@@ -1357,6 +1357,7 @@ input, select, button, .btn, .pp-inp, .cinp,
       Нараховувати можна лише з авто у статусі <b>«В роботі»</b>. Ліміт — 50% від суми робіт по авто:
       слюсарям (СЛЮСАРНІ + БЕЗПЕКА), рихтувальникам (КУЗОВНІ). Баланс: <b>+</b> винні працівнику, <b>−</b> аванс.
     </div>
+    <div id="pay-audit"></div>
     <div id="pay-cards" class="pay-cards"></div>
     <div id="pay-ledger"></div>
   </div>
@@ -2288,7 +2289,18 @@ function loadRec(id){
     if(r.type==="works"){
       currentDocId = id;
       wsel={};uidCounter=0;
-      (r.works||[]).forEach(function(w){var uid="u"+(++uidCounter);wsel[uid]=Object.assign({coeff:1},w,{uid:uid});});
+      // ВАЖЛИВО: зберігаємо оригінальний uid роботи, а не перегенеровуємо його.
+      // Раніше uid був позиційним (u1,u2,u3…), тож додавання/видалення роботи
+      // зсувало всі наступні — і нарахування зарплати «прилипали» до чужих робіт.
+      (r.works||[]).forEach(function(w){
+        var uid = w.uid || ("u"+(++uidCounter));
+        wsel[uid] = Object.assign({coeff:1}, w, {uid:uid});
+      });
+      // лічильник має бути вище за всі зайняті номери, щоб нові роботи не збіглися
+      Object.keys(wsel).forEach(function(k){
+        var n = parseInt(String(k).replace(/^u/,""), 10);
+        if(!isNaN(n) && n > uidCounter) uidCounter = n;
+      });
       document.getElementById("w-car").value=r.car||"";
       document.getElementById("w-vin").value=r.vin||"";
       document.getElementById("w-client").value=r.client||"";
@@ -5527,7 +5539,7 @@ document.addEventListener("click", function(e){
 // суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
-var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [];
+var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [];
 var PAY_SEL_WORKER = null, PAY_AC_REC = null;
 var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник"};
 
@@ -5582,7 +5594,8 @@ function payLoadAll(){
     PAY_WORKERS = []; res[0].forEach(function(d){ PAY_WORKERS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_ACCRUALS = []; res[1].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_PAYMENTS = []; res[2].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
-    PAY_CARS = []; res[3].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PAY_CARS.push(Object.assign({_id:d.id}, r)); });
+    PAY_CALCS = []; res[3].forEach(function(d){ PAY_CALCS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_CARS = PAY_CALCS.filter(function(r){ return r.status === "in_work"; });
     if(!PAY_WORKERS.length) paySeedWorkers(); else payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -5617,6 +5630,7 @@ function payRenderCards(){
     el.appendChild(card);
   });
   payRenderLedger();
+  payRenderAudit();
 }
 
 function payRenderLedger(){
@@ -5667,6 +5681,55 @@ function payVoid(kind, id){
     showToast("Скасовано");
     payLoadAll();
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+// ── ЗВІРКА: що робити, якщо роботи змінили ПІСЛЯ нарахування ─────────────────
+// Фонд рахується наживо з калькуляції, тож ДОДАНІ роботи підхоплюються самі —
+// просто зʼявляється більше вільного фонду. Проблема протилежна: якщо обсяг
+// робіт ЗМЕНШИЛИ (або роботу взагалі прибрали), раніше нараховане може
+// перевищити новий фонд. Такі випадки показуємо тут, щоб майстер зробив сторно.
+function payRenderAudit(){
+  var el = document.getElementById("pay-audit"); if(!el) return;
+  var groups = {};
+  PAY_ACCRUALS.forEach(function(a){
+    if(a.void) return;
+    var k = a.calcId + "|" + a.role;
+    if(!groups[k]) groups[k] = {calcId:a.calcId, role:a.role, sum:0, car:a.carName||"", works:{}};
+    groups[k].sum += (a.amountUSD||0);
+    groups[k].works[a.workUid] = a.workName || "";
+  });
+
+  var problems = [];
+  Object.keys(groups).forEach(function(k){
+    var g = groups[k];
+    var rec = PAY_CALCS.find(function(c){ return c._id === g.calcId; });
+    if(!rec){
+      problems.push({car:g.car, txt:"калькуляцію видалено, а нарахування лишились", over:g.sum});
+      return;
+    }
+    var fund = payFundFor(rec)[g.role] || 0;
+    if(g.sum > fund + 0.01){
+      problems.push({car:rec.car || g.car,
+        txt:"нараховано "+g.sum.toFixed(2)+" $ при фонді "+fund.toFixed(2)+" $ — обсяг робіт зменшили після нарахування",
+        over:g.sum - fund});
+    }
+    var alive = {}; (rec.works||[]).forEach(function(w){ alive[w.uid] = true; });
+    Object.keys(g.works).forEach(function(u){
+      if(!alive[u]) problems.push({car:rec.car || g.car,
+        txt:"робота «"+g.works[u]+"» вилучена з калькуляції, а нарахування за неї лишилось", over:0});
+    });
+  });
+
+  if(!problems.length){ el.innerHTML = ""; return; }
+  var h = '<div class="pay-led" style="border-color:var(--rd);margin-bottom:14px">'+
+          '<div class="pay-nm" style="margin-bottom:8px;color:var(--rd)">⚠ Потребує звірки — '+problems.length+
+          '</div><div class="pay-sub" style="margin-bottom:8px">Виправляється через × (сторно) в історії працівника</div><table>';
+  problems.forEach(function(p){
+    h += '<tr><td style="width:230px">'+escH(p.car)+'</td><td>'+escH(p.txt)+'</td>'+
+         '<td style="text-align:right;color:var(--rd);white-space:nowrap">'+
+         (p.over > 0.01 ? ("зайве "+p.over.toFixed(2)+" $") : "")+'</td></tr>';
+  });
+  el.innerHTML = h + '</table></div>';
 }
 
 // ── ПРАЦІВНИКИ ──

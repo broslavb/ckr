@@ -636,7 +636,7 @@ input, select, button, .btn, .pp-inp, .cinp,
   body.print-mechanic .pb-sum { display:none!important; }
   /* Mechanic header note */
   body.print-mechanic #ph-status::after { content:" · ДЛЯ СЛЮСАРЯ"; color:#c0392b; font-weight:bold; }
-
+}
 
 @media print {
   /* Hide empty parts blocks */
@@ -775,7 +775,8 @@ input, select, button, .btn, .pp-inp, .cinp,
   <div class="tab" onclick="switchTab('service',this)">ТО / Замовлення</div>
   <div class="tab" onclick="switchTab('cash',this)">💰 Каса</div>
   <div class="tab" onclick="switchTab('pay',this)">👷 Зарплата</div>
-  <div class="tab" onclick="switchTab('active',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" onclick="switchTabActive('calc',this)">Калькуляції</div>
+  <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" onclick="switchTab('archive',this)">Архів <span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" id="tab-stats-btn" onclick="switchTab('stats',this)" style="display:none">📊 Статистика</div>
   <div class="tab" id="tab-settings-btn" onclick="switchTab('settings',this)" style="display:none">⚙ Ціни</div>
@@ -2135,6 +2136,10 @@ function delDoc(id){
 }
 
 // ── АВТО В РОБОТІ ─────────────────────────────────────────────────────────────
+// Режим списку: "calc" — авто у статусі Розрахунок, "in_work" — переведені в роботу
+var ACTIVE_MODE = "in_work";
+function switchTabActive(mode, el){ ACTIVE_MODE = mode; switchTab('active', el); }
+
 function loadActive(vin) {
   var list = document.getElementById("active-list");
   if(!list){ console.warn("active-list not found"); return; }
@@ -2148,11 +2153,17 @@ function loadActive(vin) {
   query.get().then(function(snap){
     var docs = snap.docs.filter(function(d){
       var r = d.data();
-      return r.status !== "done" && (!vin || r.vin === vin);
+      // Калькуляції = все, що ще не переведено в роботу і не завершено
+      var okStatus = (ACTIVE_MODE === "calc")
+        ? (r.status !== "done" && r.status !== "in_work")
+        : (r.status === "in_work");
+      return okStatus && (!vin || r.vin === vin);
     });
 
     if (!docs.length) {
-      list.innerHTML='<div class="arch-empty">Немає активних авто в роботі</div>';
+      list.innerHTML = (ACTIVE_MODE === "calc")
+        ? '<div class="arch-empty">Немає авто у статусі «Розрахунок»</div>'
+        : '<div class="arch-empty">Немає авто у статусі «В роботі». Переведіть авто: вкладка Роботи → поле «Статус» → «В роботі» → Зберегти</div>';
       return;
     }
 

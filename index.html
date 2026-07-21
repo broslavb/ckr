@@ -663,6 +663,26 @@ input, select, button, .btn, .pp-inp, .cinp,
   .pm-no-disc-col { display:none!important; }
 }
 
+/* ── Витрати-роботи з каси у вкладці Роботи ── */
+.wcp{background:#fff7ed;border:1px solid #f0b27a;border-radius:5px;padding:10px 12px;margin-bottom:12px}
+.wcp-t{font-family:var(--mono);font-size:11px;color:#a04000;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.wcp-row{border-top:1px dashed #f0b27a;padding:8px 0}
+.wcp-row:first-of-type{border-top:none}
+.wcp-nm{font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--tx)}
+.wcp-d{font-family:var(--mono);font-size:10px;color:var(--tx3);font-weight:normal}
+.wcp-cmp{font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);margin:3px 0 6px}
+.wcp-fact{color:#a04000}
+.wcp-diff{color:var(--rd);font-family:var(--mono);font-size:10px;border:1px solid var(--rd);border-radius:3px;padding:1px 4px}
+.wcp-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.wcp-act label{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.wcp-act input{background:#fff;border:1px solid var(--bd);border-radius:3px;padding:3px 6px;font-family:var(--mono);font-size:11px;color:var(--tx);outline:none}
+.wcp-act input[type=number]{width:86px;text-align:right}
+.wcp-act input[type=text]{width:190px}
+.wcp-act button{font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:3px;cursor:pointer;border:1px solid var(--bd)}
+.wcp-b1{background:var(--ac);color:#fff;border-color:var(--ac)!important}
+.wcp-b2{background:#fff;color:var(--tx2)}
+@media print{ .wcp{display:none!important} }
+
 /* ── ЗАРПЛАТА ──────────────────────────────────────────────────────────────── */
 .pay-wrap{padding:16px 20px;overflow-y:auto;height:calc(100vh - 93px)}
 .pay-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -800,6 +820,7 @@ input, select, button, .btn, .pp-inp, .cinp,
         </select>
       </div>
     </div>
+    <div id="w-cash-pending"></div>
     <div class="tpl-bar">
       <span class="tpl-lbl">ШАБЛОН:</span>
       <button class="tpl-btn" onclick="applyTemplate('front')">▲ Передній удар</button>
@@ -2049,12 +2070,12 @@ function saveW(){
   var col = db.collection("calculations");
   if (currentDocId) {
     col.doc(currentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){ showToast("Оновлено: "+car); })
+      .then(function(){ wCashMarkLinked(); showToast("Оновлено: "+car); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   } else {
     isSaving = true;
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(docRef){ currentDocId=docRef.id; isSaving=false; showToast("Збережено: "+car); })
+      .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); showToast("Збережено: "+car); })
       .catch(function(e){ isSaving=false; showToast("Помилка збереження: "+e.message); });
   }
 }
@@ -2312,6 +2333,7 @@ function loadRec(id){
       document.getElementById("mal-type").value=r.malType||"std";
       switchTab("works",document.querySelectorAll(".tab")[0]);
       renderSecs(DB);wRecalc();
+      wPullCashWorks();   // витрати-роботи з каси по цьому авто
     } else if(r.type==="parts_v2"){
       pmLoadFromRecord(r, id);
       switchTab("parts",document.querySelectorAll(".tab")[1]);
@@ -6013,6 +6035,139 @@ function statsSetMal(calcId, val){
     if(r) r.malPaidUAH = v;
     statsRender();
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ВИТРАТИ-РОБОТИ З КАСИ → «СТОРОННІ РОБОТИ» ────────────────────────────────
+// Мийка / хімчистка / електрик / діагностика / розвал оплачуються стороннім,
+// але клієнту виставляються в калькуляції. Якщо така робота вже порахована —
+// показуємо фактичну суму ПОРУЧ із розрахунковою, і майстер вирішує: оновити
+// ціну (з коментарем, напр. «повторний розвал») чи лишити стару.
+// Якщо роботи ще немає — додаємо новим рядком.
+// ══════════════════════════════════════════════════════════════════════════════
+var W_CASH_OPS = [];       // неперенесені витрати по цьому авто
+var W_CASH_TO_LINK = [];   // застосовані, чекають збереження калькуляції
+
+function wPullCashWorks(){
+  var el = document.getElementById("w-cash-pending"); if(!el) return;
+  var car = (document.getElementById("w-car").value||"").trim();
+  var vin = (document.getElementById("w-vin").value||"").toUpperCase().trim();
+  if(!car && !vin){ el.innerHTML = ""; return; }
+  db.collection("cash_operations").where("type","==","-").limit(1000).get().then(function(snap){
+    W_CASH_OPS = [];
+    snap.forEach(function(doc){
+      var o = doc.data();
+      if(o.linked) return;
+      var byVin = vin && o.vin && String(o.vin).toUpperCase() === vin;
+      var byCar = car && o.car && o.car === car;
+      if(!byVin && !byCar) return;
+      var dest = o.dest || cashDestFor(o.desc).dest;   // старі записи — рахуємо на льоту
+      if(dest !== "works") return;
+      W_CASH_OPS.push({id:doc.id, o:o});
+    });
+    wRenderCashPending();
+  }).catch(function(){});
+}
+
+// Шукає вже наявну сторонню роботу з такою ж назвою
+function wFindStoWork(desc){
+  var d = (desc||"").toLowerCase().trim();
+  if(!d) return null;
+  var keys = Object.keys(wsel), found = null, i;
+  for(i=0; i<keys.length && !found; i++){
+    var w = wsel[keys[i]];
+    if(w.cat !== CAT_STO) continue;
+    var n = (w.name||"").toLowerCase();
+    if(n && (n.indexOf(d) >= 0 || d.indexOf(n) >= 0)) found = w;
+  }
+  if(found) return found;
+  var key = d.split(/[\s\/,(.]+/)[0];      // «Розвал/сходження» -> «розвал»
+  if(key && key.length >= 4){
+    for(i=0; i<keys.length && !found; i++){
+      var w2 = wsel[keys[i]];
+      if(w2.cat !== CAT_STO) continue;
+      if((w2.name||"").toLowerCase().indexOf(key) >= 0) found = w2;
+    }
+  }
+  return found;
+}
+
+function wRenderCashPending(){
+  var el = document.getElementById("w-cash-pending"); if(!el) return;
+  if(!W_CASH_OPS.length){ el.innerHTML = ""; return; }
+  var h = '<div class="wcp"><div class="wcp-t">З каси — рознести у «СТОРОННІ РОБОТИ»: '+W_CASH_OPS.length+'</div>';
+  W_CASH_OPS.forEach(function(x, i){
+    var m = wFindStoWork(x.o.desc);
+    var fact = Math.round(x.o.amount||0);
+    var sugg = Math.round(fact * 1.3);
+    var diff = m ? (fact - Math.round(m.price||0)) : 0;
+    h += '<div class="wcp-row">'+
+      '<div class="wcp-nm">'+escH(x.o.desc)+' <span class="wcp-d">'+pmCashShortDate(x.o.date)+'</span></div>'+
+      '<div class="wcp-cmp">'+
+        (m ? 'у калькуляції <b>'+Math.round(m.price||0)+' грн</b>' : '<span style="color:var(--tx3)">у калькуляції немає</span>')+
+        ' · факт з каси <b class="wcp-fact">'+fact+' грн</b>'+
+        (m && diff !== 0 ? ' <span class="wcp-diff">'+(diff>0?"+":"")+diff+' грн</span>' : '')+
+      '</div>'+
+      '<div class="wcp-act">'+
+        '<label>ціна клієнту</label><input type="number" id="wcp-p-'+i+'" value="'+sugg+'"/>'+
+        '<label>коментар</label><input type="text" id="wcp-c-'+i+'" placeholder="напр. повторний розвал"/>'+
+        '<button class="wcp-b1" onclick="wCashApply('+i+')">'+(m ? 'Оновити ціну' : 'Додати рядком')+'</button>'+
+        (m ? '<button class="wcp-b2" onclick="wCashKeep('+i+')">Лишити стару</button>' : '')+
+      '</div></div>';
+  });
+  el.innerHTML = h + '</div>';
+}
+
+function wCashApply(i){
+  var x = W_CASH_OPS[i]; if(!x) return;
+  var price = parseFloat(document.getElementById("wcp-p-"+i).value) || 0;
+  var note  = (document.getElementById("wcp-c-"+i).value || "").trim();
+  if(price <= 0){ showToast("Вкажіть ціну"); return; }
+  var m = wFindStoWork(x.o.desc);
+  if(m){
+    m.price = price; m.coeff = 1; m.fromCash = true; m.cashFact = Math.round(x.o.amount||0);
+    if(note){
+      m.note = note;
+      if((m.name||"").indexOf(note) < 0) m.name = m.name + " (" + note + ")";
+    }
+  } else {
+    var nm = x.o.desc + (note ? " ("+note+")" : "");
+    addWork(CAT_STO, nm, price, "");
+    Object.keys(wsel).forEach(function(u){
+      if(wsel[u].cat === CAT_STO && wsel[u].name === nm){
+        wsel[u].fromCash = true; wsel[u].cashFact = Math.round(x.o.amount||0);
+        if(note) wsel[u].note = note;
+      }
+    });
+  }
+  W_CASH_TO_LINK.push(x.id);
+  W_CASH_OPS.splice(i, 1);
+  renderSecs(DB); wRecalc(); wRenderCashPending();
+  showToast("Внесено. Не забудьте зберегти калькуляцію");
+}
+
+// Лишити стару ціну — калькуляція не змінюється, просто закриваємо витрату
+function wCashKeep(i){
+  var x = W_CASH_OPS[i]; if(!x) return;
+  db.collection("cash_operations").doc(x.id)
+    .update({linked:true, linkedAt:new Date().toISOString()}).catch(function(){});
+  W_CASH_OPS.splice(i, 1);
+  wRenderCashPending();
+  showToast("Залишено розрахункову ціну");
+}
+
+// Позначаємо витрати перенесеними лише ПІСЛЯ збереження калькуляції,
+// щоб вони не загубились, якщо майстер передумав і не зберіг.
+function wCashMarkLinked(){
+  if(!W_CASH_TO_LINK.length) return;
+  W_CASH_TO_LINK.forEach(function(id){
+    db.collection("cash_operations").doc(id).update({
+      linked:true, linkedCalcId: (typeof currentDocId!=="undefined" ? currentDocId : "")||"",
+      linkedAt:new Date().toISOString()
+    }).catch(function(){});
+  });
+  W_CASH_TO_LINK = [];
 }
 
 </script>

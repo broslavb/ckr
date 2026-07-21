@@ -5559,14 +5559,14 @@ function payFundFor(rec){
   return f;
 }
 function payAccruedFor(calcId, role){
-  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.role===role) ? (a.amountUSD||0) : 0); }, 0);
+  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.role===role && !a.void) ? (a.amountUSD||0) : 0); }, 0);
 }
 function payAccruedWork(calcId, workUid){
-  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.workUid===workUid) ? (a.partPct||0) : 0); }, 0);
+  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.workUid===workUid && !a.void) ? (a.partPct||0) : 0); }, 0);
 }
 function payBalance(wid){
-  var acc = PAY_ACCRUALS.reduce(function(s,a){ return s + (a.workerId===wid ? (a.amountUSD||0) : 0); }, 0);
-  var pd  = PAY_PAYMENTS.reduce(function(s,p){ return s + (p.workerId===wid ? (p.amountUSD||0) : 0); }, 0);
+  var acc = PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.workerId===wid && !a.void) ? (a.amountUSD||0) : 0); }, 0);
+  var pd  = PAY_PAYMENTS.reduce(function(s,p){ return s + ((p.workerId===wid && !p.void) ? (p.amountUSD||0) : 0); }, 0);
   return {acc:acc, paid:pd, bal:acc-pd};
 }
 
@@ -5625,18 +5625,48 @@ function payRenderLedger(){
   if(!w){ el.innerHTML = ""; return; }
   var rows = [];
   PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id)
-    rows.push({d:a.date, t:"нарахування", txt:(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)", v:(a.amountUSD||0)}); });
+    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:"нарахування",
+      txt:(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)", v:(a.amountUSD||0)}); });
   PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id)
-    rows.push({d:p.date, t:(p.type==="advance"?"аванс":"виплата"), txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-(p.amountUSD||0)}); });
+    rows.push({id:p._id, kind:"pay", vd:!!p.void, by:p.voidedBy||"", d:p.date,
+      t:(p.type==="advance"?"аванс":"виплата"),
+      txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-(p.amountUSD||0)}); });
   rows.sort(function(a,b){ return (b.d||"").localeCompare(a.d||""); });
   var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">'+escH(w.name)+' — історія</div>'+
-          '<table><tr><th>Дата</th><th>Тип</th><th>Опис</th><th style="text-align:right">Сума, $</th></tr>';
-  if(!rows.length) h += '<tr><td colspan="4" class="pay-sub">Операцій ще немає</td></tr>';
+          '<table><tr><th>Дата</th><th>Тип</th><th>Опис</th><th style="text-align:right">Сума, $</th><th></th></tr>';
+  if(!rows.length) h += '<tr><td colspan="5" class="pay-sub">Операцій ще немає</td></tr>';
   rows.forEach(function(r){
-    h += '<tr><td>'+escH(r.d||"")+'</td><td>'+r.t+'</td><td>'+escH(r.txt)+'</td>'+
-         '<td style="text-align:right" class="'+(r.v>=0?"a":"p")+'">'+(r.v>=0?"+":"")+r.v.toFixed(2)+'</td></tr>';
+    var st = r.vd ? ' style="opacity:.45"' : '';
+    var line = r.vd ? 'text-decoration:line-through;' : '';
+    h += '<tr'+st+'><td style="'+line+'">'+escH(r.d||"")+'</td>'+
+         '<td>'+r.t+(r.vd?' <span style="color:var(--rd);font-size:10px">СКАСОВАНО'+(r.by?" · "+escH(r.by):"")+'</span>':'')+'</td>'+
+         '<td style="'+line+'">'+escH(r.txt)+'</td>'+
+         '<td style="text-align:right;'+line+'" class="'+(r.v>=0?"a":"p")+'">'+(r.v>=0?"+":"")+r.v.toFixed(2)+'</td>'+
+         '<td style="text-align:right;width:26px">'+
+         (r.vd ? '' : '<span title="Скасувати запис" style="cursor:pointer;color:var(--rd);font-size:15px" onclick="payVoid(\''+r.kind+'\',\''+r.id+'\')">&#215;</span>')+
+         '</td></tr>';
   });
   el.innerHTML = h + '</table></div>';
+}
+
+// СТОРНО: запис лишається в історії, але не рахується в балансі та не займає фонд авто
+function payVoid(kind, id){
+  if(kind === "pay" && !isAdmin()){ showToast("Скасувати виплату може лише власник"); return; }
+  var what = (kind === "acc") ? "нарахування" : "виплату";
+  if(!confirm("Скасувати "+what+"?\n\nЗапис лишиться в історії позначеним як скасований, "+
+              "але перестане впливати на баланс і звільнить фонд по авто.")) return;
+  var col = (kind === "acc") ? "work_accruals" : "worker_payments";
+  db.collection(col).doc(id).update({
+    void: true, voidedBy: currentUserName || "", voidedAt: new Date().toISOString()
+  }).then(function(){
+    // Скасування виплати прибирає і повʼязану витрату з каси, щоб каса не «поїхала»
+    if(kind === "pay"){
+      var p = PAY_PAYMENTS.find(function(x){ return x._id === id; });
+      if(p && p.cashOpId) db.collection("cash_operations").doc(p.cashOpId).delete().catch(function(){});
+    }
+    showToast("Скасовано");
+    payLoadAll();
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
 // ── ПРАЦІВНИКИ ──
@@ -5772,14 +5802,16 @@ function payDoPayout(){
     amountUAH:uah, rate:rate, amountUSD:Math.round((uah/rate)*100)/100,
     type:type, date:date, note:note,
     author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
-  }).then(function(){
-    // Виплата працівнику = витрата з каси (щоб не вести подвійний облік)
+  }).then(function(pref){
+    // Виплата працівнику = витрата з каси (щоб не вести подвійний облік).
+    // Запамʼятовуємо id операції — щоб сторно виплати прибрало і її.
     db.collection("cash_operations").add({
       type:"-", amount:uah, desc:(type==="advance"?"Аванс — ":"Зарплата — ")+w.name,
       car:"", vin:"", dest:"", markup:1, linked:true, date:date,
       ts:date+"T"+new Date().toTimeString().substr(0,8),
       author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
-    }).catch(function(){});
+    }).then(function(cref){ pref.update({cashOpId:cref.id}).catch(function(){}); })
+      .catch(function(){});
     payClose("pay-payout-modal");
     showToast("Виплачено "+uah.toLocaleString("uk-UA")+" грн — "+w.name);
     payLoadAll();
@@ -5854,7 +5886,7 @@ function statsRender(){
       });});
     });
     // Зарплата по цьому авто (нарахування, USD -> грн)
-    var salUSD = PAY_ACCRUALS.reduce(function(s,a){ return s + (a.calcId===r._id ? (a.amountUSD||0) : 0); },0);
+    var salUSD = PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===r._id && !a.void) ? (a.amountUSD||0) : 0); },0);
     var salUAH = Math.round(salUSD*rate);
     // Витрати з каси на це авто
     var expUAH = STATS_CASH.reduce(function(s,o){
@@ -5882,7 +5914,7 @@ function statsRender(){
   document.getElementById("stats-cars").innerHTML = h;
 
   // 2) Фактично виплачено працівникам за місяць
-  var pays = PAY_PAYMENTS.filter(function(p){ return (p.date||"").slice(0,7)===mo; });
+  var pays = PAY_PAYMENTS.filter(function(p){ return (p.date||"").slice(0,7)===mo && !p.void; });
   var byW = {};
   pays.forEach(function(p){
     if(!byW[p.workerId]) byW[p.workerId] = {name:p.workerName||"", uah:0, adv:0};

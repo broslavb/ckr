@@ -350,6 +350,10 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .pr-var:hover{color:var(--bl);border-color:var(--bl)}
 /* Тип деталі (аналог/ориг./б.в.) — тільки для друку, на екрані є селект */
 .pr-avail-txt{display:none}
+/* Рядок, підтягнутий з каси і ще не перевірений майстром — червоний */
+.pr-cash-new td{color:var(--rd)!important;background:rgba(192,57,43,.07)!important}
+.pr-cash-new td input,.pr-cash-new td select{color:var(--rd)!important;font-weight:bold}
+@media print{ .pr-cash-new td{color:#000!important;background:transparent!important} }
 
 /* Summary panel */
 .pm-summary{background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:12px}
@@ -2720,7 +2724,9 @@ function pmFinalPrice(item){
   var isClientItem = item.status === "client_wait" || item.status === "client_delivered";
   if(isClientItem) return 0;
   if(!item.buyPrice) return 0;
-  return Math.round(item.buyPrice * pmMarkup(item.buyPrice, item.markupType||"auto") * item.qty);
+  // Рядки з каси мають власну націнку (30% звичайні / 10% транспортні), поки майстер її не змінив
+  var mk = item.cashMarkup ? item.cashMarkup : pmMarkup(item.buyPrice, item.markupType||"auto");
+  return Math.round(item.buyPrice * mk * item.qty);
 }
 
 function pmFinalWithDisc(finalPrice, disc){
@@ -2812,7 +2818,16 @@ function pmUpdItem(blockId, itemId, field, value){
       if(i.variants){ var v=i.variants.find(function(v){return v.id===itemId;}); if(v) item=v; }
     });
   }
-  if(item){ item[field]=value; pmRender(); }
+  if(item){
+    item[field]=value;
+    // Майстер щось виправив у рядку з каси -> вважаємо перевіреним (колір стає звичайним).
+    // Якщо змінив тип націнки — власна націнка каси більше не діє.
+    if(item.fromCash){
+      item.cashConfirmed = true;
+      if(field === "markupType") delete item.cashMarkup;
+    }
+    pmRender();
+  }
 }
 
 function pmUpdItemStatus(blockId, itemId, selectEl){
@@ -2855,6 +2870,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var tr = document.createElement("tr");
   if(rowBg) tr.style.background=rowBg;
   tr.setAttribute("data-item-id", item.id);
+  // Рядок, підтягнутий з каси і ще не перевірений майстром — червоний
+  if(item.fromCash && !item.cashConfirmed) tr.className = "pr-cash-new";
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 
@@ -3781,13 +3798,101 @@ function pmSave(){
   var col = db.collection("calculations");
   if(pmCurrentDocId){
     col.doc(pmCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()}, rec))
-      .then(function(){ pmIsSaving=false; showToast("Оновлено: "+car); })
+      .then(function(){ pmIsSaving=false; pmMarkCashLinked(); showToast("Оновлено: "+car); })
       .catch(function(e){ pmIsSaving=false; showToast("Помилка: "+e.message); });
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()}, rec))
-      .then(function(docRef){ pmCurrentDocId=docRef.id; pmIsSaving=false; showToast("Збережено: "+car); })
+      .then(function(docRef){ pmCurrentDocId=docRef.id; pmIsSaving=false; pmMarkCashLinked(); showToast("Збережено: "+car); })
       .catch(function(e){ pmIsSaving=false; showToast("Помилка: "+e.message); });
   }
+}
+
+// ══ ВИТРАТИ З КАСИ → КАЛЬКУЛЯЦІЯ АВТО ════════════════════════════════════════
+// У касу вноситься ЧИСТА сума. У калькуляції вона стає "закупкою", а клієнту
+// рахується з націнкою (30% звичайні / 10% транспортні). Рядок червоний, доки
+// майстер його не підтвердить — будь-яка правка рядка = підтвердження.
+
+function pmCashShortDate(d){
+  if(!d) return "";
+  var p = String(d).split("-");
+  return p.length === 3 ? (p[2] + "." + p[1]) : String(d);
+}
+
+function pmAddCashItem(blockId, name, netSum, markup, ids){
+  var block = PM_BLOCKS.find(function(b){ return b.id === blockId; });
+  if(!block) return false;
+  block.items.push({
+    id: uid(), name: name, qty: 1, avail: "", code: "", altCode: "",
+    supplier: "", supplierName: "", link: "",
+    buyPrice: netSum, markupType: "auto", cashMarkup: markup,
+    status: "dash", variants: [],
+    fromCash: true, cashIds: ids, cashConfirmed: false
+  });
+  return true;
+}
+
+function pmPullCashExpenses(car, vin){
+  if(!car && !vin) return;
+  db.collection("cash_operations").where("type","==","-").limit(1000).get().then(function(snap){
+    // Те, що вже є в цій калькуляції — повторно не додаємо
+    var already = {};
+    PM_BLOCKS.forEach(function(b){ b.items.forEach(function(i){
+      (i.cashIds||[]).forEach(function(id){ already[id] = true; });
+    });});
+
+    var ops = [];
+    snap.forEach(function(doc){
+      var o = doc.data();
+      if(o.linked || already[doc.id]) return;
+      var byVin = vin && o.vin && String(o.vin).toUpperCase() === String(vin).toUpperCase();
+      var byCar = car && o.car && o.car === car;
+      if(!byVin && !byCar) return;
+      // Старі записи (внесені до цього оновлення) не мають dest/markup — визначаємо на льоту
+      var dest = o.dest, markup = o.markup;
+      if(!dest){ var rr = cashDestFor(o.desc); dest = rr.dest; markup = rr.markup; }
+      if(dest === "works") return;   // роботи — наступним етапом
+      ops.push({_id: doc.id, o: o, dest: dest, markup: markup || 1.3});
+    });
+    if(!ops.length) return;
+
+    var added = 0;
+    // Транспортні витрати — ОДНИМ рядком: суми складаємо, дати через кому
+    var trans = ops.filter(function(x){ return x.dest === "transport"; });
+    if(trans.length){
+      var sum = 0, dates = [], ids = [];
+      trans.forEach(function(x){ sum += (x.o.amount||0); dates.push(pmCashShortDate(x.o.date)); ids.push(x._id); });
+      if(pmAddCashItem("consumables", "Транспортні витрати (" + dates.join(", ") + ")", sum, 1.1, ids)) added++;
+    }
+    // Решта — окремими рядками
+    ops.filter(function(x){ return x.dest !== "transport"; }).forEach(function(x){
+      var bid = x.dest === "to_parts" ? "service" : "consumables";
+      if(pmAddCashItem(bid, x.o.desc + " (" + pmCashShortDate(x.o.date) + ")", x.o.amount||0, x.markup, [x._id])) added++;
+    });
+
+    if(added){
+      pmRender();
+      showToast("З каси підтягнуто витрат: " + added + " — перевірте червоні рядки та збережіть");
+    }
+  }).catch(function(){});
+}
+
+// Після збереження калькуляції позначаємо витрати каси як перенесені,
+// щоб вони не підтягнулись у неї вдруге.
+function pmMarkCashLinked(){
+  var ids = [];
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(i){
+    if(i.fromCash && i.cashIds){
+      i.cashIds.forEach(function(id){ if(ids.indexOf(id) < 0) ids.push(id); });
+    }
+  });});
+  if(!ids.length) return;
+  ids.forEach(function(id){
+    db.collection("cash_operations").doc(id).update({
+      linked: true,
+      linkedCalcId: pmCurrentDocId || "",
+      linkedAt: new Date().toISOString()
+    }).catch(function(){});
+  });
 }
 
 function pmLoadFromRecord(r, docId){
@@ -3806,6 +3911,7 @@ function pmLoadFromRecord(r, docId){
   document.getElementById("pm-disc").value = r.disc||"none";
   pmRender();
   pmRenderPayments();
+  pmPullCashExpenses(r.car||"", r.vin||"");   // підтягнути витрати з каси по цьому авто
 }
 
 // Init parts module when tab opens
@@ -4865,8 +4971,38 @@ var CASH_EDIT_ID = null; // editing existing op
 
 var CASH_PRESETS = {
   "+": ["Оплата від клієнта", "Внесення готівки", "Аванс від клієнта", "Повернення коштів"],
-  "-": ["Таксі", "Стоянка", "Мийка", "Прибирання / Уборка", "Розвал/сходження", "Діагностика (УкрДіагностика)", "Бензин", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Інше"]
+  "-": ["Таксі", "Стоянка", "Мийка", "Прибирання / Уборка", "Розвал/сходження", "Діагностика (УкрДіагностика)", "Бензин", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
 };
+
+// ── МАРШРУТИЗАЦІЯ ВИТРАТ У КАЛЬКУЛЯЦІЮ АВТО ──────────────────────────────────
+// dest: works — у Роботи | consumables — Витратні матеріали
+//       to_parts — ЗЧ та матеріали для ТО | transport — одним рядком "Транспортні витрати"
+// markup: націнка при показі в калькуляції (у касі лишається чиста сума)
+var CASH_DEST_RULES = [
+  {m:["таксі","транспорт"],                  dest:"transport",   markup:1.1},
+  {m:["мийк"],                               dest:"works",       markup:1.3},
+  {m:["хімчистк","прибиран","уборк"],        dest:"works",       markup:1.3},
+  {m:["розвал","сходжен"],                   dest:"works",       markup:1.3},
+  {m:["діагностик"],                         dest:"works",       markup:1.3},
+  {m:["електрик","кодуван"],                 dest:"works",       markup:1.3},
+  {m:["олив","мастил","фільтр"],             dest:"to_parts",    markup:1.3},
+  {m:["метіз","кліпс"],                      dest:"consumables", markup:1.3},
+  {m:["запчастин"],                          dest:"consumables", markup:1.3},
+  {m:["відправк","перевізник","доставк"],    dest:"consumables", markup:1.3}
+];
+
+// Визначає, куди в калькуляції піде витрата за її описом
+function cashDestFor(desc){
+  var d = (desc||"").toLowerCase();
+  for(var i=0;i<CASH_DEST_RULES.length;i++){
+    for(var j=0;j<CASH_DEST_RULES[i].m.length;j++){
+      if(d.indexOf(CASH_DEST_RULES[i].m[j])>=0){
+        return {dest:CASH_DEST_RULES[i].dest, markup:CASH_DEST_RULES[i].markup};
+      }
+    }
+  }
+  return {dest:"consumables", markup:1.3};  // не розпізнано — щоб витрата не загубилась
+}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 function cashInit(){
@@ -4897,21 +5033,38 @@ function cashLoadOps(){
     });
 }
 
+// Мапа: назва авто -> {vin, isTO}. Потрібна, щоб прив'язати витрату до авто по VIN.
+var CASH_CAR_MAP = {};
+
 function cashLoadActiveCars(){
-  // Populate datalist with active cars
-  db.collection("calculations").orderBy("createdAt","desc").limit(100).get()
+  // Populate datalist with active cars: спершу довга робота, потім ТО (з поміткою)
+  db.collection("calculations").orderBy("createdAt","desc").limit(200).get()
     .then(function(snap){
-      var cars = ["ЦКР"];
-      var seen = {};
+      var byCar = {};
       snap.forEach(function(doc){
         var r = doc.data();
-        if(r.status !== "done" && r.car && !seen[r.car]){
-          cars.push(r.car);
-          seen[r.car] = true;
-        }
+        if(r.status === "done" || !r.car) return;
+        var k = r.car;
+        if(!byCar[k]) byCar[k] = {vin:"", isTO:false, hasRepair:false, hasTO:false};
+        if(r.vin && !byCar[k].vin) byCar[k].vin = r.vin;
+        if(r.type === "service_order") byCar[k].hasTO = true; else byCar[k].hasRepair = true;
+      });
+      var repair = [], to = [];
+      CASH_CAR_MAP = {};
+      Object.keys(byCar).forEach(function(k){
+        var c = byCar[k];
+        // Якщо авто має і ремонт, і ТО — вважаємо його "в довгій роботі"
+        c.isTO = c.hasTO && !c.hasRepair;
+        CASH_CAR_MAP[k] = {vin:c.vin, isTO:c.isTO};
+        (c.isTO ? to : repair).push(k);
       });
       var dl = document.getElementById("cash-car-list");
-      if(dl){ dl.innerHTML = cars.map(function(c){ return '<option value="'+c+'">'; }).join(""); }
+      if(dl){
+        var html = '<option value="ЦКР">цех</option>';
+        repair.forEach(function(c){ html += '<option value="'+escH(c)+'"></option>'; });
+        to.forEach(function(c){ html += '<option value="'+escH(c)+'">ТО</option>'; });
+        dl.innerHTML = html;
+      }
     }).catch(function(){});
 }
 
@@ -5075,11 +5228,19 @@ function cashSaveOp(){
   if(!amount){ showToast("Введіть суму"); document.getElementById("cash-modal-amount").focus(); return; }
   if(!desc)  { showToast("Введіть опис"); document.getElementById("cash-modal-desc").focus(); return; }
 
+  // Прив'язка до авто: беремо VIN зі списку активних авто + визначаємо маршрут у калькуляцію
+  var carInfo = (car && car !== "ЦКР" && CASH_CAR_MAP[car]) ? CASH_CAR_MAP[car] : null;
+  var route = (CASH_OP_TYPE === "-" && carInfo) ? cashDestFor(desc) : {dest:"", markup:1};
+
   var op = {
     type: CASH_OP_TYPE,
     amount: amount,
     desc: desc,
     car: car || "",
+    vin: carInfo ? (carInfo.vin || "") : "",
+    dest: route.dest,        // works | consumables | to_parts | transport | "" (лише цех)
+    markup: route.markup,    // 1.3 звичайні, 1.1 транспортні
+    linked: false,           // ще не перенесено в калькуляцію авто
     date: date,
     ts: date + "T" + new Date().toTimeString().substr(0,8),
     author: currentUserName || "",

@@ -721,8 +721,8 @@ input, select, button, .btn, .pp-inp, .cinp,
   <div class="hdr-right">
     <div class="rate-badge">
       <span class="rate-dot" id="rdot"></span>
-      <span style="color:rgba(255,255,255,.5)">НБУ</span>
-      <input type="number" id="rdisp" value="44.1" step="0.01" min="1" class="rate-inp" oninput="usdRate=parseFloat(this.value)||44.1;wRecalc()" title="Курс USD — можна змінити вручну"/>
+      <span style="color:rgba(255,255,255,.5)">USD</span>
+      <input type="number" id="rdisp" value="44.1" step="0.01" min="1" class="rate-inp" oninput="usdRate=parseFloat(this.value)||usdRate;wRecalc()" onchange="rateSetManual(this)" title="Курс USD. Оновлюється автоматично щодня. Можна змінити вручну — збережеться для всіх користувачів"/>
       <span>грн/$</span>
     </div>
     <div class="user-badge">
@@ -1444,21 +1444,65 @@ function initApp() {
   wRecalc();
 }
 
-// ── NBU RATE ─────────────────────────────────────────────────────────────────
-function loadNBURate() {
-  fetch("https://bank.gov.ua/NBUStatService/v1/statdataservice/exchangerates?valcode=USD&json")
-    .then(function(r){return r.json();})
+// ── КУРС USD ─────────────────────────────────────────────────────────────────
+// Чому не НБУ: їхній старий API вимкнено (віддає 404), а новий не надсилає
+// CORS-заголовків — із браузера його дістати неможливо. Джерело: open.er-api.com
+// (дозволяє запити з браузера). Курс додатково зберігається у Firestore —
+// щоб був спільний для всіх і не скидався на 44.1 при перезавантаженні.
+var RATE_API = "https://open.er-api.com/v6/latest/USD";
+
+function rateApply(v, ok){
+  usdRate = Math.round(v * 100) / 100;
+  var d = document.getElementById("rdisp");
+  if(d) d.value = usdRate.toFixed(2);
+  var dot = document.getElementById("rdot");
+  if(dot) dot.style.background = ok ? "var(--gr)" : "var(--rd)";
+  try { wRecalc(); } catch(e){}
+}
+
+function rateSave(v, manual){
+  db.collection("settings").doc("rate").set({
+    rate: v,
+    manual: !!manual,
+    day: new Date().toISOString().slice(0,10),
+    updatedAt: new Date().toISOString()
+  }).catch(function(){});
+}
+
+// Ручна правка курсу — зберігається для всіх користувачів
+function rateSetManual(inp){
+  var v = parseFloat(inp.value);
+  if(!(v > 1)) return;
+  rateApply(v, true);
+  rateSave(usdRate, true);
+  showToast("Курс збережено: " + usdRate.toFixed(2) + " грн/$");
+}
+
+function rateFetchNet(saved){
+  fetch(RATE_API)
+    .then(function(r){ return r.json(); })
     .then(function(d){
-      var rate = Array.isArray(d) && d[0] ? d[0].rate : 0;
-      if (rate > 30 && rate < 200) {
-        usdRate = Math.round(rate * 100) / 100;
-        document.getElementById("rdisp").value = usdRate.toFixed(2);
-        document.getElementById("rdot").style.background = "var(--gr)";
-        wRecalc();
+      var rate = (d && d.rates) ? d.rates.UAH : 0;
+      if(rate > 30 && rate < 200){
+        rateApply(rate, true);
+        rateSave(Math.round(rate*100)/100, false);
       }
     }).catch(function(){
-      document.getElementById("rdot").style.background = "var(--rd)";
+      var dot = document.getElementById("rdot");
+      if(dot && !saved) dot.style.background = "var(--rd)";
     });
+}
+
+function loadNBURate(){
+  var today = new Date().toISOString().slice(0,10);
+  db.collection("settings").doc("rate").get().then(function(doc){
+    var saved = doc.exists ? doc.data() : null;
+    // 1) одразу застосовуємо збережений курс (миттєво, спільний для всіх)
+    if(saved && saved.rate > 30 && saved.rate < 200) rateApply(saved.rate, true);
+    // 2) якщо курс сьогодні ставили вручну — не перебиваємо його автоматикою
+    if(saved && saved.manual && saved.day === today) return;
+    rateFetchNet(saved);
+  }).catch(function(){ rateFetchNet(null); });
 }
 
 // ── PRICES FROM FIRESTORE ─────────────────────────────────────────────────────
@@ -1822,10 +1866,27 @@ function clearW(){
 var currentDocId = null; // tracks the currently loaded/saved doc
 var isSaving = false; // prevent double save
 
+// ── ПЕРЕВІРКА VIN ────────────────────────────────────────────────────────────
+// Без VIN одне й те саме авто дублюється у списках (Каса, майбутня зарплата),
+// бо звʼязок іде по назві, яку в різних розділах пишуть по-різному.
+function requireVin(vin, inputId){
+  if(vin && vin.trim().length > 0) return true;
+  showToast("⚠ Вкажіть VIN / номер кузова — без нього авто дублюватиметься у списках");
+  var el = document.getElementById(inputId);
+  if(el){
+    el.focus();
+    var old = el.style.borderColor;
+    el.style.borderColor = "var(--rd)";
+    setTimeout(function(){ el.style.borderColor = old; }, 3000);
+  }
+  return false;
+}
+
 function saveW(){
   if (isSaving) { showToast("Зберігається..."); return; }
   var car=document.getElementById("w-car").value||"Без назви";
   var vin=document.getElementById("w-vin").value.toUpperCase();
+  if(!requireVin(vin, "w-vin")) return;
   var discKuz=parseFloat(document.getElementById("disc-kuz").value)||0;
   var discSlu=parseFloat(document.getElementById("disc-slu").value)||0;
   var malType=document.getElementById("mal-type").value;
@@ -2820,12 +2881,9 @@ function pmUpdItem(blockId, itemId, field, value){
   }
   if(item){
     item[field]=value;
-    // Майстер щось виправив у рядку з каси -> вважаємо перевіреним (колір стає звичайним).
-    // Якщо змінив тип націнки — власна націнка каси більше не діє.
-    if(item.fromCash){
-      item.cashConfirmed = true;
-      if(field === "markupType") delete item.cashMarkup;
-    }
+    // Якщо майстер змінив тип націнки — власна націнка з каси більше не діє.
+    // Саме підтвердження рядка робиться статусом (див. pmUpdItemStatus).
+    if(item.fromCash && field === "markupType") delete item.cashMarkup;
     pmRender();
   }
 }
@@ -2834,6 +2892,21 @@ function pmUpdItemStatus(blockId, itemId, selectEl){
   var val = selectEl.value;
   var statusObj = PM_STATUSES.find(function(s){return s.val===val;}) || PM_STATUSES[0];
   selectEl.className = "ps " + statusObj.cls;
+  // ПІДТВЕРДЖЕННЯ ВИТРАТИ З КАСИ: статуси "Перевірена вартість" або
+  // "Отримано на складі" знімають червоний колір із рядка.
+  if(val === "check" || val === "received"){
+    var cb = PM_BLOCKS.find(function(b){return b.id===blockId;});
+    if(cb){
+      var ci = cb.items.find(function(i){return i.id===itemId;});
+      if(!ci){ cb.items.forEach(function(i){
+        if(i.variants){ var v=i.variants.find(function(v){return v.id===itemId;}); if(v) ci=v; }
+      }); }
+      if(ci && ci.fromCash && !ci.cashConfirmed){
+        ci.cashConfirmed = true;
+        setTimeout(pmRender, 0);   // перемалювати, щоб зник червоний
+      }
+    }
+  }
   var row = selectEl.closest("tr");
   if(row){
     if(val==="error")                 row.style.background="rgba(211,47,47,.12)";
@@ -3772,6 +3845,7 @@ function pmSave(){
   if(pmIsSaving){ showToast("Зберігається..."); return; }
   var car = document.getElementById("pm-car").value || "Без назви";
   var vin = document.getElementById("pm-vin").value.toUpperCase();
+  if(!requireVin(vin, "pm-vin")) return;
   var disc = document.getElementById("pm-disc").value;
 
   var grandTotal = 0;
@@ -4489,6 +4563,7 @@ function soUpdateSummary(){
 function soSave(){
   var car = document.getElementById("so-car").value||"Без назви";
   var vin = document.getElementById("so-vin").value.toUpperCase();
+  if(!requireVin(vin, "so-vin")) return;
   var disc = document.getElementById("so-disc").value;
   var disc2 = soDiscRate();
   var partsTotal=0; soParts.forEach(function(item){ partsTotal+=soFinalWithDisc(soFinalPrice(item),disc2.parts); (item.variants||[]).forEach(function(v){partsTotal+=soFinalWithDisc(soFinalPrice(v),disc2.parts);}); });
@@ -5040,23 +5115,32 @@ function cashLoadActiveCars(){
   // Populate datalist with active cars: спершу довга робота, потім ТО (з поміткою)
   db.collection("calculations").orderBy("createdAt","desc").limit(200).get()
     .then(function(snap){
-      var byCar = {};
+      // Обʼєднуємо по VIN: одне авто = один пункт, навіть якщо є і в Роботах, і в Запчастинах.
+      // Без VIN (старі записи) — ключем лишається назва.
+      var byKey = {};
       snap.forEach(function(doc){
         var r = doc.data();
         if(r.status === "done" || !r.car) return;
-        var k = r.car;
-        if(!byCar[k]) byCar[k] = {vin:"", isTO:false, hasRepair:false, hasTO:false};
-        if(r.vin && !byCar[k].vin) byCar[k].vin = r.vin;
-        if(r.type === "service_order") byCar[k].hasTO = true; else byCar[k].hasRepair = true;
+        var vin = (r.vin || "").toUpperCase().trim();
+        var key = vin || ("NAME:" + r.car);
+        if(!byKey[key]) byKey[key] = {name:r.car, vin:vin, hasRepair:false, hasTO:false};
+        if(r.type === "service_order") byKey[key].hasTO = true; else byKey[key].hasRepair = true;
       });
+
+      // Якщо однакова назва трапилась у різних VIN — додаємо хвіст VIN, щоб розрізняти
+      var nameCount = {};
+      Object.keys(byKey).forEach(function(k){ nameCount[byKey[k].name] = (nameCount[byKey[k].name]||0) + 1; });
+
       var repair = [], to = [];
       CASH_CAR_MAP = {};
-      Object.keys(byCar).forEach(function(k){
-        var c = byCar[k];
-        // Якщо авто має і ремонт, і ТО — вважаємо його "в довгій роботі"
-        c.isTO = c.hasTO && !c.hasRepair;
-        CASH_CAR_MAP[k] = {vin:c.vin, isTO:c.isTO};
-        (c.isTO ? to : repair).push(k);
+      Object.keys(byKey).forEach(function(k){
+        var c = byKey[k];
+        var label = c.name;
+        if(nameCount[c.name] > 1 && c.vin) label = c.name + " (" + c.vin.slice(-6) + ")";
+        // Авто і в ремонті, і на ТО — вважаємо його "в довгій роботі"
+        var isTO = c.hasTO && !c.hasRepair;
+        CASH_CAR_MAP[label] = {vin:c.vin, isTO:isTO};
+        (isTO ? to : repair).push(label);
       });
       var dl = document.getElementById("cash-car-list");
       if(dl){

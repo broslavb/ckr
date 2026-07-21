@@ -663,6 +663,42 @@ input, select, button, .btn, .pp-inp, .cinp,
   .pm-no-disc-col { display:none!important; }
 }
 
+/* ── ЗАРПЛАТА ──────────────────────────────────────────────────────────────── */
+.pay-wrap{padding:16px 20px;overflow-y:auto;height:calc(100vh - 93px)}
+.pay-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.pay-h1{font-family:var(--disp);font-size:18px;letter-spacing:2px;color:var(--blue-dark)}
+.pay-hint{font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:8px 12px;margin-bottom:14px;line-height:1.55}
+.pay-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:18px}
+.pay-card{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
+.pay-card.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--acd)}
+.pay-nm{font-family:Verdana,sans-serif;font-size:13px;font-weight:bold;color:var(--tx)}
+.pay-rl{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.pay-bal{font-family:Verdana,sans-serif;font-size:20px;font-weight:bold;margin:4px 0}
+.pay-bal.pos{color:var(--gr)} .pay-bal.neg{color:var(--rd)} .pay-bal.zero{color:var(--tx3)}
+.pay-sub{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.pay-cbtns{display:flex;gap:6px;margin-top:10px}
+.pay-cbtns button{flex:1;font-family:var(--mono);font-size:10px;padding:5px;border-radius:3px;border:1px solid var(--bd);background:var(--bg);color:var(--tx2);cursor:pointer}
+.pay-cbtns button:hover{border-color:var(--ac);color:var(--ac)}
+.pay-modal{display:none;position:fixed;z-index:620;inset:0;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 16px}
+.pay-box{background:var(--bg2);border-radius:8px;padding:20px 22px;width:100%;max-width:460px;box-shadow:0 10px 50px rgba(0,0,0,.3)}
+.pay-box-t{font-family:var(--disp);font-size:16px;letter-spacing:1px;color:var(--blue-dark);margin-bottom:14px}
+.pay-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pay-fund{font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--bg3);border-radius:4px;margin:10px 0;color:var(--tx2)}
+.pay-works{max-height:46vh;overflow-y:auto;border:1px solid var(--bd);border-radius:4px}
+.pay-wrow{display:grid;grid-template-columns:1fr 90px 74px 92px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
+.pay-wrow:last-child{border-bottom:none}
+.pay-wrow.head{background:var(--bg3);font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;position:sticky;top:0}
+.pay-wrow input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:3px 6px;font-family:var(--mono);font-size:11px;color:var(--tx);text-align:right;outline:none}
+.pay-wrow .done{color:var(--gr);font-family:var(--mono);font-size:10px}
+.pay-status{font-family:var(--mono);font-size:11px;color:var(--tx2);margin:10px 0;min-height:16px}
+.pay-status.err{color:var(--rd)}
+.pay-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.pay-led{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
+.pay-led table{width:100%;border-collapse:collapse;font-family:Verdana,sans-serif;font-size:12px}
+.pay-led th{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;text-align:left;padding:5px 6px;border-bottom:1px solid var(--bd)}
+.pay-led td{padding:5px 6px;border-bottom:1px solid var(--bd);color:var(--tx2)}
+.pay-led .a{color:var(--gr)} .pay-led .p{color:var(--rd)}
+.pay-wk{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
 </style>
 </head>
 <body>
@@ -738,8 +774,10 @@ input, select, button, .btn, .pp-inp, .cinp,
   <div class="tab" onclick="switchTab('parts',this)">Запчастини</div>
   <div class="tab" onclick="switchTab('service',this)">ТО / Замовлення</div>
   <div class="tab" onclick="switchTab('cash',this)">💰 Каса</div>
+  <div class="tab" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" onclick="switchTab('active',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" onclick="switchTab('archive',this)">Архів <span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-stats-btn" onclick="switchTab('stats',this)" style="display:none">📊 Статистика</div>
   <div class="tab" id="tab-settings-btn" onclick="switchTab('settings',this)" style="display:none">⚙ Ціни</div>
   <div class="tab" id="tab-svc-prices-btn" onclick="switchTab('svcprices',this)" style="display:none">⚙ Ціни ТО</div>
   <div class="tab" id="tab-presets-btn" onclick="switchTab('presets',this)" style="display:none">☰ Шаблони ЗЧ</div>
@@ -755,9 +793,8 @@ input, select, button, .btn, .pp-inp, .cinp,
       <div class="fld"><label>Дата</label><input type="date" id="w-date"/></div>
       <div class="fld"><label>Статус</label>
         <select id="w-status">
-          <option value="preliminary">Попередній</option>
-          <option value="final">Фінальний</option>
-          <option value="insurance">Страхова</option>
+          <option value="preliminary">Розрахунок</option>
+          <option value="in_work">В роботі</option>
           <option value="done">Завершено</option>
         </select>
       </div>
@@ -1305,6 +1342,95 @@ input, select, button, .btn, .pp-inp, .cinp,
   </div>
 </div>
 
+<!-- ══ ЗАРПЛАТА ══════════════════════════════════════════════════════════════ -->
+<div id="tab-pay" style="display:none">
+  <div class="pay-wrap">
+    <div class="pay-bar">
+      <div class="pay-h1">ЗАРПЛАТА · БАЛАНСИ</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-p" onclick="payOpenAccrue()">+ Нарахувати роботи</button>
+        <button class="btn btn-o" onclick="payOpenWorkers()">Працівники</button>
+      </div>
+    </div>
+    <div class="pay-hint">
+      Нараховувати можна лише з авто у статусі <b>«В роботі»</b>. Ліміт — 50% від суми робіт по авто:
+      слюсарям (СЛЮСАРНІ + БЕЗПЕКА), рихтувальникам (КУЗОВНІ). Баланс: <b>+</b> винні працівнику, <b>−</b> аванс.
+    </div>
+    <div id="pay-cards" class="pay-cards"></div>
+    <div id="pay-ledger"></div>
+  </div>
+</div>
+
+<!-- ══ СТАТИСТИКА (лише власник) ═════════════════════════════════════════════ -->
+<div id="tab-stats" style="display:none">
+  <div class="pay-wrap">
+    <div class="pay-bar">
+      <div class="pay-h1">СТАТИСТИКА МІСЯЦЯ</div>
+      <input type="month" id="stats-month" onchange="statsRender()"
+             style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
+    </div>
+    <div id="stats-sum" class="pay-hint"></div>
+    <div id="stats-cars" style="margin-bottom:18px"></div>
+    <div id="stats-workers"></div>
+  </div>
+</div>
+
+<!-- Модалка: нарахування -->
+<div class="pay-modal" id="pay-accrue-modal">
+  <div class="pay-box" style="max-width:940px">
+    <div class="pay-box-t">Нарахування виконаних робіт</div>
+    <div class="pay-row2">
+      <div class="fld"><label>Працівник</label><select id="pay-ac-worker" onchange="payAccrueCarChanged()"></select></div>
+      <div class="fld"><label>Авто (лише «В роботі»)</label><select id="pay-ac-car" onchange="payAccrueCarChanged()"></select></div>
+    </div>
+    <div id="pay-ac-fund" class="pay-fund"></div>
+    <div id="pay-ac-works" class="pay-works"></div>
+    <div id="pay-ac-status" class="pay-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payDoAccrue()">Нарахувати</button>
+      <button class="btn btn-o" onclick="payClose('pay-accrue-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: виплата -->
+<div class="pay-modal" id="pay-payout-modal">
+  <div class="pay-box">
+    <div class="pay-box-t" id="pay-po-title">Виплата</div>
+    <div class="fld"><label>Сума (грн)</label><input type="number" id="pay-po-amount" min="0" step="1"/></div>
+    <div class="fld"><label>Тип</label><select id="pay-po-type">
+      <option value="salary">Зарплата (за виконане)</option>
+      <option value="advance">Аванс (наперед)</option>
+    </select></div>
+    <div class="fld"><label>Дата</label><input type="date" id="pay-po-date"/></div>
+    <div class="fld"><label>Коментар</label><input type="text" id="pay-po-note" placeholder="необовʼязково"/></div>
+    <div class="pay-status" id="pay-po-info"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payDoPayout()">Виплатити</button>
+      <button class="btn btn-o" onclick="payClose('pay-payout-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: працівники -->
+<div class="pay-modal" id="pay-workers-modal">
+  <div class="pay-box">
+    <div class="pay-box-t">Працівники</div>
+    <div id="pay-wk-list"></div>
+    <div class="pay-row2" style="margin-top:10px">
+      <div class="fld"><label>Прізвище, імʼя</label><input type="text" id="pay-wk-name" placeholder="Іваненко Іван"/></div>
+      <div class="fld"><label>Спеціальність</label><select id="pay-wk-role">
+        <option value="slu">Слюсар</option>
+        <option value="kuz">Рихтувальник</option>
+      </select></div>
+    </div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payAddWorker()">Додати</button>
+      <button class="btn btn-o" onclick="payClose('pay-workers-modal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1390,6 +1516,8 @@ auth.onAuthStateChanged(function(user) {
     // Show settings tab and role badge for admin
     if (ADMINS.indexOf(user.email) >= 0) {
       document.getElementById("tab-settings-btn").style.display = "block";
+      var statBtn = document.getElementById("tab-stats-btn");
+      if(statBtn) statBtn.style.display = "block";
       document.getElementById("user-role").textContent = "ADMIN";
       document.getElementById("user-role").style.background = "rgba(255,208,128,.2)";
       document.getElementById("user-role").style.color = "#ffd080";
@@ -1562,7 +1690,7 @@ function resetPrices() {
 function switchTab(t, el) {
   document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
   el.classList.add("active");
-  ["works","parts","service","cash","active","archive","settings","svcprices","presets"].forEach(function(id){
+  ["works","parts","service","cash","pay","stats","active","archive","settings","svcprices","presets"].forEach(function(id){
     var e = document.getElementById("tab-"+id);
     if (!e) return;
     e.style.display = id===t ? (id==="works"||id==="parts"||id==="service"?"grid":"block") : "none";
@@ -1571,6 +1699,8 @@ function switchTab(t, el) {
   if (t === "parts") pmInit();
   if (t === "service") soInit();
   if (t === "cash") cashInit();
+  if (t === "pay") payInit();
+  if (t === "stats") statsInit();
   if (t === "archive") loadArchive();
   if (t === "settings") { initDefaultPrices(); renderSettingsContent(); }
   if (t === "svcprices") { soRenderPricesEditor(); }
@@ -1936,7 +2066,7 @@ function buildCard(doc, showMoveBtn) {
   var id = doc.id;
   _cardDocs[id] = doc;
   var dt = r.date || "";
-  var statusMap = {preliminary:"Попередній",final:"Фінальний",insurance:"Страхова",done:"Завершено"};
+  var statusMap = {preliminary:"Розрахунок",in_work:"В роботі",final:"Фінальний",insurance:"Страхова",done:"Завершено"};
   var statusClass = {preliminary:"",final:"status-final",insurance:"status-insurance",done:"status-done"};
   var status = statusMap[r.status] || r.status || "";
 
@@ -2432,7 +2562,7 @@ function executePrint(){
   var clEl   = document.getElementById(printWorks ? "w-client" : "pm-client");
   var dtEl   = document.getElementById(printWorks ? "w-date"   : "pm-date");
   var stEl   = document.getElementById(printWorks ? "w-status" : null);
-  var statusMap={preliminary:"\u041f\u043e\u043f\u0435\u0440\u0435\u0434\u043d\u0456\u0439",final:"\u0424\u0456\u043d\u0430\u043b\u044c\u043d\u0438\u0439",insurance:"\u0421\u0442\u0440\u0430\u0445\u043e\u0432\u0430",done:"\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e"};
+  var statusMap={preliminary:"\u0420\u043e\u0437\u0440\u0430\u0445\u0443\u043d\u043e\u043a",in_work:"\u0412 \u0440\u043e\u0431\u043e\u0442\u0456",final:"\u0424\u0456\u043d\u0430\u043b\u044c\u043d\u0438\u0439",insurance:"\u0421\u0442\u0440\u0430\u0445\u043e\u0432\u0430",done:"\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e"};
 
   document.getElementById("ph-car").textContent     = (carEl && carEl.value) || "\u2014";
   document.getElementById("ph-client").textContent  = (clEl  && clEl.value)  || "";
@@ -2539,7 +2669,7 @@ function executePrint(){
   document.getElementById("ph-car").textContent    = carVal;
   document.getElementById("ph-client").textContent = clientVal;
   document.getElementById("ph-date").textContent   = (vinVal ? "VIN: "+vinVal+" \xb7 " : "") + dateVal;
-  var statusMap = {preliminary:"\u041f\u043e\u043f\u0435\u0440\u0435\u0434\u043d\u0456\u0439",final:"\u0424\u0456\u043d\u0430\u043b\u044c\u043d\u0438\u0439",insurance:"\u0421\u0442\u0440\u0430\u0445\u043e\u0432\u0430",done:"\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e"};
+  var statusMap = {preliminary:"\u0420\u043e\u0437\u0440\u0430\u0445\u0443\u043d\u043e\u043a",in_work:"\u0412 \u0440\u043e\u0431\u043e\u0442\u0456",final:"\u0424\u0456\u043d\u0430\u043b\u044c\u043d\u0438\u0439",insurance:"\u0421\u0442\u0440\u0430\u0445\u043e\u0432\u0430",done:"\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e"};
   var statusEl = srcMode==="works" ? document.getElementById("w-status") : null;
   document.getElementById("ph-status").textContent = statusEl ? (statusMap[statusEl.value]||"") : "";
   document.getElementById("ph-master").textContent = "\u041c\u0430\u0439\u0441\u0442\u0435\u0440: " + currentUserName;
@@ -2681,7 +2811,7 @@ function printCalc(){
   document.getElementById("ph-car").textContent = car;
   document.getElementById("ph-client").textContent = document.getElementById("w-client").value || "";
   document.getElementById("ph-date").textContent = (vin ? "VIN: "+vin+" · " : "") + document.getElementById("w-date").value;
-  var statusMap = {preliminary:"Попередній",final:"Фінальний",insurance:"Страхова",done:"Завершено"};
+  var statusMap = {preliminary:"Розрахунок",in_work:"В роботі",final:"Фінальний",insurance:"Страхова",done:"Завершено"};
   document.getElementById("ph-status").textContent = statusMap[document.getElementById("w-status").value] || "";
   document.getElementById("ph-master").textContent = "Майстер: " + currentUserName;
   // Set document title = PDF filename
@@ -5376,6 +5506,408 @@ document.addEventListener("click", function(e){
   var dd = document.getElementById("cash-presets-dd");
   if(dd && !dd.contains(e.target) && e.target.id !== "cash-modal-desc") dd.style.display="none";
 });
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ЗАРПЛАТА (v1) ────────────────────────────────────────────────────────────
+// Баланс = Σ нарахувань − Σ виплат, у ДОЛАРАХ (бо роботи в прайсі в USD, і так
+// ліміт не «пливе» від курсу). Виплати — в гривні, курс фіксується в записі.
+// Ліміт: по кожному авто працівники РАЗОМ не можуть отримати більше 50% від
+// суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
+// ══════════════════════════════════════════════════════════════════════════════
+var PAY_SHARE = 0.5;
+var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [];
+var PAY_SEL_WORKER = null, PAY_AC_REC = null;
+var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник"};
+
+// Яка спеціальність «годується» з якої категорії робіт
+function payRoleOfCat(cat){
+  if(cat === CAT_KUZ) return "kuz";
+  if(cat === CAT_SLU || cat === CAT_BEZ) return "slu";
+  return "";   // малярні та сторонні — поза схемою
+}
+
+// Вартість однієї роботи в USD (коеф., знижки, валюта прайсу) — та сама логіка, що й у saveW
+function payWorkUSD(w, rec){
+  var cur = (typeof DB !== "undefined" && DB[w.cat]) ? DB[w.cat].cur : "usd";
+  var p = (w.price||0) * (w.coeff||1);
+  if(w.cat === CAT_MAL && rec.malType === "bud") p = p * 0.85;
+  var disc = (w.cat === CAT_KUZ) ? (rec.discKuz||0) : ((w.cat === CAT_SLU) ? (rec.discSlu||0) : 0);
+  var rate = rec.rate || usdRate || 44.1;
+  var pUSD = (cur === "uah") ? (p / rate) : p;
+  return pUSD * (1 - disc);
+}
+
+function payFundFor(rec){
+  var f = {slu:0, kuz:0};
+  (rec.works||[]).forEach(function(w){
+    var r = payRoleOfCat(w.cat);
+    if(r) f[r] += payWorkUSD(w, rec);
+  });
+  f.slu *= PAY_SHARE; f.kuz *= PAY_SHARE;
+  return f;
+}
+function payAccruedFor(calcId, role){
+  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.role===role) ? (a.amountUSD||0) : 0); }, 0);
+}
+function payAccruedWork(calcId, workUid){
+  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.workUid===workUid) ? (a.partPct||0) : 0); }, 0);
+}
+function payBalance(wid){
+  var acc = PAY_ACCRUALS.reduce(function(s,a){ return s + (a.workerId===wid ? (a.amountUSD||0) : 0); }, 0);
+  var pd  = PAY_PAYMENTS.reduce(function(s,p){ return s + (p.workerId===wid ? (p.amountUSD||0) : 0); }, 0);
+  return {acc:acc, paid:pd, bal:acc-pd};
+}
+
+// ── ЗАВАНТАЖЕННЯ ──
+function payInit(){ payLoadAll(); }
+function payLoadAll(){
+  Promise.all([
+    db.collection("workers").get(),
+    db.collection("work_accruals").get(),
+    db.collection("worker_payments").get(),
+    db.collection("calculations").where("type","==","works").limit(400).get()
+  ]).then(function(res){
+    PAY_WORKERS = []; res[0].forEach(function(d){ PAY_WORKERS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_ACCRUALS = []; res[1].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_PAYMENTS = []; res[2].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_CARS = []; res[3].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PAY_CARS.push(Object.assign({_id:d.id}, r)); });
+    if(!PAY_WORKERS.length) paySeedWorkers(); else payRenderCards();
+  }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
+}
+function paySeedWorkers(){
+  var seed = [{name:"Чигряй Олександр",role:"slu"},{name:"Тютюшкін Дмитро",role:"slu"},
+              {name:"Стрижеус Володимир",role:"kuz"},{name:"Димура Дмитро",role:"kuz"}];
+  Promise.all(seed.map(function(w){ return db.collection("workers").add({name:w.name,role:w.role,active:true}); }))
+    .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
+}
+
+// ── КАРТКИ ПРАЦІВНИКІВ ──
+function payRenderCards(){
+  var el = document.getElementById("pay-cards"); if(!el) return;
+  el.innerHTML = "";
+  PAY_WORKERS.filter(function(w){ return w.active !== false; }).forEach(function(w){
+    var b = payBalance(w._id);
+    var card = document.createElement("div");
+    card.className = "pay-card" + (PAY_SEL_WORKER===w._id ? " sel" : "");
+    var cls = b.bal > 0.5 ? "pos" : (b.bal < -0.5 ? "neg" : "zero");
+    card.innerHTML =
+      '<div class="pay-nm">'+escH(w.name)+'</div>'+
+      '<div class="pay-rl">'+(PAY_ROLE_LBL[w.role]||"")+'</div>'+
+      '<div class="pay-bal '+cls+'">'+(b.bal>0?"+":"")+b.bal.toFixed(2)+' $</div>'+
+      '<div class="pay-sub">≈ '+Math.round(b.bal*(usdRate||44.1)).toLocaleString("uk-UA")+' грн · нарах. '+
+      b.acc.toFixed(0)+'$ · випл. '+b.paid.toFixed(0)+'$</div>';
+    var btns = document.createElement("div"); btns.className = "pay-cbtns";
+    var b1 = document.createElement("button"); b1.textContent = "Історія";
+    (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
+    var b2 = document.createElement("button"); b2.textContent = "Виплатити";
+    (function(id){ b2.onclick = function(){ payOpenPayout(id); }; })(w._id);
+    btns.appendChild(b1); btns.appendChild(b2); card.appendChild(btns);
+    el.appendChild(card);
+  });
+  payRenderLedger();
+}
+
+function payRenderLedger(){
+  var el = document.getElementById("pay-ledger"); if(!el) return;
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_SEL_WORKER; });
+  if(!w){ el.innerHTML = ""; return; }
+  var rows = [];
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id)
+    rows.push({d:a.date, t:"нарахування", txt:(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)", v:(a.amountUSD||0)}); });
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id)
+    rows.push({d:p.date, t:(p.type==="advance"?"аванс":"виплата"), txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-(p.amountUSD||0)}); });
+  rows.sort(function(a,b){ return (b.d||"").localeCompare(a.d||""); });
+  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">'+escH(w.name)+' — історія</div>'+
+          '<table><tr><th>Дата</th><th>Тип</th><th>Опис</th><th style="text-align:right">Сума, $</th></tr>';
+  if(!rows.length) h += '<tr><td colspan="4" class="pay-sub">Операцій ще немає</td></tr>';
+  rows.forEach(function(r){
+    h += '<tr><td>'+escH(r.d||"")+'</td><td>'+r.t+'</td><td>'+escH(r.txt)+'</td>'+
+         '<td style="text-align:right" class="'+(r.v>=0?"a":"p")+'">'+(r.v>=0?"+":"")+r.v.toFixed(2)+'</td></tr>';
+  });
+  el.innerHTML = h + '</table></div>';
+}
+
+// ── ПРАЦІВНИКИ ──
+function payClose(id){ var e=document.getElementById(id); if(e) e.style.display="none"; }
+function payOpenWorkers(){
+  var el = document.getElementById("pay-wk-list");
+  el.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false;}).map(function(w){
+    return '<div class="pay-wk"><span>'+escH(w.name)+' <span style="color:var(--tx3)">· '+(PAY_ROLE_LBL[w.role]||"")+'</span></span>'+
+           '<span style="cursor:pointer;color:var(--rd);font-size:16px" onclick="payDelWorker(\''+w._id+'\')">&#215;</span></div>';
+  }).join("") || '<div class="pay-sub">Порожньо</div>';
+  document.getElementById("pay-workers-modal").style.display = "flex";
+}
+function payAddWorker(){
+  var n = document.getElementById("pay-wk-name").value.trim();
+  var r = document.getElementById("pay-wk-role").value;
+  if(!n){ showToast("Вкажіть прізвище та імʼя"); return; }
+  db.collection("workers").add({name:n, role:r, active:true}).then(function(){
+    document.getElementById("pay-wk-name").value = "";
+    payLoadAll(); showToast("Додано: "+n); payClose("pay-workers-modal");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function payDelWorker(id){
+  if(!confirm("Прибрати працівника зі списку? Історія збережеться.")) return;
+  db.collection("workers").doc(id).update({active:false})
+    .then(function(){ payLoadAll(); payClose("pay-workers-modal"); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+// ── НАРАХУВАННЯ ──
+function payOpenAccrue(){
+  if(!PAY_WORKERS.length){ showToast("Спершу додайте працівників"); return; }
+  var ws = document.getElementById("pay-ac-worker");
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false;}).map(function(w){
+    return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>';
+  }).join("");
+  var cs = document.getElementById("pay-ac-car");
+  cs.innerHTML = PAY_CARS.length
+    ? PAY_CARS.map(function(c){ return '<option value="'+c._id+'">'+escH(c.car||"")+(c.vin?" · "+escH(c.vin):"")+'</option>'; }).join("")
+    : '<option value="">— немає авто у статусі «В роботі» —</option>';
+  document.getElementById("pay-ac-status").textContent = "";
+  document.getElementById("pay-accrue-modal").style.display = "flex";
+  payAccrueCarChanged();
+}
+
+function payAccrueCarChanged(){
+  var worker = PAY_WORKERS.find(function(w){ return w._id===document.getElementById("pay-ac-worker").value; });
+  var rec = PAY_CARS.find(function(c){ return c._id===document.getElementById("pay-ac-car").value; });
+  PAY_AC_REC = rec;
+  var fundEl = document.getElementById("pay-ac-fund"), wrap = document.getElementById("pay-ac-works");
+  if(!worker || !rec){ fundEl.textContent=""; wrap.innerHTML=""; return; }
+  var role = worker.role, funds = payFundFor(rec);
+  var fund = funds[role]||0, used = payAccruedFor(rec._id, role), left = fund-used;
+  fundEl.innerHTML = 'Фонд ('+(PAY_ROLE_LBL[role]||"")+') по авто: <b>'+fund.toFixed(2)+' $</b> · нараховано '+
+    used.toFixed(2)+' $ · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+left.toFixed(2)+' $</b>';
+  var works = (rec.works||[]).filter(function(w){ return payRoleOfCat(w.cat)===role; });
+  if(!works.length){ wrap.innerHTML='<div style="padding:12px" class="pay-sub">У цього авто немає робіт цієї спеціальності</div>'; return; }
+  var h = '<div class="pay-wrow head"><div>Робота</div><div style="text-align:right">Клієнту,$</div><div style="text-align:right">Готово</div><div style="text-align:right">Виконав,%</div></div>';
+  works.forEach(function(w,i){
+    var usd = payWorkUSD(w, rec);
+    var done = payAccruedWork(rec._id, w.uid);
+    var lft = Math.max(0, 100-done);
+    h += '<div class="pay-wrow">'+
+         '<div>'+escH(w.name)+(w.side?' <span style="color:var(--tx3)">('+escH(w.side)+')</span>':'')+'</div>'+
+         '<div style="text-align:right">'+usd.toFixed(2)+'</div>'+
+         '<div style="text-align:right" class="done">'+done.toFixed(0)+'%</div>'+
+         '<div><input type="number" min="0" max="'+lft+'" step="10" value="0" '+
+         'data-uid="'+escH(w.uid||("w"+i))+'" data-usd="'+usd+'" data-name="'+escH(w.name)+'" data-cat="'+escH(w.cat)+'"/></div></div>';
+  });
+  wrap.innerHTML = h;
+}
+
+function payDoAccrue(){
+  var worker = PAY_WORKERS.find(function(w){ return w._id===document.getElementById("pay-ac-worker").value; });
+  var rec = PAY_AC_REC, st = document.getElementById("pay-ac-status");
+  if(!worker || !rec){ st.className="pay-status err"; st.textContent="Оберіть працівника та авто"; return; }
+  var role = worker.role, today = new Date().toISOString().slice(0,10);
+  var inputs = document.querySelectorAll("#pay-ac-works input");
+  var batch = [], total = 0;
+  for(var i=0;i<inputs.length;i++){
+    var pct = parseFloat(inputs[i].value)||0;
+    if(pct <= 0) continue;
+    var usd = parseFloat(inputs[i].getAttribute("data-usd"))||0;
+    var amt = usd*(pct/100)*PAY_SHARE;
+    total += amt;
+    batch.push({ workerId:worker._id, workerName:worker.name, role:role,
+      calcId:rec._id, carName:rec.car||"", vin:rec.vin||"",
+      workUid:inputs[i].getAttribute("data-uid"), workName:inputs[i].getAttribute("data-name"),
+      cat:inputs[i].getAttribute("data-cat"), clientUSD:usd, partPct:pct,
+      amountUSD:Math.round(amt*100)/100, date:today,
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+  }
+  if(!batch.length){ st.className="pay-status err"; st.textContent="Вкажіть % виконання хоча б по одній роботі"; return; }
+  var left = (payFundFor(rec)[role]||0) - payAccruedFor(rec._id, role);
+  if(total > left + 0.01){
+    st.className="pay-status err";
+    st.textContent="Перевищено ліміт 50% по авто: доступно "+left.toFixed(2)+" $, а нараховуєте "+total.toFixed(2)+" $";
+    return;
+  }
+  st.className="pay-status"; st.textContent="Збереження...";
+  Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); }))
+    .then(function(){ payClose("pay-accrue-modal");
+      showToast("Нараховано "+total.toFixed(2)+" $ — "+worker.name); payLoadAll(); })
+    .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+}
+
+// ── ВИПЛАТА ──
+function payOpenPayout(wid){
+  if(!isAdmin()){ showToast("Виплату проводить власник / головний майстер"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; });
+  if(!w) return;
+  PAY_SEL_WORKER = wid;
+  var b = payBalance(wid), rate = usdRate||44.1;
+  document.getElementById("pay-po-title").textContent = "Виплата — "+w.name;
+  document.getElementById("pay-po-amount").value = b.bal > 0 ? Math.round(b.bal*rate) : "";
+  document.getElementById("pay-po-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("pay-po-note").value = "";
+  document.getElementById("pay-po-info").textContent =
+    "Баланс: "+b.bal.toFixed(2)+" $ ≈ "+Math.round(b.bal*rate).toLocaleString("uk-UA")+" грн (курс "+rate.toFixed(2)+")";
+  document.getElementById("pay-payout-modal").style.display = "flex";
+}
+
+function payDoPayout(){
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_SEL_WORKER; });
+  if(!w){ showToast("Оберіть працівника"); return; }
+  var uah = parseFloat(document.getElementById("pay-po-amount").value)||0;
+  if(uah <= 0){ showToast("Вкажіть суму"); return; }
+  var type = document.getElementById("pay-po-type").value;
+  var date = document.getElementById("pay-po-date").value || new Date().toISOString().slice(0,10);
+  var note = document.getElementById("pay-po-note").value.trim();
+  var rate = usdRate||44.1;
+  db.collection("worker_payments").add({
+    workerId:w._id, workerName:w.name, role:w.role,
+    amountUAH:uah, rate:rate, amountUSD:Math.round((uah/rate)*100)/100,
+    type:type, date:date, note:note,
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+  }).then(function(){
+    // Виплата працівнику = витрата з каси (щоб не вести подвійний облік)
+    db.collection("cash_operations").add({
+      type:"-", amount:uah, desc:(type==="advance"?"Аванс — ":"Зарплата — ")+w.name,
+      car:"", vin:"", dest:"", markup:1, linked:true, date:date,
+      ts:date+"T"+new Date().toTimeString().substr(0,8),
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+    }).catch(function(){});
+    payClose("pay-payout-modal");
+    showToast("Виплачено "+uah.toLocaleString("uk-UA")+" грн — "+w.name);
+    payLoadAll();
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── СТАТИСТИКА МІСЯЦЯ (лише власник) ─────────────────────────────────────────
+// Завершені авто + брудний прибуток по кожному, і фактично виплачена зарплата
+// по кожному працівнику за календарний місяць.
+// ══════════════════════════════════════════════════════════════════════════════
+var STATS_CALCS = [], STATS_CASH = [];
+
+function statsInit(){
+  var m = document.getElementById("stats-month");
+  if(m && !m.value) m.value = new Date().toISOString().slice(0,7);
+  Promise.all([
+    db.collection("calculations").limit(600).get(),
+    db.collection("worker_payments").get(),
+    db.collection("work_accruals").get(),
+    db.collection("cash_operations").where("type","==","-").limit(1000).get()
+  ]).then(function(res){
+    STATS_CALCS = []; res[0].forEach(function(d){ STATS_CALCS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_PAYMENTS = []; res[1].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_ACCRUALS = []; res[2].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
+    STATS_CASH = []; res[3].forEach(function(d){ STATS_CASH.push(Object.assign({_id:d.id}, d.data())); });
+    if(!PAY_WORKERS.length){
+      db.collection("workers").get().then(function(s){
+        PAY_WORKERS = []; s.forEach(function(d){ PAY_WORKERS.push(Object.assign({_id:d.id}, d.data())); });
+        statsRender();
+      }).catch(statsRender);
+    } else statsRender();
+  }).catch(function(e){ showToast("Статистика — помилка: "+e.message); });
+}
+
+// Місяць завершення: беремо updatedAt (коли поставили «Завершено»), інакше дату калькуляції
+function statsMonthOf(r){
+  try { if(r.updatedAt && r.updatedAt.toDate) return r.updatedAt.toDate().toISOString().slice(0,7); } catch(e){}
+  return (r.date||"").slice(0,7);
+}
+
+function statsRender(){
+  var mo = document.getElementById("stats-month").value || new Date().toISOString().slice(0,7);
+  var rate = usdRate||44.1;
+
+  // 1) Завершені авто (роботи) за місяць
+  var done = STATS_CALCS.filter(function(r){
+    return r.type==="works" && r.status==="done" && statsMonthOf(r)===mo;
+  });
+
+  var totIn=0, totOut=0, totProfit=0;
+  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">Завершені авто — '+done.length+'</div>'+
+    '<table><tr><th>Авто</th><th>VIN</th><th style="text-align:right">Клієнту</th>'+
+    '<th style="text-align:right">Закупка ЗЧ</th><th style="text-align:right">Зарплата</th>'+
+    '<th style="text-align:right">Витрати</th><th style="text-align:right">Маляри</th>'+
+    '<th style="text-align:right">Прибуток</th></tr>';
+
+  if(!done.length) h += '<tr><td colspan="8" class="pay-sub">За цей місяць завершених авто немає</td></tr>';
+
+  done.forEach(function(r){
+    var vin = (r.vin||"").toUpperCase();
+    // Дохід: роботи + запчастини (парна калькуляція по VIN)
+    var worksUAH = r.totalUAH || Math.round((r.totalUSD||0)*rate);
+    var pc = STATS_CALCS.filter(function(x){ return x.type==="parts_v2" && (x.vin||"").toUpperCase()===vin && vin; });
+    var partsUAH = 0, partsBuy = 0;
+    pc.forEach(function(p){
+      partsUAH += (p.totalUAH||0);
+      (p.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(i){
+        partsBuy += (i.buyPrice||0)*(i.qty||1);
+        (i.variants||[]).forEach(function(v){ partsBuy += (v.buyPrice||0)*(v.qty||1); });
+      });});
+    });
+    // Зарплата по цьому авто (нарахування, USD -> грн)
+    var salUSD = PAY_ACCRUALS.reduce(function(s,a){ return s + (a.calcId===r._id ? (a.amountUSD||0) : 0); },0);
+    var salUAH = Math.round(salUSD*rate);
+    // Витрати з каси на це авто
+    var expUAH = STATS_CASH.reduce(function(s,o){
+      var m1 = vin && (o.vin||"").toUpperCase()===vin;
+      var m2 = o.car && r.car && o.car===r.car;
+      return s + ((m1||m2) ? (o.amount||0) : 0);
+    },0);
+    var mal = r.malPaidUAH || 0;
+    var income = worksUAH + partsUAH;
+    var outgo  = partsBuy + salUAH + expUAH + mal;
+    var profit = income - outgo;
+    totIn += income; totOut += outgo; totProfit += profit;
+
+    h += '<tr><td>'+escH(r.car||"")+'</td><td style="font-family:var(--mono);font-size:10px">'+escH(vin)+'</td>'+
+      '<td style="text-align:right">'+income.toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+partsBuy.toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+salUAH.toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+expUAH.toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right"><input type="number" value="'+mal+'" min="0" style="width:80px;text-align:right;'+
+        'background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:11px;color:var(--tx)" '+
+        'onchange="statsSetMal(\''+r._id+'\',this.value)"/></td>'+
+      '<td style="text-align:right;font-weight:bold;color:'+(profit>=0?"var(--gr)":"var(--rd)")+'">'+profit.toLocaleString("uk-UA")+'</td></tr>';
+  });
+  h += '</table></div>';
+  document.getElementById("stats-cars").innerHTML = h;
+
+  // 2) Фактично виплачено працівникам за місяць
+  var pays = PAY_PAYMENTS.filter(function(p){ return (p.date||"").slice(0,7)===mo; });
+  var byW = {};
+  pays.forEach(function(p){
+    if(!byW[p.workerId]) byW[p.workerId] = {name:p.workerName||"", uah:0, adv:0};
+    byW[p.workerId].uah += (p.amountUAH||0);
+    if(p.type==="advance") byW[p.workerId].adv += (p.amountUAH||0);
+  });
+  var w2 = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">Виплачено працівникам за місяць</div>'+
+    '<table><tr><th>Працівник</th><th style="text-align:right">Всього, грн</th>'+
+    '<th style="text-align:right">з них аванс</th><th style="text-align:right">Баланс зараз, $</th></tr>';
+  var totPay = 0;
+  Object.keys(byW).forEach(function(k){
+    var b = payBalance(k); totPay += byW[k].uah;
+    w2 += '<tr><td>'+escH(byW[k].name)+'</td>'+
+      '<td style="text-align:right">'+Math.round(byW[k].uah).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+Math.round(byW[k].adv).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right;color:'+(b.bal>=0?"var(--gr)":"var(--rd)")+'">'+b.bal.toFixed(2)+'</td></tr>';
+  });
+  if(!Object.keys(byW).length) w2 += '<tr><td colspan="4" class="pay-sub">Виплат за цей місяць немає</td></tr>';
+  w2 += '</table></div>';
+  document.getElementById("stats-workers").innerHTML = w2;
+
+  document.getElementById("stats-sum").innerHTML =
+    'Дохід: <b>'+totIn.toLocaleString("uk-UA")+' грн</b> · Витрати: <b>'+totOut.toLocaleString("uk-UA")+
+    ' грн</b> · Брудний прибуток: <b style="color:'+(totProfit>=0?"var(--gr)":"var(--rd)")+'">'+
+    totProfit.toLocaleString("uk-UA")+' грн</b> · Виплачено зарплати: <b>'+Math.round(totPay).toLocaleString("uk-UA")+' грн</b>';
+}
+
+// Скільки фактично сплачено малярам по авто (бачить лише власник)
+function statsSetMal(calcId, val){
+  var v = parseFloat(val)||0;
+  db.collection("calculations").doc(calcId).update({malPaidUAH:v}).then(function(){
+    var r = STATS_CALCS.find(function(x){ return x._id===calcId; });
+    if(r) r.malPaidUAH = v;
+    statsRender();
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
 
 </script>
 </body>

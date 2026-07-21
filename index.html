@@ -8,6 +8,10 @@
 <meta http-equiv="Expires" content="0">
 <title>CKR — Цех Кузовного Ремонту v2.2</title>
 <!-- v2.1.0 -->
+<!-- Lora — шрифт головного меню -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -52,7 +56,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 
 /* ── TABS ── */
 .tabs{display:flex;border-bottom:1px solid var(--bd);background:var(--bg2);padding:0 20px}
-.tab{padding:11px 14px;font-family:var(--mono);font-size:11px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.5px}
+.tab{padding:11px 14px;font-family:'Lora',Georgia,'Times New Roman',serif;font-weight:700;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px}
 .tab:hover{color:var(--tx)}.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
 
 /* ── LAYOUT ── */
@@ -344,6 +348,8 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .pr-del:hover{color:var(--rd)}
 .pr-var{color:var(--tx3);cursor:pointer;padding:2px 4px;font-size:10px;transition:color .15s;border:1px solid var(--bd);border-radius:2px;font-family:var(--mono)}
 .pr-var:hover{color:var(--bl);border-color:var(--bl)}
+/* Тип деталі (аналог/ориг./б.в.) — тільки для друку, на екрані є селект */
+.pr-avail-txt{display:none}
 
 /* Summary panel */
 .pm-summary{background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:12px}
@@ -469,16 +475,16 @@ input, select, button, .btn, .pp-inp, .cinp,
   .pt{font-size:9pt!important;table-layout:fixed!important;width:100%!important}
   .pt th{font-size:8pt!important;background:#e3edf8!important;color:#0d2b6b!important;overflow:hidden!important}
   .pt td{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
-  /* Print column widths — narrow Вар & Наявність, wide Назва */
-  .pt th:nth-child(1), .pt td:nth-child(1) { width:3%!important; }
-  .pt th:nth-child(2), .pt td:nth-child(2) { width:38%!important; }
+  /* Print column widths — вужчі вартості й артикули, ширша назва (п.3.3, 3.4) */
+  .pt th:nth-child(1), .pt td:nth-child(1) { width:4%!important; }
+  .pt th:nth-child(2), .pt td:nth-child(2) { width:50%!important; }
   .pt th:nth-child(3), .pt td:nth-child(3) { width:5%!important; }
-  .pt th:nth-child(4), .pt td:nth-child(4) { width:12%!important; }
-  .pt th:nth-child(5), .pt td:nth-child(5) { width:14%!important; }
+  .pt th:nth-child(4), .pt td:nth-child(4) { width:9%!important; }
+  .pt th:nth-child(5), .pt td:nth-child(5) { width:11%!important; }
   /* With codes: redistribute */
-  body.print-with-codes .pt th:nth-child(2), body.print-with-codes .pt td:nth-child(2) { width:26%!important; }
-  body.print-with-codes .pt th:nth-child(6), body.print-with-codes .pt td:nth-child(6) { width:14%!important; }
-  body.print-with-codes .pt th:nth-child(7), body.print-with-codes .pt td:nth-child(7) { width:14%!important; }
+  body.print-with-codes .pt th:nth-child(2), body.print-with-codes .pt td:nth-child(2) { width:36%!important; }
+  body.print-with-codes .pt th:nth-child(6), body.print-with-codes .pt td:nth-child(6) { width:11%!important; }
+  body.print-with-codes .pt th:nth-child(7), body.print-with-codes .pt td:nth-child(7) { width:11%!important; }
   .pt-add-row,.pr-del,.pr-var,.pm-preset-btn{display:none!important}
   .pb.collapsed .pb-body{display:block!important}
   /* Hide blocks with no items */
@@ -592,8 +598,9 @@ input, select, button, .btn, .pp-inp, .cinp,
   .pt td:nth-child(10), .pt td:nth-child(11),
   .pt td:nth-child(12), .pt td:nth-child(13),
   .pt td:nth-child(14) { display:none!important; }
-  /* Hide avail dropdown in print, show name only */
+  /* Замість селекта наявності друкуємо тип деталі текстом: аналог / ориг. / б.в. (п.3.2) */
   .pt td:nth-child(2) select { display:none!important; }
+  .pt td:nth-child(2) .pr-avail-txt { display:inline!important; font-family:Verdana,sans-serif!important; font-size:7.5pt!important; font-weight:bold!important; color:#0d2b6b!important; white-space:nowrap!important; flex-shrink:0!important; margin-right:4px!important; }
   .pt td:nth-child(2) { white-space:normal!important; word-break:break-word!important; }
   .pt td { white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; }
   .pt td:nth-child(2) input { display:block!important; width:100%!important; border:none!important; background:transparent!important; font-size:9pt!important; white-space:normal!important; overflow:visible!important; }
@@ -1345,13 +1352,20 @@ var STO_DEFAULTS = ["Діагностика авто","Розвал/сходже
 
 var PM_AVAIL = [
   {val:"",                 label:"—"},
-  {val:"avail_orig_used",  label:"Наявність, ориг. б.в."},
-  {val:"avail_orig_new",   label:"Наявність, ориг. новий"},
-  {val:"avail_analog_new", label:"Наявність, аналог, новий"},
-  {val:"order_orig_used",  label:"Під замовл., ориг. б.в."},
-  {val:"order_orig_new",   label:"Під замовл., ориг. новий"},
-  {val:"order_analog_new", label:"Під замовл., аналог новий"}
+  {val:"avail_orig_used",  label:"Ориг. б.в. · наявн."},
+  {val:"avail_orig_new",   label:"Ориг. новий · наявн."},
+  {val:"avail_analog_new", label:"Аналог новий · наявн."},
+  {val:"order_orig_used",  label:"Ориг. б.в. · замовл."},
+  {val:"order_orig_new",   label:"Ориг. новий · замовл."},
+  {val:"order_analog_new", label:"Аналог новий · замовл."}
 ];
+
+// Підпис типу деталі (аналог / оригінал / б.в.) — використовується для друку
+function pmAvailLabel(val){
+  if(!val) return "";
+  for(var i=0;i<PM_AVAIL.length;i++){ if(PM_AVAIL[i].val===val) return PM_AVAIL[i].label; }
+  return "";
+}
 
 var wsel = {}, uidCounter = 0, parts = [], usdRate = 44.1;
 var currentUser = null, currentUserName = "";
@@ -2278,6 +2292,7 @@ function renderSettingsContent(){
 var _printMode = null;
 
 function showPrintModal(source){
+  _printMode = source || "works";   // п.3.1: запам'ятовуємо, з якої вкладки друкуємо (works / parts)
   var hasWorks = Object.keys(wsel).length > 0;
   var hasParts = PM_BLOCKS.some(function(b){ return b.items.some(function(i){ return i.name; }); });
   var opts = document.getElementById("print-modal-options");
@@ -2872,7 +2887,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   }
 
   // Col 1: Var label
-  var td1=mkTd("width:4%;white-space:nowrap;vertical-align:middle");
+  var td1=mkTd("width:3%;white-space:nowrap;vertical-align:middle");
   if(hasVariants||isVariant){
     var sp=document.createElement("span");
     sp.style.cssText="font-family:Verdana,sans-serif;font-size:10px;font-weight:bold;color:"+(isVariant?"var(--bl)":"var(--tx2)");
@@ -2882,14 +2897,17 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   tr.appendChild(td1);
 
   // Col 2: Avail + Name
-  var td2=mkTd("min-width:160px;vertical-align:middle");
+  var td2=mkTd("min-width:200px;vertical-align:middle");
   var wrap=document.createElement("div");
   wrap.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=mkSel(PM_AVAIL,item.avail||"","avail");
-  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;max-width:140px;cursor:pointer";
+  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:104px;max-width:104px;cursor:pointer";
+  var availTxt=document.createElement("span");
+  availTxt.className="pr-avail-txt";
+  availTxt.textContent=pmAvailLabel(item.avail);
   var nameInp=mkInp(item.name,"\u041d\u0430\u0437\u0432\u0430...","name","text");
   nameInp.style.flex="1";
-  wrap.appendChild(availSel); wrap.appendChild(nameInp);
+  wrap.appendChild(availSel); wrap.appendChild(availTxt); wrap.appendChild(nameInp);
   td2.appendChild(wrap); tr.appendChild(td2);
 
   // Col 3: Qty
@@ -2899,36 +2917,36 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   td3.appendChild(qtyInp); tr.appendChild(td3);
 
   // Col 4: Price without discount (Вартість)
-  var td4a=mkTd("width:8%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
+  var td4a=mkTd("width:7%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
   if(isClientItem){ td4a.textContent="\u2014"; td4a.style.color="var(--tx3)"; }
   else td4a.textContent=finalRaw?finalRaw.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014";
   tr.appendChild(td4a);
 
   // Col 5: Final price with discount (Фін.вартість)
-  var td4=mkTd("width:9%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
+  var td4=mkTd("width:8%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
   td4.textContent=isClientItem?"\u0432\u0456\u0434 \u043a\u043b\u0456\u0454\u043d\u0442\u0430":(finalDisc?finalDisc.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014");
   if(isClientItem) td4.style.color="var(--tx3)";
   tr.appendChild(td4);
 
   // Col 5: Main code
-  var td5=mkTd("width:10%;vertical-align:middle");
+  var td5=mkTd("width:8%;vertical-align:middle");
   td5.appendChild(mkInp(item.code,"OEM/\u0430\u0440\u0442.","code","text")); tr.appendChild(td5);
 
   // Col 6: Alt code
-  var td6=mkTd("width:10%;vertical-align:middle");
+  var td6=mkTd("width:8%;vertical-align:middle");
   td6.appendChild(mkInp(item.altCode,"\u0430\u043b\u044c\u0442. \u0430\u0440\u0442.","altCode","text")); tr.appendChild(td6);
 
   // Col 7: Link (supplier select removed, using text field instead)
   // Col 8: Link
-  var td8=mkTd("width:7%;vertical-align:middle");
+  var td8=mkTd("width:5%;vertical-align:middle");
   td8.appendChild(mkInp(item.link,"\u043f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f","link","text")); tr.appendChild(td8);
 
   // Col 8b: Supplier name
-  var td8b=mkTd("width:8%;vertical-align:middle");
+  var td8b=mkTd("width:7%;vertical-align:middle");
   td8b.appendChild(mkInp(item.supplierName||"","\u041d\u0430\u0437\u0432\u0430 \u043f\u043e\u0441\u0442\u0430\u0447.","supplierName","text")); tr.appendChild(td8b);
 
   // Col 9: Buy price
-  var td9=mkTd("width:8%;vertical-align:middle");
+  var td9=mkTd("width:6%;vertical-align:middle");
   var priceInp=document.createElement("input");
   priceInp.type="number"; priceInp.min="0"; priceInp.value=item.buyPrice||""; priceInp.placeholder="0";
   priceInp.style.cssText="width:100%;background:transparent;border:none;color:var(--ac);font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
@@ -2936,7 +2954,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   td9.appendChild(priceInp); tr.appendChild(td9);
 
   // Col 10: Markup select
-  var td10=mkTd("width:7%;vertical-align:middle");
+  var td10=mkTd("width:6%;vertical-align:middle");
   var markupOpts=[
     {val:"auto", label:"\xd7"+markup+" (avto.pro)"},
     {val:"at",   label:"\xd71.4 (AT/AN)"},
@@ -2947,7 +2965,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   td10.appendChild(markupSel); tr.appendChild(td10);
 
   // Col 11: Status
-  var td11=mkTd("width:12%;vertical-align:middle");
+  var td11=mkTd("width:10%;vertical-align:middle");
   var statSel=mkSel(PM_STATUSES,item.status||"dash","status","ps "+statusObj.cls);
   td11.appendChild(statSel); tr.appendChild(td11);
 
@@ -2969,7 +2987,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(isAdmin()){
     var disc = document.getElementById("pm-disc") ? document.getElementById("pm-disc").value : "none";
     var profit = pmProfit(item, disc);
-    var td13 = mkTd("width:7%;vertical-align:middle;text-align:right;white-space:nowrap;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold");
+    var td13 = mkTd("width:6%;vertical-align:middle;text-align:right;white-space:nowrap;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold");
     td13.textContent = profit ? profit.toLocaleString("uk-UA") + " грн" : "—";
     td13.style.color = profit > 0 ? "var(--gr)" : profit < 0 ? "var(--rd)" : "var(--tx3)";
     tr.appendChild(td13);
@@ -3545,13 +3563,13 @@ function pmRender(){
     table.className = "pt";
     var thead = document.createElement("thead");
     var hrow = document.createElement("tr");
-    [["4%","\u0412\u0430\u0440"],["26%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
-     ["4%","\u041a-\u0442\u044c"],["8%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["9%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
-     ["10%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
-     ["10%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
-     ["7%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["9%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
-     ["7%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
-     ["7%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["12%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%",""]
+    [["3%","\u0412\u0430\u0440"],["34%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
+     ["4%","\u041a-\u0442\u044c"],["7%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["8%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
+     ["8%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
+     ["8%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
+     ["5%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["7%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
+     ["6%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
+     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["10%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%",""]
     ].forEach(function(h){
       var th = document.createElement("th");
       th.style.width = h[0];

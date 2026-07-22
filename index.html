@@ -165,6 +165,14 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .gtrow.main .gtval{font-size:18px;font-weight:700;color:var(--blue-dark)}
 .gt-sub{font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:right}
 .acts{padding:10px 14px;border-top:1px solid var(--bd);display:flex;gap:7px;flex-wrap:wrap;background:var(--bg2)}
+/* Оплати: інтерактивні поля лише на екрані, у друку — чистий текст */
+.w-pay-print{display:none}
+@media print{
+  .pm-payments{display:none!important}
+  .pm-add-pay{display:none!important}
+  .w-pay-print{display:block!important;font-family:Arial,sans-serif;font-size:9pt;color:#000;margin-top:6px}
+  .w-pay-print .wpp-row{display:flex;justify-content:space-between;padding:2px 0}
+}
 .btn{padding:7px 13px;border-radius:3px;font-family:var(--mono);font-size:11px;cursor:pointer;border:1px solid;transition:all .15s;letter-spacing:.5px}
 .btn-p{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark);font-weight:500}
 .btn-p:hover{background:var(--blue-mid)}
@@ -947,7 +955,13 @@ input, select, button, .btn, .pp-inp, .cinp,
           <div class="gt-sub" id="gt-total-usd"></div>
         </div>
       </div>
-      <div class="gtrow" style="margin-top:8px"><span class="gtlbl">Аванс (грн)</span><input class="pp-inp" type="number" id="w-pp" value="0" min="0" oninput="wRecalc()"/></div>
+      <div class="pm-payments" style="margin-top:10px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Оплати клієнта</div>
+        <div id="w-pay-list"></div>
+        <div class="pm-add-pay" onclick="wAddPayment()">＋ Додати оплату</div>
+      </div>
+      <div class="w-pay-print" id="w-pay-print"></div>
+      <div class="gtrow" style="margin-top:8px"><span class="gtlbl">Сплачено</span><span class="gtval gr" id="gt-paid">—</span></div>
       <div class="gtrow"><span class="gtlbl">Залишок</span><span class="gtval bl" id="gt-bal">—</span></div>
     </div>
     <div class="acts">
@@ -1147,6 +1161,7 @@ input, select, button, .btn, .pp-inp, .cinp,
     </tr>
   </table>
   <div id="so-pf-words" style="margin-top:8px;font-family:Arial,sans-serif;font-size:9pt;color:#444;font-style:italic"></div>
+  <div id="so-pf-payments" style="margin-top:10px;font-family:Arial,sans-serif;font-size:10pt;color:#000"></div>
 </div>
 
 <!-- SVC PRICES EDITOR TAB -->
@@ -1534,6 +1549,7 @@ function pmAvailLabel(val){
 }
 
 var wsel = {}, uidCounter = 0, parts = [], usdRate = 44.1;
+var wPayments = [];   // оплати клієнта по роботах (рядки з датою/коментарем, грн або $)
 var currentUser = null, currentUserName = "";
 var DEFAULT_DB_PRICES = null;
 
@@ -1975,11 +1991,33 @@ function blockTotal(items,cur,disc,malBud){
   return{usd:Math.round((sumUSD-discAmt)*100)/100,uah:Math.round((sumUSD-discAmt)*usdRate),disc:Math.round(discAmt*usdRate)};
 }
 
+function wAddPayment(){
+  wPayments.push({id:"wp"+(++uidCounter), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
+  wRenderPayments(); wRecalc();
+}
+function wRenderPayments(){
+  var list = document.getElementById("w-pay-list"); if(!list) return;
+  list.innerHTML = wPayments.map(function(p,i){
+    return payRowHtml(p, i, "wPayments", "wRecalc()", "wRenderPayments()");
+  }).join("");
+  // Друкована версія — чистим текстом (заголовок «Оплати клієнта» + рядки)
+  var pr = document.getElementById("w-pay-print"); if(!pr) return;
+  var typeMap = {cash:"Готівка", bank:"Безготівка"};
+  var rows = wPayments.filter(function(p){ return p.amount; });
+  if(!rows.length){ pr.innerHTML = ""; return; }
+  var h = '<div style="text-transform:uppercase;letter-spacing:.7px;color:#666;margin:4px 0 3px">Оплати клієнта</div>';
+  rows.forEach(function(p){
+    var amt = p.cur==="usd" ? (p.amount+" $ ("+payAmountUAH(p).toLocaleString("uk-UA")+" грн)") : (p.amount.toLocaleString("uk-UA")+" грн");
+    h += '<div class="wpp-row"><span>'+(p.date||"")+(p.type?" · "+(typeMap[p.type]||p.type):"")+(p.comment?" · "+p.comment:"")+'</span><span style="font-weight:600">'+amt+'</span></div>';
+  });
+  pr.innerHTML = h;
+}
+
 function wRecalc(){
   var discKuz=parseFloat(document.getElementById("disc-kuz").value)||0;
   var discSlu=parseFloat(document.getElementById("disc-slu").value)||0;
   var malType=document.getElementById("mal-type").value;
-  var pp=parseFloat(document.getElementById("w-pp").value)||0;
+  var pp=paySumUAH(wPayments);
   var cats={};
   Object.keys(wsel).forEach(function(uid){var it=wsel[uid];if(!cats[it.cat])cats[it.cat]=[];cats[it.cat].push(it);});
   var kuzItems=cats[CAT_KUZ]||[],sluItems=cats[CAT_SLU]||[],bezItems=cats[CAT_BEZ]||[],malItems=cats[CAT_MAL]||[],stoItems=cats[CAT_STO]||[];
@@ -2008,6 +2046,7 @@ function wRecalc(){
   document.getElementById("gt-all-uah").textContent=allUAH?allUAH.toLocaleString("uk-UA")+" грн":"";
   document.getElementById("gt-total-uah").textContent=totalUAH.toLocaleString("uk-UA")+" грн";
   document.getElementById("gt-total-usd").textContent=totalUSD?"≈ "+totalUSD.toFixed(0)+" USD":"";
+  var paidEl=document.getElementById("gt-paid"); if(paidEl) paidEl.textContent = pp ? Math.round(pp).toLocaleString("uk-UA")+" грн" : "—";
   document.getElementById("gt-bal").textContent=(totalUAH-pp)?(Math.round(totalUAH-pp)).toLocaleString("uk-UA")+" грн":"—";
   var dr=document.getElementById("gt-disc-row");
   if(totalDisc>0){dr.style.display="flex";document.getElementById("gt-disc").textContent="−"+Math.round(totalDisc).toLocaleString("uk-UA")+" грн";}
@@ -2022,7 +2061,7 @@ function clearW(){
   document.getElementById("w-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("w-status").value="preliminary";
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
-  document.getElementById("w-pp").value="0";document.getElementById("mal-type").value="std";
+  wPayments=[];wRenderPayments();document.getElementById("mal-type").value="std";
   document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
   selectStoDefaults();renderSecs(DB);wRecalc();
   currentDocId = null;
@@ -2057,7 +2096,7 @@ function saveW(){
   var discKuz=parseFloat(document.getElementById("disc-kuz").value)||0;
   var discSlu=parseFloat(document.getElementById("disc-slu").value)||0;
   var malType=document.getElementById("mal-type").value;
-  var pp=parseFloat(document.getElementById("w-pp").value)||0;
+  var pp=paySumUAH(wPayments);
   var totalUSD=0;
   Object.keys(wsel).forEach(function(uid){
     var it=wsel[uid];var cur=DB[it.cat]?DB[it.cat].cur:"usd";
@@ -2076,10 +2115,12 @@ function saveW(){
     masterEmail:currentUser.email,
     masterName:currentUserName,
     rate:usdRate,discKuz:discKuz,discSlu:discSlu,malType:malType,pp:pp,
+    payments:JSON.parse(JSON.stringify(wPayments)),
     totalUSD:Math.round(totalUSD*100)/100,totalUAH:totalUAH,
     count:Object.keys(wsel).length,
     works:Object.keys(wsel).map(function(uid){return JSON.parse(JSON.stringify(wsel[uid]));})
   };
+  if(!confirmDoneIfUnpaid(rec.status, totalUAH, wPayments)) return;
   // Save to Firestore — update if exists, create if new
   var col = db.collection("calculations");
   if (currentDocId) {
@@ -2157,10 +2198,21 @@ function buildCard(doc, showMoveBtn) {
 }
 
 function archiveDoc(id){
-  if(!confirm("Ремонт завершено? Авто перейде в Архів.")) return;
-  db.collection("calculations").doc(id).update({status:"done",updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
-    .then(function(){ showToast("Переміщено в архів"); loadActive(); })
-    .catch(function(e){ showToast("Помилка: "+e.message); });
+  // Архів лише після оплати: спершу читаємо запис і перевіряємо залишок,
+  // щоб не «забути» внести оплату клієнта.
+  db.collection("calculations").doc(id).get().then(function(doc){
+    if(!doc.exists){ showToast("Запис не знайдено"); return; }
+    var bal = recordBalanceUAH(doc.data());
+    var msg = "Ремонт завершено? Авто перейде в Архів.";
+    if(bal > 0){
+      msg = "⚠ Оплату внесено не повністю — залишок " + bal.toLocaleString("uk-UA") + " грн.\n\n"
+          + "Спершу додайте оплату клієнта у калькуляції. Все одно завершити й архівувати?";
+    }
+    if(!confirm(msg)) return;
+    db.collection("calculations").doc(id).update({status:"done",updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+      .then(function(){ showToast("Переміщено в архів"); loadActive(); })
+      .catch(function(e){ showToast("Помилка: "+e.message); });
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
 function delDoc(id){
@@ -2343,7 +2395,9 @@ function loadRec(id){
       document.getElementById("w-status").value=r.status||"preliminary";
       document.getElementById("disc-kuz").value=r.discKuz||0;
       document.getElementById("disc-slu").value=r.discSlu||0;
-      document.getElementById("w-pp").value=r.pp||0;
+      wPayments = Array.isArray(r.payments) ? r.payments
+        : (r.pp>0 ? [{id:"wp"+(++uidCounter),amount:r.pp,cur:"uah",rate:r.rate||usdRate,type:"cash",date:r.date||"",comment:"аванс"}] : []);
+      wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
       switchTab("works",document.querySelectorAll(".tab")[0]);
       renderSecs(DB);wRecalc();
@@ -2792,7 +2846,7 @@ function executePrint(){
   });
 
   // Build print payments footer
-  var paidTotal = pmPayments.reduce(function(s,p){return s+(p.amount||0);},0);
+  var paidTotal = paySumUAH(pmPayments);
   var balance = grandTotal - paidTotal;
   var typeMap = {cash:"Готівка", bank:"Безготівка"};
 
@@ -2810,7 +2864,7 @@ function executePrint(){
       var typeLabel = typeMap[p.type]||p.type||"";
       footerHtml += '<div style="display:flex;justify-content:space-between;font-size:10pt;margin-bottom:3px">';
       footerHtml += '<span style="color:#444">'+p.date+(typeLabel?" · <b>"+typeLabel+"</b>":"")+(p.comment?" · "+p.comment:"")+'</span>';
-      footerHtml += '<span style="font-weight:600;color:#2e7d32">'+p.amount.toLocaleString("uk-UA")+" грн"+'</span>';
+      footerHtml += '<span style="font-weight:600;color:#2e7d32">'+(p.cur==="usd"?(p.amount+" $ ("+payAmountUAH(p).toLocaleString("uk-UA")+" грн)"):(p.amount.toLocaleString("uk-UA")+" грн"))+'</span>';
       footerHtml += '</div>';
     });
     footerHtml += '<div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #ddd;font-size:10pt">';
@@ -3949,7 +4003,7 @@ function pmUpdateSummary(){
   }
 
   // Payments
-  var paidTotal = pmPayments.reduce(function(s,p){return s+(p.amount||0);}, 0);
+  var paidTotal = paySumUAH(pmPayments);
   var balance = grandTotal - paidTotal;
   var ptEl = document.getElementById("pm-paid-total");
   if(ptEl) ptEl.textContent = paidTotal.toLocaleString("uk-UA") + " грн";
@@ -3973,24 +4027,59 @@ function pmUpdateSummary(){
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
 function pmAddPayment(){
-  pmPayments.push({id:uid(), amount:0, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
+  pmPayments.push({id:uid(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
   pmRenderPayments();
+}
+
+// ── ОПЛАТИ: спільні помічники (підтримка грн і USD) ─────────────────────────
+// Оплата: {id, amount, cur:"uah"|"usd", type:"cash"|"bank", date, comment}
+// Курс фіксуємо в записі (rate), щоб історична оплата не «попливла».
+function payAmountUAH(p){
+  if(!p) return 0;
+  var a = p.amount || 0;
+  return (p.cur === "usd") ? Math.round(a * (p.rate || usdRate || 44.1)) : a;
+}
+function paySumUAH(arr){
+  return (arr||[]).reduce(function(s,p){ return s + payAmountUAH(p); }, 0);
+}
+// Попередження, якщо ставлять «Завершено» з несплаченим залишком
+function confirmDoneIfUnpaid(status, totalUAH, payArr){
+  if(status !== "done") return true;
+  var bal = Math.round(totalUAH - paySumUAH(payArr));
+  if(bal <= 0) return true;
+  return confirm("⚠ Статус «Завершено», але залишок оплати " + bal.toLocaleString("uk-UA") + " грн.\n\nЗавершити без повної оплати клієнта?");
+}
+// Залишок оплати по збереженому запису (грн). Використовується для блокування архіву.
+function recordBalanceUAH(r){
+  var rate = r.rate || usdRate || 44.1;
+  var total = r.totalUAH || (r.totalUSD ? Math.round(r.totalUSD*rate) : 0);
+  var paid = Array.isArray(r.payments) ? paySumUAH(r.payments) : (r.pp||0);
+  return Math.round(total - paid);
+}
+// Рядок оплати. arrName — назва глобального масиву ("pmPayments"/"soPayments"/"wPayments"),
+// onCh — код перерахунку підсумку ("pmUpdateSummary()"/"soUpdateSummary()"/"wRecalc()").
+function payRowHtml(p, i, arrName, onCh, reRender){
+  return '<div class="pm-pay-row">'
+    + '<input class="pm-pay-inp" style="width:64px" type="number" value="'+(p.amount||"")+'" placeholder="сума" onchange="'+arrName+'['+i+'].amount=+this.value;'+onCh+'"/>'
+    + '<select class="pm-pay-inp" style="width:56px" onchange="'+arrName+'['+i+'].cur=this.value;if(this.value===\'usd\')'+arrName+'['+i+'].rate=usdRate;'+onCh+'">'
+    + '<option value="uah"'+(p.cur!=="usd"?" selected":"")+'>грн</option>'
+    + '<option value="usd"'+(p.cur==="usd"?" selected":"")+'>$</option>'
+    + '</select>'
+    + '<select class="pm-pay-inp" style="width:82px" onchange="'+arrName+'['+i+'].type=this.value">'
+    + '<option value="cash"'+(p.type==="cash"?" selected":"")+'>Готівка</option>'
+    + '<option value="bank"'+(p.type==="bank"?" selected":"")+'>Безготівка</option>'
+    + '</select>'
+    + '<input class="pm-pay-inp" style="width:88px" type="date" value="'+(p.date||"")+'" onchange="'+arrName+'['+i+'].date=this.value"/>'
+    + '<input class="pm-pay-inp" style="flex:1;min-width:70px" value="'+(p.comment||"").replace(/"/g,"&quot;")+'" placeholder="Коментар" onchange="'+arrName+'['+i+'].comment=this.value"/>'
+    + '<span class="pm-pay-del" onclick="'+arrName+'.splice('+i+',1);'+reRender+';'+onCh+'">×</span>'
+    + '</div>';
 }
 
 function pmRenderPayments(){
   var list = document.getElementById("pm-pay-list");
   if(!list) return;
   list.innerHTML = pmPayments.map(function(p, i){
-    return '<div class="pm-pay-row">'
-      + '<input class="pm-pay-inp" style="width:80px" type="number" value="' + (p.amount||"") + '" placeholder="грн" onchange="pmPayments['+i+'].amount=+this.value;pmUpdateSummary()"/>'
-      + '<select class="pm-pay-inp" style="width:90px" onchange="pmPayments['+i+'].type=this.value">'
-      + '<option value="cash"' + (p.type==="cash"?" selected":"") + '>Готівка</option>'
-      + '<option value="bank"' + (p.type==="bank"?" selected":"") + '>Безготівка</option>'
-      + '</select>'
-      + '<input class="pm-pay-inp" style="width:90px" type="date" value="' + p.date + '" onchange="pmPayments['+i+'].date=this.value"/>'
-      + '<input class="pm-pay-inp" style="flex:1;min-width:80px" value="' + (p.comment||"").replace(/"/g,"&quot;") + '" placeholder="Коментар" onchange="pmPayments['+i+'].comment=this.value"/>'
-      + '<span class="pm-pay-del" onclick="pmPayments.splice('+i+',1);pmRenderPayments();pmUpdateSummary()">×</span>'
-      + '</div>';
+    return payRowHtml(p, i, "pmPayments", "pmUpdateSummary()", "pmRenderPayments()");
   }).join("");
 }
 
@@ -4697,23 +4786,14 @@ function soPopulateWorkDD(dropdown, query, work, input){
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
 function soAddPayment(){
-  soPayments.push({id:soUID(), amount:0, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
+  soPayments.push({id:soUID(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
   soRenderPayments();
 }
 
 function soRenderPayments(){
   var list = document.getElementById("so-pay-list"); if(!list) return;
   list.innerHTML = soPayments.map(function(p,i){
-    return '<div class="pm-pay-row">'
-      +'<input class="pm-pay-inp" style="width:80px" type="number" value="'+(p.amount||"")+'" placeholder="грн" onchange="soPayments['+i+'].amount=+this.value;soUpdateSummary()"/>'
-      +'<select class="pm-pay-inp" style="width:90px" onchange="soPayments['+i+'].type=this.value">'
-      +'<option value="cash"'+(p.type==="cash"?" selected":"")+'>Готівка</option>'
-      +'<option value="bank"'+(p.type==="bank"?" selected":"")+'>Безготівка</option>'
-      +'</select>'
-      +'<input class="pm-pay-inp" style="width:90px" type="date" value="'+p.date+'" onchange="soPayments['+i+'].date=this.value"/>'
-      +'<input class="pm-pay-inp" style="flex:1;min-width:80px" value="'+(p.comment||"").replace(/"/g,"&quot;")+'" placeholder="Коментар" onchange="soPayments['+i+'].comment=this.value"/>'
-      +'<span class="pm-pay-del" onclick="soPayments.splice('+i+',1);soRenderPayments();soUpdateSummary()">×</span>'
-      +'</div>';
+    return payRowHtml(p, i, "soPayments", "soUpdateSummary()", "soRenderPayments()");
   }).join("");
 }
 
@@ -4744,7 +4824,7 @@ function soUpdateSummary(){
   var srEl = document.getElementById("so-summary-rows"); if(srEl) srEl.innerHTML=html;
 
   var gtEl = document.getElementById("so-grand-total"); if(gtEl) gtEl.textContent=grandTotal.toLocaleString("uk-UA")+" грн";
-  var paidTotal = soPayments.reduce(function(s,p){return s+(p.amount||0);},0);
+  var paidTotal = paySumUAH(soPayments);
   var ptotEl = document.getElementById("so-paid-total"); if(ptotEl) ptotEl.textContent=paidTotal.toLocaleString("uk-UA")+" грн";
   var balEl = document.getElementById("so-balance"); if(balEl) balEl.textContent=(grandTotal-paidTotal).toLocaleString("uk-UA")+" грн";
 }
@@ -4772,6 +4852,7 @@ function soSave(){
     works:JSON.parse(JSON.stringify(soWorks)),
     payments:JSON.parse(JSON.stringify(soPayments))
   };
+  if(!confirmDoneIfUnpaid(rec.status, rec.totalUAH, soPayments)) return;
   var col = db.collection("calculations");
   if(soCurrentDocId){
     col.doc(soCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
@@ -4909,6 +4990,25 @@ function soExecutePrint(){
   if(pfTotal) pfTotal.textContent=grandTotal.toLocaleString("uk-UA")+" грн";
   if(pfWords) pfWords.textContent=numberToWords(grandTotal);
   if(invDisplay) invDisplay.textContent=invNum;
+
+  // Блок оплат у рахунку ТО
+  var pfPay=document.getElementById("so-pf-payments");
+  if(pfPay){
+    var typeMap={cash:"Готівка",bank:"Безготівка"};
+    var rows=soPayments.filter(function(p){return p.amount;});
+    if(!rows.length){ pfPay.innerHTML=""; }
+    else{
+      var paid=paySumUAH(soPayments), bal=grandTotal-paid;
+      var h='<div style="border-top:1px solid #ddd;padding-top:8px"><div style="text-transform:uppercase;letter-spacing:.7px;color:#666;font-size:9pt;margin-bottom:5px">Оплати клієнта</div>';
+      rows.forEach(function(p){
+        var amt=p.cur==="usd"?(p.amount+" $ ("+payAmountUAH(p).toLocaleString("uk-UA")+" грн)"):(p.amount.toLocaleString("uk-UA")+" грн");
+        h+='<div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:#444">'+(p.date||"")+(p.type?" · <b>"+(typeMap[p.type]||p.type)+"</b>":"")+(p.comment?" · "+p.comment:"")+'</span><span style="font-weight:600;color:#2e7d32">'+amt+'</span></div>';
+      });
+      h+='<div style="display:flex;justify-content:space-between;margin-top:5px;padding-top:5px;border-top:1px solid #ddd"><span>Сплачено:</span><span style="font-weight:bold;color:#2e7d32">'+paid.toLocaleString("uk-UA")+' грн</span></div>';
+      h+='<div style="display:flex;justify-content:space-between;margin-top:3px"><span style="font-weight:bold">Залишок оплати:</span><span style="font-weight:bold;color:'+(bal>0?"#c0392b":"#2e7d32")+'">'+bal.toLocaleString("uk-UA")+' грн</span></div></div>';
+      pfPay.innerHTML=h;
+    }
+  }
 
   // Show footer
   var footer=document.getElementById("so-print-footer");

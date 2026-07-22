@@ -60,7 +60,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .tab:hover{color:var(--tx)}.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
 
 /* ── LAYOUT ── */
-.main{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 93px)}
+.main{display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 93px)}
 .left{overflow-y:auto;padding:16px 20px;border-right:1px solid var(--bd)}
 .right{overflow-y:hidden;background:var(--bg2);display:flex;flex-direction:column;height:calc(100vh - 93px)}
 .right-scroll{overflow-y:auto;flex:1;min-height:0}
@@ -136,6 +136,9 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ritem-left{flex:1}
 .ritem-name{font-size:11px;color:var(--tx);line-height:1.3}
 .ritem-side{font-family:var(--mono);font-size:10px;color:var(--ac)}
+.ritem-acc{font-family:var(--mono);font-size:9px;color:var(--gr);margin-top:2px}
+.ritem-acc.full{color:#0b6b33;font-weight:bold}
+@media print{ .ritem-acc{display:none!important} }
 .ritem-prices{text-align:right;flex-shrink:0}
 .ritem-usd{font-family:Verdana,sans-serif;font-size:11px;color:var(--blue-mid);font-weight:600}
 .ritem-uah{font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3)}
@@ -264,7 +267,11 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
   #tab-works{display:block!important;height:auto!important}
   #tab-parts,#tab-active,#tab-archive,#tab-settings,#tab-presets{display:none!important}
   .main{display:block!important;height:auto!important;grid-template-columns:1fr!important}
-  .right{background:#fff!important;overflow:visible!important;width:100%!important;display:block!important}
+  .right{background:#fff!important;overflow:visible!important;width:100%!important;display:block!important;height:auto!important}
+  /* скрол-контейнер у друку давав величезні порожнечі перед підсумком */
+  .right-scroll{overflow:visible!important;height:auto!important;max-height:none!important;flex:none!important;min-height:0!important;display:block!important}
+  .acts{display:none!important}
+  .grand-tot{page-break-inside:avoid}
   .sum-hdr{display:none!important}
   #print-header{display:block!important}
   .rblock{border:none!important;page-break-inside:avoid}
@@ -1938,6 +1945,7 @@ function renderRList(elId,items,cur,disc,malBud){
     return '<div class="ritem">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
       +(it.side?'<div class="ritem-side">▸ '+it.side+'</div>':'')
+      +wAccBadge(it.uid)
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:6px">'
       +coeffControl
@@ -2334,6 +2342,7 @@ function loadRec(id){
       switchTab("works",document.querySelectorAll(".tab")[0]);
       renderSecs(DB);wRecalc();
       wPullCashWorks();   // витрати-роботи з каси по цьому авто
+      wLoadAccruals();    // скільки вже нараховано працівникам по цих роботах
     } else if(r.type==="parts_v2"){
       pmLoadFromRecord(r, id);
       switchTab("parts",document.querySelectorAll(".tab")[1]);
@@ -5583,8 +5592,23 @@ function payWorkUSD(w, rec){
   return pUSD * (1 - disc);
 }
 
+function payIsTO(rec){ return rec && rec.type === "service_order"; }
+
+// Робота ТО: ціна в грн, знижка зі збереженого запису
+function payTOWorkUSD(w, rec){
+  var d = rec.disc === "regular" ? 0.07 : (rec.disc === "max" ? 0.13 : 0);
+  var uah = (w.price||0) * (w.qty||1) * (1 - d);
+  return uah / (rec.rate || usdRate || 44.1);
+}
+
 function payFundFor(rec){
   var f = {slu:0, kuz:0};
+  if(payIsTO(rec)){
+    // ТО не має категорій — усі роботи вважаємо слюсарними
+    (rec.works||[]).forEach(function(w){ f.slu += payTOWorkUSD(w, rec); });
+    f.slu *= PAY_SHARE; f.kuz *= PAY_SHARE;
+    return f;
+  }
   (rec.works||[]).forEach(function(w){
     var r = payRoleOfCat(w.cat);
     if(r) f[r] += payWorkUSD(w, rec);
@@ -5611,13 +5635,18 @@ function payLoadAll(){
     db.collection("workers").get(),
     db.collection("work_accruals").get(),
     db.collection("worker_payments").get(),
-    db.collection("calculations").where("type","==","works").limit(400).get()
+    db.collection("calculations").limit(600).get()
   ]).then(function(res){
     PAY_WORKERS = []; res[0].forEach(function(d){ PAY_WORKERS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_ACCRUALS = []; res[1].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_PAYMENTS = []; res[2].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
-    PAY_CALCS = []; res[3].forEach(function(d){ PAY_CALCS.push(Object.assign({_id:d.id}, d.data())); });
-    PAY_CARS = PAY_CALCS.filter(function(r){ return r.status === "in_work"; });
+    PAY_CALCS = []; res[3].forEach(function(d){ var r = d.data();
+      if(r.type === "works" || r.type === "service_order") PAY_CALCS.push(Object.assign({_id:d.id}, r)); });
+    // Роботи — лише зі статусом "В роботі". ТО зберігається завжди як preliminary
+    // (soSave жорстко ставить цей статус), тож для ТО беремо всі незавершені.
+    PAY_CARS = PAY_CALCS.filter(function(r){
+      return r.type === "service_order" ? (r.status !== "done") : (r.status === "in_work");
+    });
     if(!PAY_WORKERS.length) paySeedWorkers(); else payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -5789,7 +5818,7 @@ function payOpenAccrue(){
   }).join("");
   var cs = document.getElementById("pay-ac-car");
   cs.innerHTML = PAY_CARS.length
-    ? PAY_CARS.map(function(c){ return '<option value="'+c._id+'">'+escH(c.car||"")+(c.vin?" · "+escH(c.vin):"")+'</option>'; }).join("")
+    ? PAY_CARS.map(function(c){ return '<option value="'+c._id+'">'+escH(c.car||"")+(c.type==="service_order"?" · ТО":"")+(c.vin?" · "+escH(c.vin):"")+'</option>'; }).join("")
     : '<option value="">— немає авто у статусі «В роботі» —</option>';
   document.getElementById("pay-ac-status").textContent = "";
   document.getElementById("pay-accrue-modal").style.display = "flex";
@@ -5806,19 +5835,29 @@ function payAccrueCarChanged(){
   var fund = funds[role]||0, used = payAccruedFor(rec._id, role), left = fund-used;
   fundEl.innerHTML = 'Фонд ('+(PAY_ROLE_LBL[role]||"")+') по авто: <b>'+fund.toFixed(2)+' $</b> · нараховано '+
     used.toFixed(2)+' $ · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+left.toFixed(2)+' $</b>';
-  var works = (rec.works||[]).filter(function(w){ return payRoleOfCat(w.cat)===role; });
-  if(!works.length){ wrap.innerHTML='<div style="padding:12px" class="pay-sub">У цього авто немає робіт цієї спеціальності</div>'; return; }
+  // ТО не має категорій робіт — усі його роботи слюсарні
+  var isTO = payIsTO(rec);
+  var works = isTO
+    ? ((role === "slu") ? (rec.works||[]) : [])
+    : (rec.works||[]).filter(function(w){ return payRoleOfCat(w.cat)===role; });
+  if(!works.length){
+    wrap.innerHTML = '<div style="padding:12px" class="pay-sub">'+
+      (isTO ? "ТО — це слюсарні роботи, рихтувальнику тут нараховувати нічого"
+            : "У цього авто немає робіт цієї спеціальності")+'</div>';
+    return;
+  }
   var h = '<div class="pay-wrow head"><div>Робота</div><div style="text-align:right">Клієнту,$</div><div style="text-align:right">Готово</div><div style="text-align:right">Виконав,%</div></div>';
   works.forEach(function(w,i){
-    var usd = payWorkUSD(w, rec);
-    var done = payAccruedWork(rec._id, w.uid);
+    var usd = isTO ? payTOWorkUSD(w, rec) : payWorkUSD(w, rec);
+    var wid = w.uid || w.id || ("w"+i);       // у ТО ідентифікатор — id
+    var done = payAccruedWork(rec._id, wid);
     var lft = Math.max(0, 100-done);
     h += '<div class="pay-wrow">'+
          '<div>'+escH(w.name)+(w.side?' <span style="color:var(--tx3)">('+escH(w.side)+')</span>':'')+'</div>'+
          '<div style="text-align:right">'+usd.toFixed(2)+'</div>'+
          '<div style="text-align:right" class="done">'+done.toFixed(0)+'%</div>'+
          '<div><input type="number" min="0" max="'+lft+'" step="10" value="0" '+
-         'data-uid="'+escH(w.uid||("w"+i))+'" data-usd="'+usd+'" data-name="'+escH(w.name)+'" data-cat="'+escH(w.cat)+'"/></div></div>';
+         'data-uid="'+escH(wid)+'" data-usd="'+usd+'" data-name="'+escH(w.name)+'" data-cat="'+escH(w.cat||"ТО")+'"/></div></div>';
   });
   wrap.innerHTML = h;
 }
@@ -6046,6 +6085,37 @@ function statsSetMal(calcId, val){
 // ціну (з коментарем, напр. «повторний розвал») чи лишити стару.
 // Якщо роботи ще немає — додаємо новим рядком.
 // ══════════════════════════════════════════════════════════════════════════════
+// ── СКІЛЬКИ ВЖЕ НАРАХОВАНО ПО КОЖНІЙ РОБОТІ ──────────────────────────────────
+// Показується праворуч від роботи в калькуляції, щоб майстер/адмін одразу бачив,
+// що по цій роботі вже нараховано працівнику (і не нарахував удруге).
+var W_ACC_MAP = {};
+
+function wAccBadge(uid){
+  var a = W_ACC_MAP[uid];
+  if(!a || !a.pct) return "";
+  var pct = Math.round(a.pct);
+  var who = Object.keys(a.names).filter(Boolean).join(", ");
+  return '<div class="ritem-acc'+(pct>=100?' full':'')+'">нараховано '+pct+'%'+(who?' · '+who:'')+'</div>';
+}
+
+function wLoadAccruals(){
+  W_ACC_MAP = {};
+  var id = (typeof currentDocId !== "undefined") ? currentDocId : null;
+  if(!id) return;
+  db.collection("work_accruals").where("calcId","==",id).get().then(function(snap){
+    W_ACC_MAP = {};
+    snap.forEach(function(d){
+      var a = d.data();
+      if(a.void) return;
+      var k = a.workUid;
+      if(!W_ACC_MAP[k]) W_ACC_MAP[k] = {pct:0, names:{}};
+      W_ACC_MAP[k].pct += (a.partPct||0);
+      W_ACC_MAP[k].names[a.workerName||""] = true;
+    });
+    renderSecs(DB);
+  }).catch(function(){});
+}
+
 var W_CASH_OPS = [];       // неперенесені витрати по цьому авто
 var W_CASH_TO_LINK = [];   // застосовані, чекають збереження калькуляції
 

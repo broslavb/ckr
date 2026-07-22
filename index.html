@@ -153,7 +153,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .empty-tx{font-family:var(--mono);font-size:11px}
 
 /* ── GRAND TOTAL ── */
-.grand-tot{padding:12px 14px;border-top:1px solid var(--bda);background:var(--bg)}
+.grand-tot{padding:12px 14px;border-top:1px solid var(--bda);background:var(--bg);flex-shrink:0;max-height:46vh;overflow-y:auto}
 .gtrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .gtlbl{font-family:var(--mono);font-size:10px;color:var(--tx2)}
 .gtval{font-family:Verdana,sans-serif;font-size:12px;color:var(--tx);font-weight:600}
@@ -923,6 +923,7 @@ input, select, button, .btn, .pp-inp, .cinp,
     </div>
 
     <!-- TOTALS -->
+    </div><!-- /right-scroll -->
     <div class="grand-tot">
       <div class="gtrow"><span class="gtlbl">Кузовні</span><div><span class="gtval ac" id="gt-kuz-usd">—</span><span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px" id="gt-kuz-uah"></span></div></div>
       <div class="gtrow"><span class="gtlbl">Слюсарні</span><div><span class="gtval ac" id="gt-slu-usd">—</span><span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px" id="gt-slu-uah"></span></div></div>
@@ -947,7 +948,6 @@ input, select, button, .btn, .pp-inp, .cinp,
       <div class="gtrow" style="margin-top:8px"><span class="gtlbl">Аванс (грн)</span><input class="pp-inp" type="number" id="w-pp" value="0" min="0" oninput="wRecalc()"/></div>
       <div class="gtrow"><span class="gtlbl">Залишок</span><span class="gtval bl" id="gt-bal">—</span></div>
     </div>
-    </div><!-- /right-scroll -->
     <div class="acts">
       <button class="btn btn-p" onclick="saveW()">💾 Зберегти</button>
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
@@ -1037,6 +1037,13 @@ input, select, button, .btn, .pp-inp, .cinp,
       <div class="fld"><label>VIN / Кузов</label><input type="text" id="so-vin" placeholder="WBA..." style="font-family:var(--mono);text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/></div>
       <div class="fld"><label>Клієнт</label><input type="text" id="so-client" placeholder="Іванов Тарас"/></div>
       <div class="fld"><label>Дата</label><input type="date" id="so-date"/></div>
+      <div class="fld"><label>Статус</label>
+        <select id="so-status" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
+          <option value="preliminary">Розрахунок</option>
+          <option value="in_work">В роботі</option>
+          <option value="done">Завершено</option>
+        </select>
+      </div>
       <div class="fld"><label>Знижка</label>
         <select id="so-disc" onchange="soRecalc()" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
           <option value="none">— без знижки —</option>
@@ -4754,7 +4761,8 @@ function soSave(){
   var worksTotal=0; soWorks.forEach(function(w){worksTotal+=soWorkFinal(w);});
   var rec = {
     type:"service_order",
-    car:car, vin:vin, status:"preliminary",
+    car:car, vin:vin,
+    status:(document.getElementById("so-status")||{value:"preliminary"}).value,
     client:document.getElementById("so-client").value,
     date:document.getElementById("so-date").value,
     disc:disc, partsTotal:partsTotal, worksTotal:worksTotal,
@@ -4787,6 +4795,8 @@ function soLoadFromRecord(r, docId){
   document.getElementById("so-client").value=r.client||"";
   document.getElementById("so-date").value=r.date||"";
   document.getElementById("so-disc").value=r.disc||"none";
+  var soSt = document.getElementById("so-status");
+  if(soSt) soSt.value = r.status || "preliminary";
   soInit();
 }
 
@@ -5644,9 +5654,7 @@ function payLoadAll(){
       if(r.type === "works" || r.type === "service_order") PAY_CALCS.push(Object.assign({_id:d.id}, r)); });
     // Роботи — лише зі статусом "В роботі". ТО зберігається завжди як preliminary
     // (soSave жорстко ставить цей статус), тож для ТО беремо всі незавершені.
-    PAY_CARS = PAY_CALCS.filter(function(r){
-      return r.type === "service_order" ? (r.status !== "done") : (r.status === "in_work");
-    });
+    PAY_CARS = PAY_CALCS.filter(function(r){ return r.status === "in_work"; });
     if(!PAY_WORKERS.length) paySeedWorkers(); else payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -6112,7 +6120,7 @@ function wLoadAccruals(){
       W_ACC_MAP[k].pct += (a.partPct||0);
       W_ACC_MAP[k].names[a.workerName||""] = true;
     });
-    renderSecs(DB);
+    wRecalc();   // саме wRecalc малює праву колонку (renderRList), а не renderSecs
   }).catch(function(){});
 }
 

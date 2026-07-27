@@ -982,6 +982,13 @@ input, select, button, .btn, .pp-inp, .cinp,
         <div class="fld"><label>VIN / Кузов</label><input type="text" id="pm-vin" placeholder="WBA5A7C5XED..." style="font-family:var(--mono);text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/></div>
         <div class="fld"><label>Клієнт</label><input type="text" id="pm-client" placeholder="Іванов Тарас"/></div>
         <div class="fld"><label>Дата</label><input type="date" id="pm-date"/></div>
+        <div class="fld"><label>Статус</label>
+          <select id="pm-status" class="pm-disc-sel" style="width:100%">
+            <option value="preliminary">Розрахунок</option>
+            <option value="in_work">В роботі</option>
+            <option value="done">Завершено</option>
+          </select>
+        </div>
         <div class="fld"><label>Знижка</label>
           <select class="pm-disc-sel" id="pm-disc" onchange="pmRecalc()" style="width:100%">
             <option value="none">— без знижки —</option>
@@ -3280,12 +3287,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   td8b.appendChild(mkInp(item.supplierName||"","\u041d\u0430\u0437\u0432\u0430 \u043f\u043e\u0441\u0442\u0430\u0447.","supplierName","text")); tr.appendChild(td8b);
 
   // Col 9: Buy price
-  var td9=mkTd("width:6%;vertical-align:middle");
-  var priceInp=document.createElement("input");
-  priceInp.type="number"; priceInp.min="0"; priceInp.value=item.buyPrice||""; priceInp.placeholder="0";
-  priceInp.style.cssText="width:100%;background:transparent;border:none;color:var(--ac);font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
-  priceInp.addEventListener("change",function(){ pmUpdItem(blockId,item.id,"buyPrice",+this.value); });
-  td9.appendChild(priceInp); tr.appendChild(td9);
+  var td9=buyPriceCell(item, function(v){ pmUpdItem(blockId,item.id,"buyPrice",v); });
+  tr.appendChild(td9);
 
   // Col 10: Markup select
   var td10=mkTd("width:6%;vertical-align:middle");
@@ -4031,6 +4034,24 @@ function pmAddPayment(){
   pmRenderPayments();
 }
 
+// #4: комірка «Закупка,грн» з конвертером $→грн. onSet(валуеГрн) зберігає значення.
+// Впиши суму в доларах, натисни «$» — переведе в грн за актуальним курсом.
+function buyPriceCell(item, onSet){
+  var td=document.createElement("td"); td.style.cssText="width:6%;vertical-align:middle";
+  var wrap=document.createElement("div"); wrap.style.cssText="display:flex;align-items:center;gap:2px";
+  var inp=document.createElement("input");
+  inp.type="number"; inp.min="0"; inp.value=item.buyPrice||""; inp.placeholder="0";
+  inp.style.cssText="width:100%;background:transparent;border:none;color:var(--ac);font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+  inp.addEventListener("change",function(){ onSet(+this.value); });
+  var usd=document.createElement("span");
+  usd.textContent="$";
+  usd.title="Впишіть суму в доларах і натисніть — переведе в грн за курсом "+(usdRate||44.1);
+  usd.style.cssText="cursor:pointer;font-size:10px;color:var(--tx3);border:1px solid var(--bd);border-radius:2px;padding:0 3px;flex-shrink:0";
+  usd.onclick=function(){ var v=parseFloat(inp.value)||0; if(!v) return; var uah=Math.round(v*(usdRate||44.1)); inp.value=uah; onSet(uah); };
+  wrap.appendChild(inp); wrap.appendChild(usd); td.appendChild(wrap);
+  return td;
+}
+
 // ── ОПЛАТИ: спільні помічники (підтримка грн і USD) ─────────────────────────
 // Оплата: {id, amount, cur:"uah"|"usd", type:"cash"|"bank", date, comment}
 // Курс фіксуємо в записі (rate), щоб історична оплата не «попливла».
@@ -4113,6 +4134,7 @@ function pmClear(){
   ["pm-car","pm-client","pm-vin"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   pmInitDate();
   document.getElementById("pm-disc").value = "none";
+  var pmStC=document.getElementById("pm-status"); if(pmStC) pmStC.value="preliminary";
   pmRender();
   pmRenderPayments();
 }
@@ -4136,7 +4158,7 @@ function pmSave(){
   });
 
   var rec = {
-    type:"parts_v2", car:car, vin:vin, status:"preliminary",
+    type:"parts_v2", car:car, vin:vin, status:(document.getElementById("pm-status")||{value:"preliminary"}).value,
     client:document.getElementById("pm-client").value,
     date:document.getElementById("pm-date").value,
     disc:disc,
@@ -4147,6 +4169,7 @@ function pmSave(){
     payments:JSON.parse(JSON.stringify(pmPayments))
   };
 
+  if(!confirmDoneIfUnpaid(rec.status, grandTotal, pmPayments)) return;
   pmIsSaving = true;
   var col = db.collection("calculations");
   if(pmCurrentDocId){
@@ -4262,6 +4285,7 @@ function pmLoadFromRecord(r, docId){
   document.getElementById("pm-client").value = r.client||"";
   document.getElementById("pm-date").value = r.date||"";
   document.getElementById("pm-disc").value = r.disc||"none";
+  var pmSt=document.getElementById("pm-status"); if(pmSt) pmSt.value=r.status||"preliminary";
   pmRender();
   pmRenderPayments();
   pmPullCashExpenses(r.car||"", r.vin||"");   // підтягнути витрати з каси по цьому авто
@@ -4612,13 +4636,9 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var td8b=mkTd("width:9%;vertical-align:middle");
   td8b.appendChild(mkInp(item.supplierName||"","Назва постач.","supplierName","text")); tr.appendChild(td8b);
 
-  // Col10: buy price
-  var td9=mkTd("width:7%;vertical-align:middle");
-  var priceInp=document.createElement("input");
-  priceInp.type="number"; priceInp.min="0"; priceInp.value=item.buyPrice||""; priceInp.placeholder="0";
-  priceInp.style.cssText="width:100%;background:transparent;border:none;color:var(--ac);font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
-  priceInp.addEventListener("change",function(){ soUpdPart(item.id,"buyPrice",+this.value); });
-  td9.appendChild(priceInp); tr.appendChild(td9);
+  // Col10: buy price (з конвертером $→грн)
+  var td9=buyPriceCell(item, function(v){ soUpdPart(item.id,"buyPrice",v); });
+  tr.appendChild(td9);
 
   // Col11: markup
   var td10=mkTd("width:7%;vertical-align:middle");
@@ -5024,9 +5044,17 @@ function soExecutePrint(){
   });
   document.getElementById("print-header").style.display="block";
 
+  // #6: назва PDF-файлу з авto+VIN (раніше лишалась загальний заголовок сторінки)
+  var soOrigTitle = document.title;
+  var soPdfName = "CKR";
+  if(car && car !== "—") soPdfName += " — " + car;
+  if(vin) soPdfName += " — " + vin;
+  document.title = soPdfName;
+
   setTimeout(function(){
     window.print();
     setTimeout(function(){
+      document.title = soOrigTitle;
       document.body.classList.remove("so-print","so-ins-print");
       document.getElementById("print-header").style.display="none";
       if(footer) footer.style.display="none";

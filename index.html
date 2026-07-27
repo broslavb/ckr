@@ -166,6 +166,12 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .gt-sub{font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:right}
 .acts{padding:10px 14px;border-top:1px solid var(--bd);display:flex;gap:7px;flex-wrap:wrap;background:var(--bg2)}
 /* Оплати: інтерактивні поля лише на екрані, у друку — чистий текст */
+.tab-create{position:relative;color:var(--ac)}
+.create-menu{display:none;position:absolute;top:100%;left:0;background:var(--bg2);border:1px solid var(--bda);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.18);min-width:190px;z-index:300;overflow:hidden}
+.create-menu.open{display:block}
+.create-menu>div{padding:10px 16px;font-family:'Lora',Georgia,serif;font-weight:700;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:1px solid var(--bd)}
+.create-menu>div:last-child{border-bottom:none}
+.create-menu>div:hover{background:var(--acd);color:var(--ac)}
 .atf-chip{font-family:var(--mono);font-size:11px;padding:5px 12px;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s}
 .atf-chip:hover{border-color:var(--ac);color:var(--ac)}
 .atf-chip.active{background:var(--ac);color:#fff;border-color:var(--ac)}
@@ -810,13 +816,18 @@ input, select, button, .btn, .pp-inp, .cinp,
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('works',this)">Роботи</div>
-  <div class="tab" onclick="switchTab('parts',this)">Запчастини</div>
-  <div class="tab" onclick="switchTab('service',this)">ТО / Замовлення</div>
+  <div class="tab tab-create" id="tab-create-btn" onclick="toggleCreateMenu(event)">
+    ＋ Створити калькуляцію ▾
+    <div class="create-menu" id="create-menu">
+      <div onclick="event.stopPropagation();newCalc('works')">Роботи</div>
+      <div onclick="event.stopPropagation();newCalc('parts')">Запчастини</div>
+      <div onclick="event.stopPropagation();newCalc('service')">ТО / Замовлення</div>
+    </div>
+  </div>
   <div class="tab" onclick="switchTab('cash',this)">💰 Каса</div>
   <div class="tab" onclick="switchTab('parking',this)">🅿 Парковка</div>
   <div class="tab" onclick="switchTab('pay',this)">👷 Зарплата</div>
-  <div class="tab" onclick="switchTabActive('calc',this)">Калькуляції</div>
+  <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
   <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" onclick="switchTab('archive',this)">Архів <span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" id="tab-stats-btn" onclick="switchTab('stats',this)" style="display:none">📊 Статистика</div>
@@ -1621,6 +1632,8 @@ auth.onAuthStateChanged(function(user) {
     document.getElementById("user-name").textContent = currentUserName;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
+    // Посадка на «Калькуляції» (новий хаб): три форми лише для створення
+    setTimeout(function(){ try{ switchTabActive("calc", document.getElementById("tab-calc-btn")); }catch(e){} }, 100);
     // Show settings tab and role badge for admin
     if (ADMINS.indexOf(user.email) >= 0) {
       document.getElementById("tab-settings-btn").style.display = "block";
@@ -2282,6 +2295,19 @@ function delDoc(id){
 
 // ── АВТО В РОБОТІ ─────────────────────────────────────────────────────────────
 // Режим списку: "calc" — авто у статусі Розрахунок, "in_work" — переведені в роботу
+// ── СТВОРИТИ КАЛЬКУЛЯЦІЮ (дропдаун замість трьох вкладок) ────────────────────
+function toggleCreateMenu(e){ if(e) e.stopPropagation(); var m=document.getElementById("create-menu"); if(m) m.classList.toggle("open"); }
+function closeCreateMenu(){ var m=document.getElementById("create-menu"); if(m) m.classList.remove("open"); }
+document.addEventListener("click", closeCreateMenu);
+// Нова порожня калькуляція обраного типу
+function newCalc(type){
+  closeCreateMenu();
+  if(type==="works"){ clearW(); }
+  else if(type==="parts"){ pmClear(); }
+  else if(type==="service"){ soClear(); }
+  switchTab(type, document.getElementById("tab-create-btn"));
+}
+
 var ACTIVE_MODE = "in_work";
 var ACTIVE_TYPE = "all";   // фільтр за типом калькуляції у списку
 function switchTabActive(mode, el){ ACTIVE_MODE = mode; switchTab('active', el); }
@@ -2464,19 +2490,19 @@ function loadRec(id){
         : (r.pp>0 ? [{id:"wp"+(++uidCounter),amount:r.pp,cur:"uah",rate:r.rate||usdRate,type:"cash",date:r.date||"",comment:"аванс"}] : []);
       wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
-      switchTab("works",document.querySelectorAll(".tab")[0]);
+      switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();
       wPullCashWorks();   // витрати-роботи з каси по цьому авто
       wPullParking(r.vin||"");   // парковка -> СТОРОННІ
       wLoadAccruals();    // скільки вже нараховано працівникам по цих роботах
     } else if(r.type==="parts_v2"){
       pmLoadFromRecord(r, id);
-      switchTab("parts",document.querySelectorAll(".tab")[1]);
+      switchTab("parts",document.getElementById("tab-create-btn"));
     } else if(r.type==="service_order"){
       soLoadFromRecord(r, id);
       // Find service tab button
       var svcTabBtn = Array.from(document.querySelectorAll(".tab")).find(function(t){return t.textContent.trim().indexOf("ТО")===0;});
-      if(svcTabBtn) switchTab("service", svcTabBtn);
+      switchTab("service", document.getElementById("tab-create-btn"));
     }
   });
 }

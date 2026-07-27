@@ -814,6 +814,7 @@ input, select, button, .btn, .pp-inp, .cinp,
   <div class="tab" onclick="switchTab('parts',this)">Запчастини</div>
   <div class="tab" onclick="switchTab('service',this)">ТО / Замовлення</div>
   <div class="tab" onclick="switchTab('cash',this)">💰 Каса</div>
+  <div class="tab" onclick="switchTab('parking',this)">🅿 Парковка</div>
   <div class="tab" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" onclick="switchTabActive('calc',this)">Калькуляції</div>
   <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
@@ -1498,6 +1499,45 @@ input, select, button, .btn, .pp-inp, .cinp,
   </div>
 </div>
 
+<!-- ══ ПАРКОВКА ══════════════════════════════════════════════════════════════ -->
+<div id="tab-parking" style="display:none">
+  <div class="pay-wrap">
+    <div class="pay-bar">
+      <div class="pay-h1">🅿 ПАРКОВКА</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">Ціна за добу, грн:</span>
+        <input type="number" id="park-rate" min="0" step="10" style="width:90px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:13px;font-weight:bold;padding:5px 8px;border-radius:4px;outline:none" onchange="parkSaveRate(this.value)"/>
+        <button class="btn btn-p" onclick="parkOpenStart()">＋ Старт парковки</button>
+      </div>
+    </div>
+    <div class="pay-hint">
+      Ставка стає константою для нових парковок (кожне авто фіксує ціну на момент старту).
+      <b>Пауза</b> — коли авто забрали з платної парковки (дні не рахуються). <b>Завершити</b>
+      можна лише авто, яке вже <b>«В роботі»</b> — сума (дні × ставка) піде в його калькуляцію
+      робіт, блок «Сторонні / Аутсорсинг».
+    </div>
+    <div id="park-list" class="pay-cards"></div>
+  </div>
+</div>
+
+<!-- Модалка: старт парковки -->
+<div class="pay-modal" id="park-start-modal">
+  <div class="pay-box">
+    <div class="pay-box-t">Старт парковки</div>
+    <div class="fld"><label>Авто «В роботі» (або впишіть VIN вручну нижче)</label>
+      <select id="park-start-car" onchange="parkStartPick()"></select></div>
+    <div class="fld"><label>VIN / номер кузова (17 символів)</label>
+      <input type="text" id="park-start-vin" maxlength="17" style="font-family:var(--mono);text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="WBA..."/></div>
+    <div class="fld"><label>Назва авто (необов'язково)</label><input type="text" id="park-start-name" placeholder="2024 BMW X5"/></div>
+    <div class="fld"><label>Дата початку</label><input type="date" id="park-start-date"/></div>
+    <div class="pay-status" id="park-start-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="parkDoStart()">Старт</button>
+      <button class="btn btn-o" onclick="payClose('park-start-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1758,7 +1798,7 @@ function resetPrices() {
 function switchTab(t, el) {
   document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
   el.classList.add("active");
-  ["works","parts","service","cash","pay","stats","active","archive","settings","svcprices","presets"].forEach(function(id){
+  ["works","parts","service","cash","parking","pay","stats","active","archive","settings","svcprices","presets"].forEach(function(id){
     var e = document.getElementById("tab-"+id);
     if (!e) return;
     e.style.display = id===t ? (id==="works"||id==="parts"||id==="service"?"grid":"block") : "none";
@@ -1767,6 +1807,7 @@ function switchTab(t, el) {
   if (t === "parts") pmInit();
   if (t === "service") soInit();
   if (t === "cash") cashInit();
+  if (t === "parking") parkInit();
   if (t === "pay") payInit();
   if (t === "stats") statsInit();
   if (t === "archive") loadArchive();
@@ -2141,12 +2182,12 @@ function saveW(){
   var col = db.collection("calculations");
   if (currentDocId) {
     col.doc(currentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){ wCashMarkLinked(); showToast("Оновлено: "+car); })
+      .then(function(){ wCashMarkLinked(); wParkMarkLinked(); showToast("Оновлено: "+car); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   } else {
     isSaving = true;
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); showToast("Збережено: "+car); })
+      .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); wParkMarkLinked(); showToast("Збережено: "+car); })
       .catch(function(e){ isSaving=false; showToast("Помилка збереження: "+e.message); });
   }
 }
@@ -2426,6 +2467,7 @@ function loadRec(id){
       switchTab("works",document.querySelectorAll(".tab")[0]);
       renderSecs(DB);wRecalc();
       wPullCashWorks();   // витрати-роботи з каси по цьому авто
+      wPullParking(r.vin||"");   // парковка -> СТОРОННІ
       wLoadAccruals();    // скільки вже нараховано працівникам по цих роботах
     } else if(r.type==="parts_v2"){
       pmLoadFromRecord(r, id);
@@ -6381,6 +6423,176 @@ function wCashKeep(i){
 
 // Позначаємо витрати перенесеними лише ПІСЛЯ збереження калькуляції,
 // щоб вони не загубились, якщо майстер передумав і не зберіг.
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ПАРКОВКА ─────────────────────────────────────────────────────────────────
+// Облік днів на платній парковці. Пауза зупиняє лічильник. Завершити можна лише
+// авто «В роботі» — сума (дні × ставка) переноситься в калькуляцію робіт (СТОРОННІ).
+// Ставка глобальна (settings/parking), фіксується на кожній парковці при старті.
+// ══════════════════════════════════════════════════════════════════════════════
+var PARK_OPS = [], PARK_RATE = 0;
+var W_PARK_TO_LINK = [];   // парковки, застосовані у відкриту калькуляцію, чекають збереження
+
+function parkDayNum(dateStr){
+  if(!dateStr) return 0;
+  var d = new Date(String(dateStr).slice(0,10) + "T00:00:00");
+  return Math.floor(d.getTime() / 86400000);
+}
+function parkToday(){ return parkDayNum(new Date().toISOString().slice(0,10)); }
+
+// Скільки днів рахується (з урахуванням пауз). +1 бо доба прибуття теж рахується.
+function parkBillableDays(p){
+  var end = (p.status === "done" && p.endDate) ? parkDayNum(p.endDate) : parkToday();
+  var elapsed = end - parkDayNum(p.startDate) + 1;
+  if(elapsed < 0) elapsed = 0;
+  var paused = p.pausedDays || 0;
+  if(p.status === "paused" && p.pauseStart) paused += (parkToday() - parkDayNum(p.pauseStart));
+  var b = elapsed - paused;
+  return b < 0 ? 0 : b;
+}
+
+function parkInit(){
+  db.collection("settings").doc("parking").get().then(function(doc){
+    PARK_RATE = (doc.exists && doc.data().dailyRate) ? doc.data().dailyRate : 0;
+    var r = document.getElementById("park-rate"); if(r) r.value = PARK_RATE || "";
+  }).catch(function(){});
+  parkLoad();
+}
+function parkSaveRate(v){
+  PARK_RATE = parseFloat(v) || 0;
+  db.collection("settings").doc("parking").set({dailyRate:PARK_RATE, updatedAt:new Date().toISOString()})
+    .then(function(){ showToast("Ставка збережена: "+PARK_RATE+" грн/добу"); }).catch(function(){});
+}
+function parkLoad(){
+  db.collection("parking").limit(500).get().then(function(snap){
+    PARK_OPS = []; snap.forEach(function(d){ PARK_OPS.push(Object.assign({_id:d.id}, d.data())); });
+    parkRenderList();
+  }).catch(function(e){ showToast("Парковка — помилка: "+e.message); });
+}
+
+function parkRenderList(){
+  var el = document.getElementById("park-list"); if(!el) return;
+  var active = PARK_OPS.filter(function(p){ return p.status !== "done"; });
+  var done   = PARK_OPS.filter(function(p){ return p.status === "done"; }).slice(-12);
+  if(!active.length && !done.length){ el.innerHTML = '<div class="pay-sub">Немає авто на парковці</div>'; return; }
+  function card(p){
+    var days = parkBillableDays(p), cost = days * (p.dailyRate || 0);
+    var st = p.status==="active" ? '<span style="color:var(--gr)">● на парковці</span>'
+           : p.status==="paused" ? '<span style="color:var(--rd)">⏸ пауза</span>'
+           : '<span style="color:var(--tx3)">✓ завершено</span>';
+    var h = '<div class="pay-card">'
+      + '<div class="pay-nm">'+escH(p.car || "—")+'</div>'
+      + '<div class="pay-rl" style="font-family:var(--mono)">'+escH(p.vin||"")+'</div>'
+      + '<div class="pay-bal" style="font-size:16px">'+days+' дн · '+cost.toLocaleString("uk-UA")+' грн</div>'
+      + '<div class="pay-sub">старт '+escH(p.startDate||"")+' · '+(p.dailyRate||0)+' грн/добу · '+st+'</div>';
+    var btns = '<div class="pay-cbtns">';
+    if(p.status === "active") btns += '<button onclick="parkPause(\''+p._id+'\')">Пауза</button>';
+    if(p.status === "paused") btns += '<button onclick="parkResume(\''+p._id+'\')">Зняти з паузи</button>';
+    if(p.status !== "done")   btns += '<button onclick="parkFinish(\''+p._id+'\')">Завершити</button>';
+    if(p.status === "done" && isAdmin()) btns += '<button onclick="parkDelete(\''+p._id+'\')">×</button>';
+    btns += '</div>';
+    return h + btns + '</div>';
+  }
+  el.innerHTML = active.map(card).join("") + done.map(card).join("");
+}
+
+// ── СТАРТ ──
+function parkOpenStart(){
+  var sel = document.getElementById("park-start-car");
+  db.collection("calculations").where("type","==","works").limit(400).get().then(function(snap){
+    var opts = '<option value="">— впишу VIN вручну —</option>', seen = {};
+    snap.forEach(function(d){ var r=d.data();
+      if(r.status==="in_work" && r.vin && !seen[r.vin]){ seen[r.vin]=1;
+        opts += '<option value="'+escH(r.vin)+'|'+escH(r.car||"")+'">'+escH(r.car||"")+' · '+escH(r.vin)+'</option>'; }
+    });
+    sel.innerHTML = opts;
+  }).catch(function(){ sel.innerHTML = '<option value="">— впишу VIN вручну —</option>'; });
+  document.getElementById("park-start-vin").value = "";
+  document.getElementById("park-start-name").value = "";
+  document.getElementById("park-start-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("park-start-status").textContent = "";
+  document.getElementById("park-start-modal").style.display = "flex";
+}
+function parkStartPick(){
+  var v = document.getElementById("park-start-car").value;
+  if(!v) return;
+  var parts = v.split("|");
+  document.getElementById("park-start-vin").value = parts[0] || "";
+  document.getElementById("park-start-name").value = parts[1] || "";
+}
+function parkDoStart(){
+  var vin = (document.getElementById("park-start-vin").value||"").toUpperCase().trim();
+  var car = document.getElementById("park-start-name").value.trim();
+  var date = document.getElementById("park-start-date").value || new Date().toISOString().slice(0,10);
+  var st = document.getElementById("park-start-status");
+  if(vin.length !== 17){ st.className="pay-status err"; st.textContent="VIN має бути рівно 17 символів"; return; }
+  if(PARK_OPS.some(function(p){ return p.status!=="done" && (p.vin||"").toUpperCase()===vin; })){
+    st.className="pay-status err"; st.textContent="Це авто вже на активній парковці"; return;
+  }
+  db.collection("parking").add({
+    vin:vin, car:car, startDate:date, status:"active", pausedDays:0, pauseStart:null,
+    dailyRate:PARK_RATE, linked:false,
+    createdAt:new Date().toISOString(), author:currentUserName||""
+  }).then(function(){ payClose("park-start-modal"); showToast("Парковку розпочато"); parkLoad(); })
+    .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+}
+
+// ── ПАУЗА / ЗНЯТИ / ЗАВЕРШИТИ ──
+function parkPause(id){
+  db.collection("parking").doc(id).update({status:"paused", pauseStart:new Date().toISOString().slice(0,10)})
+    .then(function(){ showToast("Пауза"); parkLoad(); }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function parkResume(id){
+  var p = PARK_OPS.find(function(x){ return x._id===id; }); if(!p) return;
+  var add = p.pauseStart ? (parkToday() - parkDayNum(p.pauseStart)) : 0;
+  db.collection("parking").doc(id).update({status:"active", pauseStart:null, pausedDays:(p.pausedDays||0)+Math.max(0,add)})
+    .then(function(){ showToast("Знято з паузи"); parkLoad(); }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function parkFinish(id){
+  var p = PARK_OPS.find(function(x){ return x._id===id; }); if(!p) return;
+  var vin = (p.vin||"").toUpperCase();
+  // Завершити можна лише авто, яке вже «В роботі» (щоб було куди перенести суму)
+  db.collection("calculations").where("type","==","works").where("vin","==",vin).limit(20).get().then(function(snap){
+    var hasInWork = false; snap.forEach(function(d){ if(d.data().status==="in_work") hasInWork=true; });
+    if(!hasInWork){ showToast("Завершити не можна: немає калькуляції робіт «В роботі» для цього авто"); return; }
+    var days = parkBillableDays(p), cost = days * (p.dailyRate||0);
+    if(!confirm("Завершити парковку?\n"+days+" дн × "+(p.dailyRate||0)+" грн = "+cost.toLocaleString("uk-UA")+" грн\n\nСума піде в калькуляцію робіт (Сторонні).")) return;
+    db.collection("parking").doc(id).update({
+      status:"done", endDate:new Date().toISOString().slice(0,10), days:days, cost:cost, linked:false
+    }).then(function(){ showToast("Парковку завершено — "+cost.toLocaleString("uk-UA")+" грн у калькуляцію"); parkLoad(); })
+      .catch(function(e){ showToast("Помилка: "+e.message); });
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function parkDelete(id){
+  if(!isAdmin()){ showToast("Лише адмін"); return; }
+  if(!confirm("Видалити запис парковки?")) return;
+  db.collection("parking").doc(id).delete().then(function(){ parkLoad(); }).catch(function(){});
+}
+
+// ── ПЕРЕНЕСЕННЯ В КАЛЬКУЛЯЦІЮ РОБІТ (виклик при відкритті авто у Роботах) ──
+function wPullParking(vin){
+  vin = (vin||"").toUpperCase().trim(); if(!vin) return;
+  db.collection("parking").where("vin","==",vin).where("status","==","done").limit(50).get().then(function(snap){
+    var already = {};
+    Object.keys(wsel).forEach(function(u){ if(wsel[u].parkingId) already[wsel[u].parkingId]=1; });
+    var added = 0;
+    snap.forEach(function(doc){
+      var p = doc.data(); if(p.linked || already[doc.id]) return;
+      var uid = "u"+(++uidCounter);
+      wsel[uid] = {cat:CAT_STO, name:"Парковка, "+(p.days||0)+" дн × "+(p.dailyRate||0)+" грн",
+        price:(p.cost||0), side:"", coeff:1, uid:uid, fromParking:true, parkingId:doc.id};
+      W_PARK_TO_LINK.push(doc.id); added++;
+    });
+    if(added){ renderSecs(DB); wRecalc(); showToast("Парковку додано в СТОРОННІ — збережіть калькуляцію"); }
+  }).catch(function(){});
+}
+function wParkMarkLinked(){
+  if(!W_PARK_TO_LINK.length) return;
+  W_PARK_TO_LINK.forEach(function(id){
+    db.collection("parking").doc(id).update({linked:true, linkedAt:new Date().toISOString()}).catch(function(){});
+  });
+  W_PARK_TO_LINK = [];
+}
+
 function wCashMarkLinked(){
   if(!W_CASH_TO_LINK.length) return;
   W_CASH_TO_LINK.forEach(function(id){

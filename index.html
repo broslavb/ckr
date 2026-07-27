@@ -166,6 +166,9 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .gt-sub{font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:right}
 .acts{padding:10px 14px;border-top:1px solid var(--bd);display:flex;gap:7px;flex-wrap:wrap;background:var(--bg2)}
 /* Оплати: інтерактивні поля лише на екрані, у друку — чистий текст */
+.atf-chip{font-family:var(--mono);font-size:11px;padding:5px 12px;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s}
+.atf-chip:hover{border-color:var(--ac);color:var(--ac)}
+.atf-chip.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .w-pay-print{display:none}
 @media print{
   .pm-payments{display:none!important}
@@ -1344,6 +1347,12 @@ input, select, button, .btn, .pp-inp, .cinp,
       <button class="btn btn-p" onclick="searchActiveByVin()">Знайти</button>
       <button class="btn btn-o" onclick="loadActive()">Всі</button>
     </div>
+    <div id="active-type-filter" style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap">
+      <button class="atf-chip active" data-t="all"          onclick="setActiveType('all',this)">Усі</button>
+      <button class="atf-chip"        data-t="works"        onclick="setActiveType('works',this)">Роботи</button>
+      <button class="atf-chip"        data-t="parts_v2"     onclick="setActiveType('parts_v2',this)">Запчастини</button>
+      <button class="atf-chip"        data-t="service_order" onclick="setActiveType('service_order',this)">ТО / Замовлення</button>
+    </div>
     <div id="active-list"><div class="arch-loading">Завантаження...</div></div>
   </div>
 </div>
@@ -2233,7 +2242,14 @@ function delDoc(id){
 // ── АВТО В РОБОТІ ─────────────────────────────────────────────────────────────
 // Режим списку: "calc" — авто у статусі Розрахунок, "in_work" — переведені в роботу
 var ACTIVE_MODE = "in_work";
+var ACTIVE_TYPE = "all";   // фільтр за типом калькуляції у списку
 function switchTabActive(mode, el){ ACTIVE_MODE = mode; switchTab('active', el); }
+function setActiveType(t, btn){
+  ACTIVE_TYPE = t;
+  document.querySelectorAll("#active-type-filter .atf-chip").forEach(function(c){ c.classList.remove("active"); });
+  if(btn) btn.classList.add("active");
+  loadActive();
+}
 
 function loadActive(vin) {
   var list = document.getElementById("active-list");
@@ -2252,7 +2268,8 @@ function loadActive(vin) {
       var okStatus = (ACTIVE_MODE === "calc")
         ? (r.status !== "done" && r.status !== "in_work")
         : (r.status === "in_work");
-      return okStatus && (!vin || r.vin === vin);
+      var okType = (ACTIVE_TYPE === "all") || (r.type === ACTIVE_TYPE);
+      return okStatus && okType && (!vin || r.vin === vin);
     });
 
     if (!docs.length) {

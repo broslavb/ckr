@@ -376,6 +376,18 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .pr-var:hover{color:var(--bl);border-color:var(--bl)}
 /* Тип деталі (аналог/ориг./б.в.) — тільки для друку, на екрані є селект */
 .pr-avail-txt{display:none}
+/* #3 Деталі першої черги — виділення рядка + кнопка «1» */
+.pr-prio-btn{display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;font-size:10px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;margin-right:3px;font-family:var(--mono)}
+.pr-prio-btn.on{background:#ffb300;border-color:#ff8f00;color:#fff}
+tr.pr-prio td{background:rgba(255,179,0,.1)!important}
+tr.pr-prio td input,tr.pr-prio td .pr-avail-txt{font-style:italic;font-weight:bold}
+tr.pr-prio td:nth-child(2){box-shadow:inset 3px 0 0 #ff8f00}
+@media print{
+  .pr-prio-btn{display:none!important}
+  body.print-prio-only .pt tbody tr[data-item-id]:not(.pr-prio){display:none!important}
+  body.print-prio-only .pb:not(:has(tr.pr-prio)){display:none!important}
+  tr.pr-prio td{background:transparent!important;box-shadow:none!important}
+}
 /* Рядок, підтягнутий з каси і ще не перевірений майстром — червоний */
 .pr-cash-new td{color:var(--rd)!important;background:rgba(192,57,43,.07)!important}
 .pr-cash-new td input,.pr-cash-new td select{color:var(--rd)!important;font-weight:bold}
@@ -1030,6 +1042,10 @@ input, select, button, .btn, .pp-inp, .cinp,
           <div class="pm-srow main">
             <span class="pm-slbl" style="font-size:12px;color:var(--tx)">ВСЬОГО ЗАПЧАСТИНИ</span>
             <span class="pm-sval total" id="pm-grand-total">0 грн</span>
+          </div>
+          <div class="pm-srow" id="pm-prio-row" style="display:none">
+            <span class="pm-slbl" style="color:#ff8f00;font-weight:bold">Першочергові</span>
+            <span class="pm-sval" id="pm-prio-total" style="color:#ff8f00;font-weight:bold">0 грн</span>
           </div>
           <div class="pm-srow" id="pm-profit-row" style="display:none">
             <span class="pm-slbl" style="font-size:11px;color:var(--gr)">Прибуток (після податку 6%)</span>
@@ -1827,7 +1843,7 @@ function partsSnapshot(){
   return JSON.stringify({
     car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),dt:_v("pm-date"),st:_v("pm-status"),dc:_v("pm-disc"),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
-      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.buyPrice,i.markupType,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code];})];});}),
+      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.buyPrice,i.markupType,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code];})];});}),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -2787,6 +2803,20 @@ function showPrintModal(source){
   mechWrap.appendChild(mechCb); mechWrap.appendChild(mechSp);
   opts.appendChild(mechWrap);
 
+  // #3 Лише запчастини першої черги (показуємо, якщо є хоч одна)
+  var hasPrio = PM_BLOCKS.some(function(b){ return b.items.some(function(i){ return i.priority; }); });
+  if(hasPrio){
+    var prioWrap = document.createElement("label");
+    prioWrap.style.cssText="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:#ff8f00;font-weight:bold";
+    var prioCb = document.createElement("input");
+    prioCb.type="checkbox"; prioCb.id="pr-prio-only";
+    prioCb.style.cssText="width:14px;height:14px;cursor:pointer";
+    var prioSp = document.createElement("span");
+    prioSp.textContent="Лише запчастини першої черги";
+    prioWrap.appendChild(prioCb); prioWrap.appendChild(prioSp);
+    opts.appendChild(prioWrap);
+  }
+
   document.getElementById("print-modal").style.display = "flex";
 }
 
@@ -2889,7 +2919,7 @@ function executePrint(){
     window.print();
     setTimeout(function(){
       document.title = origTitle;
-      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-with-codes");
+      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-with-codes","print-prio-only");
     }, 800);
   }, 150);
 }
@@ -2900,8 +2930,10 @@ function executePrint(){
   var printParts = document.getElementById("pr-parts") && document.getElementById("pr-parts").checked;
   var withCodes = document.getElementById("pr-with-codes") && document.getElementById("pr-with-codes").checked;
   var mechanic  = document.getElementById("pr-mechanic")   && document.getElementById("pr-mechanic").checked;
+  var prioOnly  = document.getElementById("pr-prio-only")  && document.getElementById("pr-prio-only").checked;
   document.body.classList.toggle("print-with-codes", !!withCodes);
   document.body.classList.toggle("print-mechanic",   !!mechanic);
+  document.body.classList.toggle("print-prio-only",  !!prioOnly);
   closePrintModal();
 
   // Populate print header — use whichever tab was the source
@@ -3047,7 +3079,7 @@ function executePrint(){
       // Restore tab visibility
       if(tabWorks && worksWasHidden) tabWorks.style.display = "none";
       if(tabParts && partsWasHidden) tabParts.style.display = "none";
-      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic");
+      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-prio-only");
     }, 1000);
   }, 300);
 }
@@ -3300,7 +3332,29 @@ function pmUpdItemStatus(blockId, itemId, selectEl){
   pmUpdItem(blockId, itemId, "status", val);
 }
 
-function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariants){
+// #2 Перенос рядка запчастини в інший блок
+function pmMoveSelect(fromBlockId, itemId){
+  var sel=document.createElement("select");
+  sel.title="Перенести в інший блок";
+  sel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:1px 2px;width:22px;cursor:pointer;vertical-align:middle";
+  var o0=document.createElement("option"); o0.value=""; o0.textContent="⇄"; sel.appendChild(o0);
+  PM_BLOCKS.forEach(function(b){ if(b.id!==fromBlockId){ var o=document.createElement("option"); o.value=b.id; o.textContent=b.label; sel.appendChild(o); } });
+  (function(fb,iid){ sel.onchange=function(){ if(this.value) pmMoveItem(fb, iid, this.value); }; })(fromBlockId, itemId);
+  return sel;
+}
+function pmMoveItem(fromId, itemId, toId){
+  var from=PM_BLOCKS.find(function(b){return b.id===fromId;});
+  var to=PM_BLOCKS.find(function(b){return b.id===toId;});
+  if(!from || !to) return;
+  var idx=-1; from.items.forEach(function(i,k){ if(i.id===itemId) idx=k; });
+  if(idx<0) return;
+  var it=from.items.splice(idx,1)[0];
+  to.items.push(it);
+  pmRender(); pmUpdateSummary();
+  showToast("Перенесено в «"+to.label+"»");
+}
+
+function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariants, parentPrio){
   var statusObj = PM_STATUSES.find(function(s){return s.val===item.status;}) || PM_STATUSES[0];
   var markup = pmMarkup(item.buyPrice);
   var finalRaw = pmFinalPrice(item);
@@ -3323,6 +3377,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   tr.setAttribute("data-item-id", item.id);
   // Рядок, підтягнутий з каси і ще не перевірений майстром — червоний
   if(item.fromCash && !item.cashConfirmed) tr.className = "pr-cash-new";
+  var isPrio = isVariant ? !!parentPrio : !!item.priority;
+  if(isPrio) tr.classList.add("pr-prio");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 
@@ -3436,6 +3492,14 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   // Col 12: Actions
   var td12=mkTd("width:4%;white-space:nowrap;vertical-align:middle");
   if(!isVariant){
+    // #3 \u041f\u0435\u0440\u0448\u0430 \u0447\u0435\u0440\u0433\u0430 \u2014 \u00ab1\u00bb
+    var prioBtn=document.createElement("span");
+    prioBtn.className="pr-prio-btn"+(item.priority?" on":"");
+    prioBtn.textContent="1"; prioBtn.title="\u0414\u0435\u0442\u0430\u043b\u044c \u043f\u0435\u0440\u0448\u043e\u0457 \u0447\u0435\u0440\u0433\u0438";
+    (function(it){ prioBtn.onclick=function(){ it.priority=!it.priority; pmRender(); pmUpdateSummary(); }; })(item);
+    td12.appendChild(prioBtn);
+    // #2 \u041f\u0435\u0440\u0435\u043d\u0435\u0441\u0442\u0438 \u0432 \u0456\u043d\u0448\u0438\u0439 \u0431\u043b\u043e\u043a
+    td12.appendChild(pmMoveSelect(blockId, item.id));
     var varBtn=document.createElement("span");
     varBtn.className="pr-var"; varBtn.textContent="+\u0412";
     varBtn.title="\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0430\u0440\u0456\u0430\u043d\u0442";
@@ -4055,10 +4119,10 @@ function pmRender(){
 
     block.items.forEach(function(item, ii){
       var hasV = !!(item.variants && item.variants.length > 0);
-      var row = pmRowHtml(block.id, item, ii, "\u0412\u0430\u04401", false, disc, hasV);
+      var row = pmRowHtml(block.id, item, ii, "\u0412\u0430\u04401", false, disc, hasV, false);
       if(row && row.nodeType) tbody.appendChild(row);
       (item.variants||[]).forEach(function(v, vi){
-        var vrow = pmRowHtml(block.id, v, vi, "\u0412\u0430\u0440"+(vi+2), true, disc, true);
+        var vrow = pmRowHtml(block.id, v, vi, "\u0412\u0430\u0440"+(vi+2), true, disc, true, item.priority);
         if(vrow && vrow.nodeType) tbody.appendChild(vrow);
       });
     });
@@ -4115,6 +4179,19 @@ function pmUpdateSummary(){
   if(totalsEl) totalsEl.innerHTML = html;
   var gtEl = document.getElementById("pm-grand-total");
   if(gtEl) gtEl.textContent = grandTotal.toLocaleString("uk-UA") + " грн";
+
+  // #3 Сума першочергових деталей (item.priority + його варіанти)
+  var prioTotal = 0;
+  PM_BLOCKS.forEach(function(block){ block.items.forEach(function(item){
+    if(item.priority){
+      prioTotal += pmFinalWithDisc(pmFinalPrice(item), disc);
+      (item.variants||[]).forEach(function(v){ prioTotal += pmFinalWithDisc(pmFinalPrice(v), disc); });
+    }
+  }); });
+  var prioRow = document.getElementById("pm-prio-row");
+  var prioEl = document.getElementById("pm-prio-total");
+  if(prioRow) prioRow.style.display = prioTotal > 0 ? "flex" : "none";
+  if(prioEl) prioEl.textContent = prioTotal.toLocaleString("uk-UA") + " грн";
 
   // Profit summary — admin only
   if(isAdmin()){

@@ -470,6 +470,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
   body.so-print .so-pt th:nth-child(5),body.so-print .so-pt td:nth-child(5){width:24%!important;font-weight:bold}
   /* Hide avail select in SO print */
   body.so-print .so-pt td:nth-child(2) select{display:none!important}
+  body.so-print .so-pt td:nth-child(2) .pr-avail-txt{display:inline!important;font-family:Verdana,sans-serif!important;font-size:8pt!important;font-weight:bold!important;color:#0d2b6b!important;margin-right:4px!important}
   body.so-print .so-pt td:nth-child(2){white-space:normal!important;word-break:break-word!important}
   /* SO print: hide add buttons, markup selects, status selects */
   body.so-print .so-wt td:nth-child(5),body.so-print .so-wt th:nth-child(5){display:none!important}
@@ -4730,8 +4731,9 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;max-width:140px;cursor:pointer";
   PM_AVAIL.forEach(function(o){ var opt=document.createElement("option"); opt.value=o.val!==undefined?o.val:o; opt.textContent=o.label!==undefined?o.label:o; if(opt.value===(item.avail||"")) opt.selected=true; availSel.appendChild(opt); });
   (function(){ availSel.addEventListener("change",function(){ soUpdPart(item.id,"avail",this.value); }); })();
+  var availTxt=document.createElement("span"); availTxt.className="pr-avail-txt"; availTxt.textContent=pmAvailLabel(item.avail);
   var nameInp=mkInp(item.name,"Назва...","name","text"); nameInp.style.flex="1";
-  wrap2.appendChild(availSel); wrap2.appendChild(nameInp);
+  wrap2.appendChild(availSel); wrap2.appendChild(availTxt); wrap2.appendChild(nameInp);
   td2.appendChild(wrap2); tr.appendChild(td2);
 
   // Col3: qty

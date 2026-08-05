@@ -400,6 +400,12 @@ tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
 .pr-cash-new td{color:var(--rd)!important;background:rgba(192,57,43,.07)!important}
 .pr-cash-new td input,.pr-cash-new td select{color:var(--rd)!important;font-weight:bold}
 @media print{ .pr-cash-new td{color:#000!important;background:transparent!important} }
+/* Статус ERROR — весь рядок жирний і яскраво-червоний, щоб кидався в очі */
+tr.pr-error td{background:rgba(211,47,47,.26)!important;color:#c62828!important;font-weight:bold!important}
+tr.pr-error td input,tr.pr-error td select,tr.pr-error td .pr-avail-txt{color:#c62828!important;font-weight:bold!important}
+tr.pr-error td:nth-child(2){box-shadow:inset 3px 0 0 #d32f2f!important}
+tr.pr-error td .ps.s-error{background:rgba(211,47,47,.4)!important;color:#b71c1c!important}
+@media print{ tr.pr-error td{background:transparent!important;color:#000!important;box-shadow:none!important} }
 
 /* Summary panel */
 .pm-summary{background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:12px}
@@ -3190,6 +3196,40 @@ var PM_STATUSES = [
   {val:"client_delivered", label:"Клієнт доставив на склад",  cls:"s-client-delivered"}
 ];
 
+// Фон рядка залежно від статусу (спільний для таблиці запчастин/ТО і замовлень)
+function pmRowStatusBg(val, isVariant){
+  if(val==="error")            return "rgba(211,47,47,.12)";
+  if(val==="received")         return "rgba(27,94,32,.1)";
+  if(val==="client_delivered") return "rgba(27,94,32,.1)";
+  if(val==="ordered")          return "rgba(230,81,0,.1)";
+  if(val==="cart")             return "rgba(0,188,212,.1)";
+  if(val==="inquiry")          return "rgba(156,39,176,.08)";
+  if(val==="check")            return "rgba(255,235,59,.15)";
+  if(val==="client_wait")      return "rgba(255,152,0,.1)";
+  return isVariant ? "rgba(21,101,192,.03)" : "";
+}
+
+// Оновити вигляд рядка під новий статус без повного перемальовування таблиці
+// (щоб не забирати фокус із поля, яке зараз редагується).
+function pmSyncRowStatus(row, val, isVariant){
+  if(!row) return;
+  var sObj = PM_STATUSES.find(function(s){return s.val===val;}) || PM_STATUSES[0];
+  var sel = row.querySelector("select.ps");
+  if(sel){ sel.value = val; sel.className = "ps " + sObj.cls; }
+  row.style.background = pmRowStatusBg(val, isVariant);
+  row.classList.toggle("pr-error", val==="error");
+}
+
+// Статуси, які вставка посилання НЕ перебиває на «Замовлено»:
+// деталь уже на складі або її привозить клієнт.
+var PM_LINK_KEEP_STATUS = ["ordered","received","client_wait","client_delivered"];
+
+// Чи треба після заповнення поля «Посилання» автоматично поставити «Замовлено»
+function pmLinkShouldOrder(item, val){
+  if(!val || !String(val).trim()) return false;
+  return PM_LINK_KEEP_STATUS.indexOf(item.status || "dash") < 0;
+}
+
 function uid(){ return "p" + Date.now() + Math.random().toString(36).substr(2,5); }
 
 
@@ -3342,15 +3382,8 @@ function pmUpdItemStatus(blockId, itemId, selectEl){
   }
   var row = selectEl.closest("tr");
   if(row){
-    if(val==="error")                 row.style.background="rgba(211,47,47,.12)";
-    else if(val==="received")         row.style.background="rgba(27,94,32,.1)";
-    else if(val==="client_delivered") row.style.background="rgba(27,94,32,.1)";
-    else if(val==="ordered")          row.style.background="rgba(230,81,0,.1)";
-    else if(val==="cart")             row.style.background="rgba(0,188,212,.1)";
-    else if(val==="inquiry")          row.style.background="rgba(156,39,176,.08)";
-    else if(val==="check")            row.style.background="rgba(255,235,59,.15)";
-    else if(val==="client_wait")      row.style.background="rgba(255,152,0,.1)";
-    else row.style.background="";
+    row.style.background = pmRowStatusBg(val, false);
+    row.classList.toggle("pr-error", val==="error");
   }
   pmUpdItem(blockId, itemId, "status", val);
 }
@@ -3408,16 +3441,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var finalDisc = pmFinalWithDisc(finalRaw, disc);
   var isClientItem = item.status==="client_wait"||item.status==="client_delivered";
 
-  var rowBg = "";
-  if(item.status==="error")                 rowBg="rgba(211,47,47,.12)";
-  else if(item.status==="received")         rowBg="rgba(27,94,32,.1)";
-  else if(item.status==="client_delivered") rowBg="rgba(27,94,32,.1)";
-  else if(item.status==="ordered")          rowBg="rgba(230,81,0,.1)";
-  else if(item.status==="cart")             rowBg="rgba(0,188,212,.1)";
-  else if(item.status==="inquiry")          rowBg="rgba(156,39,176,.08)";
-  else if(item.status==="check")            rowBg="rgba(255,235,59,.15)";
-  else if(item.status==="client_wait")      rowBg="rgba(255,152,0,.1)";
-  else if(isVariant) rowBg="rgba(21,101,192,.03)";
+  var rowBg = pmRowStatusBg(item.status, isVariant);
 
   var tr = document.createElement("tr");
   if(rowBg) tr.style.background=rowBg;
@@ -3426,6 +3450,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(item.fromCash && !item.cashConfirmed) tr.className = "pr-cash-new";
   var isPrio = isVariant ? !!parentPrio : !!item.priority;
   if(isPrio) tr.classList.add("pr-prio");
+  if(item.status==="error") tr.classList.add("pr-error");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 
@@ -3436,7 +3461,25 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     if(type==="number"){ el.min="0"; }
     if(field==="buyPrice"||field==="qty") el.style.textAlign="right";
     if(field==="buyPrice") el.style.color="var(--ac)";
-    (function(f,t){ el.addEventListener("change",function(){ pmUpdItem(blockId,item.id,f,t==="number"?+this.value:this.value); }); })(field,type||"text");
+    (function(f,t){ el.addEventListener("change",function(){
+      var v = t==="number" ? +this.value : this.value;
+      // Заповнили «Посилання» — деталь вважається замовленою
+      if(f==="link" && pmLinkShouldOrder(item, v)) item.status="ordered";
+      pmUpdItem(blockId,item.id,f,v);
+    }); })(field,type||"text");
+    // Вставка посилання (Ctrl+V) — статус міняємо одразу, не чекаючи виходу з поля
+    if(field==="link"){
+      el.addEventListener("paste", function(){
+        var inp=this;
+        setTimeout(function(){
+          var v=inp.value;
+          if(!pmLinkShouldOrder(item, v)) return;
+          item.link=v; item.status="ordered";
+          pmSyncRowStatus(inp.closest("tr"), "ordered", isVariant);
+          showToast("Статус → Замовлено");
+        },0);
+      });
+    }
     return el;
   }
 
@@ -4850,20 +4893,12 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var finalDisc = soFinalWithDisc(finalRaw, disc);
   var markup = soMarkup(item.buyPrice, item.markupType||"auto");
 
-  var rowBg="";
-  if(item.status==="error")                 rowBg="rgba(211,47,47,.12)";
-  else if(item.status==="received")         rowBg="rgba(27,94,32,.1)";
-  else if(item.status==="client_delivered") rowBg="rgba(27,94,32,.1)";
-  else if(item.status==="ordered")          rowBg="rgba(230,81,0,.1)";
-  else if(item.status==="cart")             rowBg="rgba(0,188,212,.1)";
-  else if(item.status==="inquiry")          rowBg="rgba(156,39,176,.08)";
-  else if(item.status==="check")            rowBg="rgba(255,235,59,.15)";
-  else if(item.status==="client_wait")      rowBg="rgba(255,152,0,.1)";
-  else if(isVariant) rowBg="rgba(21,101,192,.03)";
+  var rowBg = pmRowStatusBg(item.status, isVariant);
 
   var tr=document.createElement("tr");
   if(rowBg) tr.style.background=rowBg;
   tr.setAttribute("data-item-id",item.id);
+  if(item.status==="error") tr.classList.add("pr-error");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
   function mkInp(val,ph,field,type){
@@ -4873,7 +4908,25 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
     if(type==="number"){ el.min="0"; }
     if(field==="buyPrice"||field==="qty") el.style.textAlign="right";
     if(field==="buyPrice") el.style.color="var(--ac)";
-    (function(f,t){ el.addEventListener("change",function(){ soUpdPart(item.id,f,t==="number"?+this.value:this.value); }); })(field,type||"text");
+    (function(f,t){ el.addEventListener("change",function(){
+      var v = t==="number" ? +this.value : this.value;
+      // Заповнили «Посилання» — деталь вважається замовленою
+      if(f==="link" && pmLinkShouldOrder(item, v)) item.status="ordered";
+      soUpdPart(item.id,f,v);
+    }); })(field,type||"text");
+    // Вставка посилання (Ctrl+V) — статус міняємо одразу, не чекаючи виходу з поля
+    if(field==="link"){
+      el.addEventListener("paste", function(){
+        var inp=this;
+        setTimeout(function(){
+          var v=inp.value;
+          if(!pmLinkShouldOrder(item, v)) return;
+          item.link=v; item.status="ordered";
+          pmSyncRowStatus(inp.closest("tr"), "ordered", isVariant);
+          showToast("Статус → Замовлено");
+        },0);
+      });
+    }
     return el;
   }
 
@@ -4952,12 +5005,8 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
     this.className="ps "+sObj.cls;
     var row=this.closest("tr");
     if(row){
-      if(v==="error") row.style.background="rgba(192,57,43,.12)";
-      else if(v==="received") row.style.background="rgba(76,175,114,.08)";
-      else if(v==="ordered") row.style.background="rgba(21,101,192,.08)";
-      else if(v==="cart") row.style.background="rgba(255,152,0,.08)";
-      else if(v==="inquiry") row.style.background="rgba(156,39,176,.06)";
-      else row.style.background="";
+      row.style.background = pmRowStatusBg(v, isVariant);
+      row.classList.toggle("pr-error", v==="error");
     }
     soUpdPart(item.id,"status",v);
   });

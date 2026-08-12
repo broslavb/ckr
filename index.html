@@ -836,10 +836,8 @@ input, select, button, .btn, .pp-inp, .cinp,
   body.act-print #act-doc{display:block !important}
   #act-doc .akt-page{page-break-after:always}
   #act-doc .akt-page:last-child{page-break-after:auto}
-  /* Дрібні таблиці (вартість, гарантія) не розривати; великі переліки — вільно течуть */
-  #act-doc .akt-signs,#act-doc .akt-keep{page-break-inside:avoid}
-  /* «Порядок звернення» + прийняття + підписи — на другу сторінку */
-  #act-doc .akt-callout{page-break-before:always}
+  /* Дрібні таблиці (вартість, гарантія), «Порядок звернення» і підписи — не розривати */
+  #act-doc .akt-signs,#act-doc .akt-keep,#act-doc .akt-callout{page-break-inside:avoid}
 }
 </style>
 </head>

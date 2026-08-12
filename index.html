@@ -782,9 +782,66 @@ input, select, button, .btn, .pp-inp, .cinp,
 .pay-led td{padding:5px 6px;border-bottom:1px solid var(--bd);color:var(--tx2)}
 .pay-led .a{color:var(--gr)} .pay-led .p{color:var(--rd)}
 .pay-wk{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
+
+/* ═══ АКТ ВИКОНАНИХ РОБІТ (окремий друк) ═══ */
+#act-doc{display:none}
+#act-doc *{box-sizing:border-box}
+#act-doc .akt-page{max-width:800px;margin:0 auto;padding:6mm 4mm;color:#1b1f27;font-family:Arial,Helvetica,sans-serif}
+#act-doc .akt-page + .akt-page{margin-top:26px}
+#act-doc .akt-mast{display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:2px solid #0d2b6b;padding-bottom:12px}
+#act-doc .akt-lock{display:flex;align-items:center;gap:11px}
+#act-doc .akt-wmb{font-family:Georgia,serif;font-weight:700;font-size:26px;letter-spacing:3px;color:#0d2b6b;line-height:1}
+#act-doc .akt-wmt{font-size:7px;letter-spacing:2.2px;color:#5a6473;margin-top:5px;text-transform:uppercase}
+#act-doc .akt-org{font-size:10px;line-height:1.5;color:#5a6473;margin-top:8px}
+#act-doc .akt-usa img{max-height:70px;max-width:180px;display:block}
+#act-doc .akt-title{text-align:center;margin:20px 0 4px}
+#act-doc .akt-title h1{font-family:Georgia,serif;font-weight:700;color:#0d2b6b;font-size:21px;letter-spacing:1px;margin:0;text-transform:uppercase}
+#act-doc .akt-title .sub{font-size:11px;color:#1b1f27;margin-top:7px}
+#act-doc .akt-place{display:flex;justify-content:space-between;font-size:11px;color:#5a6473;margin-top:12px}
+#act-doc .akt-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+#act-doc .akt-party{border:1px solid #d7e2f2;border-radius:4px;padding:10px 12px;background:#fbfcfe}
+#act-doc .akt-role{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#5a6473;margin-bottom:5px}
+#act-doc .akt-pname{font-family:Georgia,serif;font-weight:700;font-size:13px;color:#0d2b6b}
+#act-doc .akt-pline{font-size:11px;line-height:1.55;color:#1b1f27;margin-top:3px}
+#act-doc .akt-req{font-size:9.5px;line-height:1.5;color:#5a6473;margin-top:7px;padding-top:7px;border-top:1px dashed #d7e2f2}
+#act-doc .akt-req b{color:#0d2b6b}
+#act-doc h2.akt-sec{font-family:Georgia,serif;font-size:14px;color:#0d2b6b;margin:22px 0 9px;padding-bottom:5px;border-bottom:1px solid #b0c4de;letter-spacing:.3px}
+#act-doc p.akt-doc{font-family:Georgia,serif;font-size:12.5px;line-height:1.65;color:#1b1f27;margin:9px 0}
+#act-doc .akt-small{font-size:11px;color:#5a6473;line-height:1.55}
+#act-doc table.akt-t{width:100%;border-collapse:collapse;margin:7px 0;font-size:11.5px}
+#act-doc table.akt-t thead th{background:#0d2b6b;color:#fff;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:6px 9px;text-align:left}
+#act-doc table.akt-t tbody td{border:1px solid #b0c4de;padding:6px 9px;vertical-align:top}
+#act-doc table.akt-t tbody tr:nth-child(even) td{background:#f6f9fd}
+#act-doc table.akt-t td.num,#act-doc table.akt-t th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#act-doc table.akt-t .akt-tot td{background:#e3edf8;font-weight:700;color:#0d2b6b}
+#act-doc table.akt-t .akt-grp td{background:#e3edf8;font-family:Georgia,serif;font-style:italic;color:#0d2b6b;font-weight:700}
+#act-doc .term{font-weight:700;color:#1b5e20;white-space:nowrap}
+#act-doc .term.no{color:#b5322a}
+#act-doc ol.akt-excl{font-family:Georgia,serif;font-size:11.5px;line-height:1.55;color:#1b1f27;margin:7px 0;padding-left:20px}
+#act-doc ol.akt-excl li{margin:4px 0}
+#act-doc .akt-callout{border-left:3px solid #0d2b6b;background:#e3edf8;padding:9px 13px;font-size:11px;line-height:1.55;color:#1b1f27;border-radius:0 4px 4px 0;margin:11px 0;font-family:Georgia,serif}
+#act-doc .akt-signs{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:30px}
+#act-doc .akt-slbl{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#5a6473;margin-bottom:24px}
+#act-doc .akt-sline{border-top:1px solid #1b1f27;padding-top:5px;font-size:10.5px;color:#5a6473;display:flex;justify-content:space-between}
+#act-doc .akt-who{font-family:Georgia,serif;font-size:11.5px;color:#1b1f27;margin-top:7px;font-weight:700}
+#act-doc .akt-mp{font-size:9.5px;color:#5a6473;margin-top:16px;letter-spacing:1px}
+#act-doc .akt-foot{margin-top:22px;border-top:1px solid #d7e2f2;padding-top:9px;font-size:9px;color:#5a6473;text-align:center;line-height:1.5}
+#act-doc .akt-tag{display:inline-block;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#fff;background:#0d2b6b;padding:3px 9px;border-radius:3px;margin-bottom:3px}
+#act-doc .akt-apxh{font-family:Georgia,serif;font-size:17px;color:#0d2b6b;margin:5px 0 2px}
+#act-doc .akt-apxm{font-size:10.5px;color:#5a6473;margin-bottom:6px}
+@media print{
+  body.act-print > *{display:none !important}
+  body.act-print #act-doc{display:block !important}
+  #act-doc .akt-page{page-break-after:always}
+  #act-doc .akt-page:last-child{page-break-after:auto}
+  #act-doc .akt-signs,#act-doc table.akt-t,#act-doc .akt-callout{page-break-inside:avoid}
+}
 </style>
 </head>
 <body>
+
+<!-- АКТ ВИКОНАНИХ РОБІТ (наповнюється у actPrint, показується лише при друку) -->
+<div id="act-doc"></div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -880,6 +937,7 @@ input, select, button, .btn, .pp-inp, .cinp,
       <div class="fld" style="grid-column:1/3"><label>Авто / Модель</label><input type="text" id="w-car" placeholder="2024 BMW X5..." oninput="wCarSync()"/></div>
       <div class="fld"><label>VIN / Кузов</label><input type="text" id="w-vin" placeholder="WBA5A7C5XED..." style="font-family:var(--mono);text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/></div>
       <div class="fld"><label>Клієнт</label><input type="text" id="w-client" placeholder="Іванов Тарас"/></div>
+      <div class="fld"><label>Телефон</label><input type="text" id="w-phone" placeholder="+380..."/></div>
       <div class="fld"><label>Дата</label><input type="date" id="w-date"/></div>
       <div class="fld"><label>Статус</label>
         <select id="w-status">
@@ -1033,6 +1091,7 @@ input, select, button, .btn, .pp-inp, .cinp,
         <div class="fld pm-header-wide"><label>Авто / Модель</label><input type="text" id="pm-car" placeholder="2024 BMW X5..." oninput="pmCarSync()"/></div>
         <div class="fld"><label>VIN / Кузов</label><input type="text" id="pm-vin" placeholder="WBA5A7C5XED..." style="font-family:var(--mono);text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/></div>
         <div class="fld"><label>Клієнт</label><input type="text" id="pm-client" placeholder="Іванов Тарас"/></div>
+        <div class="fld"><label>Телефон</label><input type="text" id="pm-phone" placeholder="+380..."/></div>
         <div class="fld"><label>Дата</label><input type="date" id="pm-date"/></div>
         <div class="fld"><label>Статус</label>
           <select id="pm-status" class="pm-disc-sel" style="width:100%">
@@ -1117,6 +1176,7 @@ input, select, button, .btn, .pp-inp, .cinp,
       <div class="fld so-header-wide"><label>Авто / Модель</label><input type="text" id="so-car" placeholder="2024 BMW X5..." oninput="soCarSync()"/></div>
       <div class="fld"><label>VIN / Кузов</label><input type="text" id="so-vin" placeholder="WBA..." style="font-family:var(--mono);text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/></div>
       <div class="fld"><label>Клієнт</label><input type="text" id="so-client" placeholder="Іванов Тарас"/></div>
+      <div class="fld"><label>Телефон</label><input type="text" id="so-phone" placeholder="+380..."/></div>
       <div class="fld"><label>Дата</label><input type="date" id="so-date"/></div>
       <div class="fld"><label>Статус</label>
         <select id="so-status" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
@@ -1463,6 +1523,9 @@ input, select, button, .btn, .pp-inp, .cinp,
     <div style="display:flex;gap:8px">
       <button class="btn btn-p" onclick="executePrint()" style="flex:1">Друкувати</button>
       <button class="btn btn-o" onclick="closePrintModal()">Скасувати</button>
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">
+      <button class="btn btn-o" onclick="actPrint()" style="width:100%">🧾 Акт виконаних робіт (роботи + запчастини по VIN)</button>
     </div>
   </div>
 </div>
@@ -1863,7 +1926,7 @@ var SNAP = {works:"", parts:"", service:""};
 function _v(id){ var e=document.getElementById(id); return e?e.value:""; }
 function worksSnapshot(){
   return JSON.stringify({
-    car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),dt:_v("w-date"),st:_v("w-status"),
+    car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
     dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
@@ -1871,7 +1934,7 @@ function worksSnapshot(){
 }
 function partsSnapshot(){
   return JSON.stringify({
-    car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),dt:_v("pm-date"),st:_v("pm-status"),dc:_v("pm-disc"),
+    car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),dc:_v("pm-disc"),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
       return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.buyPrice,i.markupType,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];});}),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
@@ -1879,7 +1942,7 @@ function partsSnapshot(){
 }
 function serviceSnapshot(){
   return JSON.stringify({
-    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),dt:_v("so-date"),st:_v("so-status"),dc:_v("so-disc"),inv:_v("so-invoice-num"),
+    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),dc:_v("so-disc"),inv:_v("so-invoice-num"),
     pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.avail,i.code,i.altCode,i.link,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price];}),
     p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
@@ -2213,7 +2276,7 @@ function delW(uid){delete wsel[uid];renderSecs(DB);wRecalc();}
 
 function clearW(){
   wsel={};uidCounter=0;
-  ["w-car","w-client","w-vin"].forEach(function(id){document.getElementById(id).value="";});
+  ["w-car","w-client","w-vin","w-phone"].forEach(function(id){document.getElementById(id).value="";});
   document.getElementById("w-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("w-status").value="preliminary";
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
@@ -2267,6 +2330,7 @@ function saveW(){
   var rec={
     type:"works",car:car,vin:vin,
     client:document.getElementById("w-client").value,
+    phone:document.getElementById("w-phone").value,
     date:document.getElementById("w-date").value,
     status:document.getElementById("w-status").value,
     masterEmail:currentUser.email,
@@ -2569,6 +2633,7 @@ function loadRec(id){
       document.getElementById("w-car").value=r.car||"";
       document.getElementById("w-vin").value=r.vin||"";
       document.getElementById("w-client").value=r.client||"";
+      document.getElementById("w-phone").value=r.phone||"";
       document.getElementById("w-date").value=r.date||"";
       document.getElementById("w-status").value=r.status||"preliminary";
       document.getElementById("disc-kuz").value=r.discKuz||0;
@@ -4526,7 +4591,7 @@ function pmClear(){
   pmPayments = [];
   pmCurrentDocId = null;
   _seatDeliveryAdded = false;
-  ["pm-car","pm-client","pm-vin"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
+  ["pm-car","pm-client","pm-vin","pm-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   pmInitDate();
   document.getElementById("pm-disc").value = "none";
   var pmStC=document.getElementById("pm-status"); if(pmStC) pmStC.value="preliminary";
@@ -4556,6 +4621,7 @@ function pmSave(){
   var rec = {
     type:"parts_v2", car:car, vin:vin, status:(document.getElementById("pm-status")||{value:"preliminary"}).value,
     client:document.getElementById("pm-client").value,
+    phone:document.getElementById("pm-phone").value,
     date:document.getElementById("pm-date").value,
     disc:disc,
     totalUAH:grandTotal,
@@ -4679,6 +4745,7 @@ function pmLoadFromRecord(r, docId){
   document.getElementById("pm-car").value = r.car||"";
   document.getElementById("pm-vin").value = r.vin||"";
   document.getElementById("pm-client").value = r.client||"";
+  document.getElementById("pm-phone").value = r.phone||"";
   document.getElementById("pm-date").value = r.date||"";
   document.getElementById("pm-disc").value = r.disc||"none";
   var pmSt=document.getElementById("pm-status"); if(pmSt) pmSt.value=r.status||"preliminary";
@@ -5275,6 +5342,7 @@ function soSave(){
     car:car, vin:vin,
     status:(document.getElementById("so-status")||{value:"preliminary"}).value,
     client:document.getElementById("so-client").value,
+    phone:document.getElementById("so-phone").value,
     date:document.getElementById("so-date").value,
     disc:disc, partsTotal:partsTotal, worksTotal:worksTotal,
     totalUAH:partsTotal+worksTotal,
@@ -5305,6 +5373,7 @@ function soLoadFromRecord(r, docId){
   document.getElementById("so-car").value=r.car||"";
   document.getElementById("so-vin").value=r.vin||"";
   document.getElementById("so-client").value=r.client||"";
+  document.getElementById("so-phone").value=r.phone||"";
   document.getElementById("so-date").value=r.date||"";
   document.getElementById("so-disc").value=r.disc||"none";
   var soSt = document.getElementById("so-status");
@@ -5315,7 +5384,7 @@ function soLoadFromRecord(r, docId){
 
 function soClear(){
   soCurrentDocId=null; soParts=[]; soWorks=[]; soPayments=[];
-  ["so-car","so-client","so-vin"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
+  ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   document.getElementById("so-disc").value="none";
   var d=document.getElementById("so-date"); if(d) d.value=new Date().toISOString().split("T")[0];
   soRenderParts(); soRenderWorks(); soRenderPayments(); soUpdateSummary();
@@ -5359,6 +5428,209 @@ function numberToWords(n){
   if(!rest && thousands){ var lt=thousands%10; grn=(lt===1&&thousands%100!==11)?"гривня":(lt>=2&&lt<=4&&!(thousands%100>=11&&thousands%100<=14))?"гривні":"гривень"; }
   res = res.trim().charAt(0).toUpperCase() + res.trim().slice(1);
   return res + " " + grn + " 00 коп";
+}
+
+// ═══ АКТ ВИКОНАНИХ РОБІТ ═══════════════════════════════════════════════════════
+var ACT_MONTHS=["січня","лютого","березня","квітня","травня","червня","липня","серпня","вересня","жовтня","листопада","грудня"];
+var ACT_SHIELD='<svg width="50" height="50" viewBox="0 0 64 64" aria-label="CKR"><path d="M32 3 L57 11 V33 C57 47 46 56 32 61 C18 56 7 47 7 33 V11 Z" fill="#0d2b6b"/><path d="M16 39 C24 27 40 27 48 39" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><path d="M20 45 C26 37 38 37 44 45" fill="none" stroke="#7fa8e6" stroke-width="2.4" stroke-linecap="round"/><circle cx="32" cy="19" r="2.6" fill="#b5322a"/></svg>';
+function actEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function actField(a,b){ var ea=document.getElementById(a),eb=document.getElementById(b); var va=ea&&ea.value?ea.value:""; var vb=eb&&eb.value?eb.value:""; return va||vb; }
+
+function actCollectWorks(){
+  var discKuz=parseFloat((document.getElementById("disc-kuz")||{}).value)||0;
+  var discSlu=parseFloat((document.getElementById("disc-slu")||{}).value)||0;
+  var malType=(document.getElementById("mal-type")||{value:"std"}).value;
+  var byCat={};
+  Object.keys(wsel).forEach(function(u){var it=wsel[u]; if(!byCat[it.cat])byCat[it.cat]=[]; byCat[it.cat].push(it);});
+  var order=[CAT_KUZ,CAT_SLU,CAT_BEZ,CAT_MAL,CAT_STO];
+  var rows=[], grossUAH=0, netUAH=0;
+  order.forEach(function(cat){
+    var items=byCat[cat]||[]; if(!items.length) return;
+    var cur=DB[cat]?DB[cat].cur:"usd";
+    var malBud=(cat===CAT_MAL && malType==="bud");
+    var d=(cat===CAT_KUZ)?discKuz:(cat===CAT_SLU?discSlu:0);
+    items.forEach(function(it){
+      var c=it.coeff||1; var pRaw=it.price*c; if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
+      var uah=cur==="uah"?Math.round(pRaw):Math.round(pRaw*usdRate);
+      grossUAH+=uah; rows.push({name:it.name, side:it.side||"", uah:uah});
+    });
+    var bt=blockTotal(items,cur,d,malBud);
+    netUAH+=bt.uah;
+  });
+  return {rows:rows, discUAH:Math.max(0,grossUAH-netUAH), totalUAH:netUAH};
+}
+
+function actCollectParts(){
+  var disc=(document.getElementById("pm-disc")||{value:"none"}).value;
+  var rows=[], total=0;
+  (typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).forEach(function(b){
+    (b.items||[]).forEach(function(it){
+      if(it.status==="hidden") return;
+      if(!it.name && !it.buyPrice) return;
+      var price=pmFinalWithDisc(pmFinalPrice(it),disc);
+      total+=price;
+      rows.push({name:it.name, avail:it.avail, status:it.status, qty:it.qty||1, uah:price});
+      (it.variants||[]).forEach(function(v){
+        if(v.status==="hidden") return;
+        if(!v.name && !v.buyPrice) return;
+        var vp=pmFinalWithDisc(pmFinalPrice(v),disc);
+        total+=vp;
+        rows.push({name:v.name, avail:v.avail, status:v.status, qty:v.qty||1, uah:vp, variant:true});
+      });
+    });
+  });
+  return {rows:rows, totalUAH:total};
+}
+
+function actMastCover(usaSrc){
+  var lock='<div class="akt-lock">'+ACT_SHIELD+'<div><div class="akt-wmb">CKR</div><div class="akt-wmt">ЦЕХ КУЗОВНОГО РЕМОНТУ</div></div></div>';
+  var usa=usaSrc?'<div class="akt-usa"><img src="'+usaSrc+'" alt="Авто з США"/></div>':'';
+  return '<div class="akt-mast"><div>'+lock+'<div class="akt-org">Кропивницький, вул. Маланюка, 19А · тел. 050 330 3884</div></div>'+usa+'</div>';
+}
+function actMastApx(actNo, car, vin){
+  var lock='<div class="akt-lock">'+ACT_SHIELD+'<div><div class="akt-wmb" style="font-size:22px">CKR</div><div class="akt-wmt">ЦЕХ КУЗОВНОГО РЕМОНТУ</div></div></div>';
+  var ref='<div style="font-size:10.5px;line-height:1.55;text-align:right;color:#5a6473"><b style="color:#0d2b6b">До акту №</b> '+actEsc(actNo)+'<br>'+actEsc(car)+(vin?' · VIN '+actEsc(vin):'')+'</div>';
+  return '<div class="akt-mast"><div>'+lock+'</div>'+ref+'</div>';
+}
+
+function actPrint(){
+  var works=actCollectWorks();
+  var parts=actCollectParts();
+  var hasW=works.rows.length>0, hasP=parts.rows.length>0;
+  if(!hasW && !hasP){ showToast("Немає даних для акту — додайте роботи або запчастини"); return; }
+
+  var car=actField("w-car","pm-car");
+  var vin=actField("w-vin","pm-vin");
+  var client=actField("w-client","pm-client");
+  var phone=actField("w-phone","pm-phone");
+
+  var now=new Date();
+  var dd=("0"+now.getDate()).slice(-2), mm=("0"+(now.getMonth()+1)).slice(-2), yyyy=now.getFullYear();
+  var dateNum=dd+"."+mm+"."+yyyy;
+  var actNo=(vin||car||"—")+"-"+dateNum;
+  var total=works.totalUAH+parts.totalUAH;
+  var usaSrc=(document.querySelector("#print-header img")||{}).src||"";
+
+  // ── Reference to appendices ──
+  var apxRef = (hasW&&hasP) ? "у <b>Додатку&nbsp;1</b> (роботи) та <b>Додатку&nbsp;2</b> (запасні частини та матеріали)"
+             : hasW ? "у <b>Додатку&nbsp;1</b> (роботи)"
+             : "у <b>Додатку&nbsp;1</b> (запасні частини та матеріали)";
+
+  // ══ COVER PAGE ══
+  var h='<div class="akt-page">';
+  h+=actMastCover(usaSrc);
+  h+='<div class="akt-title"><h1>Акт виконаних робіт</h1>'
+    +'<div class="sub">№ '+actEsc(actNo)+'</div>'
+    +'<div class="akt-place"><span>м. Кропивницький</span><span>«'+dd+'» '+ACT_MONTHS[now.getMonth()]+' '+yyyy+' р.</span></div></div>';
+
+  h+='<div class="akt-parties">'
+    +'<div class="akt-party"><div class="akt-role">Виконавець</div><div class="akt-pname">ФОП Брослав Б. В.</div>'
+    +'<div class="akt-pline">Цех кузовного ремонту «CKR»<br>вул. Маланюка, 19А, м. Кропивницький<br>тел. 050 330 3884</div>'
+    +'<div class="akt-req"><b>Код:</b> 3062515837 · <b>IBAN:</b> UA183052990000026000045110312<br>АТ КБ «ПРИВАТБАНК» · за послуги ремонту авто / автозапчастини</div></div>'
+    +'<div class="akt-party"><div class="akt-role">Замовник</div><div class="akt-pname">'+(actEsc(client)||"—")+'</div>'
+    +'<div class="akt-pline">Автомобіль: '+(actEsc(car)||"—")+'<br>VIN: '+(actEsc(vin)||"—")+'<br>Телефон: '+(actEsc(phone)||"—")+'</div></div>'
+    +'</div>';
+
+  h+='<h2 class="akt-sec">1. Предмет акту</h2>'
+    +'<p class="akt-doc">Виконавець виконав, а Замовник прийняв роботи з відновлення / ремонту автомобіля '
+    +(actEsc(car)||"—")+(vin?', VIN '+actEsc(vin):'')+'. Повний перелік наведено '+apxRef+', які є невід’ємними частинами цього Акту.</p>';
+
+  // Cost table
+  h+='<h2 class="akt-sec">2. Вартість</h2><table class="akt-t"><thead><tr><th>Найменування</th><th class="num">Сума, грн</th></tr></thead><tbody>';
+  if(hasW) h+='<tr><td>Роботи з ремонту'+(hasP?" (Додаток 1)":"")+'</td><td class="num">'+works.totalUAH.toLocaleString("uk-UA")+'</td></tr>';
+  if(hasP) h+='<tr><td>Запасні частини та матеріали'+(hasW?" (Додаток 2)":" (Додаток 1)")+'</td><td class="num">'+parts.totalUAH.toLocaleString("uk-UA")+'</td></tr>';
+  h+='<tr class="akt-tot"><td>Усього до сплати</td><td class="num">'+total.toLocaleString("uk-UA")+'</td></tr></tbody></table>';
+  h+='<p class="akt-small">Сума прописом: '+numberToWords(total)+'.</p>';
+
+  // Warranty
+  h+='<h2 class="akt-sec">3. Гарантійні зобов’язання</h2>'
+    +'<p class="akt-small">Гарантія діє з дати підписання цього Акту. Термін залежить від виду робіт і типу запасних частин:</p>'
+    +'<table class="akt-t"><thead><tr><th>Вид робіт</th><th class="num">Гарантія</th></tr></thead><tbody>'
+    +'<tr><td>Слюсарні, рихтувальні роботи</td><td class="num"><span class="term">3 місяці</span></td></tr>'
+    +'<tr><td>Малярні роботи</td><td class="num"><span class="term">3 місяці</span></td></tr>'
+    +'</tbody></table>'
+    +'<table class="akt-t"><thead><tr><th>Запасні частини</th><th class="num">Нові оригінальні</th><th class="num">Аналоги (нові)</th><th class="num">Вживані (б/в)</th></tr></thead><tbody>'
+    +'<tr class="akt-grp"><td colspan="4">Кузовні деталі</td></tr>'
+    +'<tr><td>Термін гарантії</td><td class="num"><span class="term">3 місяці</span></td><td class="num"><span class="term">3 місяці</span></td><td class="num"><span class="term no">без гарантії</span></td></tr>'
+    +'<tr class="akt-grp"><td colspan="4">Механічні деталі, деталі ходової частини та підвіски</td></tr>'
+    +'<tr><td>Термін гарантії</td><td class="num"><span class="term">1 місяць</span></td><td class="num"><span class="term">1 місяць</span></td><td class="num"><span class="term no">без гарантії</span></td></tr>'
+    +'</tbody></table>';
+
+  // Exclusions
+  h+='<h2 class="akt-sec">4. Умови та обмеження гарантії</h2>'
+    +'<p class="akt-small">Гарантія <b>не поширюється</b> на випадки, що виникли не з вини Виконавця, зокрема:</p>'
+    +'<ol class="akt-excl">'
+    +'<li>Механічні пошкодження, отримані після передачі автомобіля Замовнику.</li>'
+    +'<li>Природний (експлуатаційний) знос деталей, вузлів та витратних матеріалів.</li>'
+    +'<li>Наслідки ДТП, порушення правил експлуатації, перевантаження автомобіля.</li>'
+    +'<li>Втручання третіх осіб, самостійний ремонт або ремонт на інших СТО у зоні виконаних робіт.</li>'
+    +'<li>Використання неякісного пального, мастил та технічних рідин.</li>'
+    +'<li>Пошкодження внаслідок несвоєчасного технічного обслуговування.</li>'
+    +'<li>Корозія, приховані дефекти та природний ресурс вживаних (б/в) деталей.</li>'
+    +'<li>Витратні матеріали, технічні рідини, кріплення, лампи, запобіжники — гарантії не підлягають.</li>'
+    +'<li>Деталі, надані Замовником: гарантія на самі деталі не надається (лише на роботи з їх встановлення).</li>'
+    +'<li>Зміна конструкції, тюнінг, встановлення нештатного обладнання.</li>'
+    +'<li>Форс-мажорні обставини та дії непереборної сили.</li>'
+    +'</ol>'
+    +'<div class="akt-callout"><b>Порядок звернення.</b> У разі виявлення недоліку Замовник звертається до Виконавця за вказаними контактами. Автомобіль надається на СТО для діагностики. Гарантія поширюється виключно на конкретну виконану роботу чи встановлену деталь і не передбачає відшкодування супутніх витрат.</div>';
+
+  // Acceptance + signatures
+  h+='<h2 class="akt-sec">5. Прийняття робіт</h2>'
+    +'<p class="akt-doc">Роботи виконані в повному обсязі та належної якості. Замовник претензій до обсягу, якості та строків виконаних робіт не має. Сторони підтверджують, що ознайомлені та згодні з умовами гарантії, викладеними в цьому Акті. Акт складено у двох примірниках, що мають однакову юридичну силу.</p>'
+    +'<div class="akt-signs">'
+    +'<div><div class="akt-slbl">Виконавець</div><div class="akt-sline"><span>підпис</span><span>ПІБ</span></div><div class="akt-who">ФОП Брослав Б. В.</div><div class="akt-mp">М. П.</div></div>'
+    +'<div><div class="akt-slbl">Замовник</div><div class="akt-sline"><span>підпис</span><span>ПІБ</span></div><div class="akt-who">'+(actEsc(client)||"")+'</div></div>'
+    +'</div>';
+  h+='<div class="akt-foot">CKR · Цех кузовного ремонту · Кропивницький, вул. Маланюка, 19А · тел. 050 330 3884</div>';
+  h+='</div>'; // end cover
+
+  // ══ ДОДАТОК 1 — РОБОТИ ══
+  if(hasW){
+    var apxNo1=hasP?"Додаток 1":"Додаток 1";
+    h+='<div class="akt-page">'+actMastApx(actNo,car,vin)
+      +'<div style="margin-top:18px"><span class="akt-tag">'+apxNo1+'</span><div class="akt-apxh">Перелік виконаних робіт</div><div class="akt-apxm">Замовник: '+(actEsc(client)||"—")+'</div></div>'
+      +'<table class="akt-t"><thead><tr><th style="width:7%">№</th><th>Найменування роботи</th><th class="num" style="width:20%">Сума, грн</th></tr></thead><tbody>';
+    works.rows.forEach(function(r,i){
+      h+='<tr><td>'+(i+1)+'</td><td>'+actEsc(r.name)+(r.side?' <span style="color:#5a6473">· '+actEsc(r.side)+'</span>':'')+'</td><td class="num">'+r.uah.toLocaleString("uk-UA")+'</td></tr>';
+    });
+    if(works.discUAH>0) h+='<tr><td colspan="2" style="text-align:right;color:#5a6473">Знижка</td><td class="num" style="color:#b5322a">−'+works.discUAH.toLocaleString("uk-UA")+'</td></tr>';
+    h+='<tr class="akt-tot"><td colspan="2">Усього робіт</td><td class="num">'+works.totalUAH.toLocaleString("uk-UA")+'</td></tr></tbody></table>'
+      +'<div class="akt-signs" style="margin-top:32px"><div><div class="akt-slbl">Виконавець</div><div class="akt-sline"><span>підпис</span><span></span></div></div><div><div class="akt-slbl">Замовник</div><div class="akt-sline"><span>підпис</span><span></span></div></div></div>'
+      +'</div>';
+  }
+
+  // ══ ДОДАТОК 2 — ЗАПЧАСТИНИ ══
+  if(hasP){
+    var apxNo2=hasW?"Додаток 2":"Додаток 1";
+    h+='<div class="akt-page">'+actMastApx(actNo,car,vin)
+      +'<div style="margin-top:18px"><span class="akt-tag">'+apxNo2+'</span><div class="akt-apxh">Перелік запасних частин та матеріалів</div><div class="akt-apxm">Замовник: '+(actEsc(client)||"—")+'</div></div>'
+      +'<table class="akt-t"><thead><tr><th style="width:6%">№</th><th>Найменування</th><th style="width:20%">Тип</th><th class="num" style="width:8%">К-ть</th><th class="num" style="width:16%">Сума, грн</th></tr></thead><tbody>';
+    parts.rows.forEach(function(r,i){
+      var isClient=r.status==="client_wait"||r.status==="client_delivered";
+      var priceCell=isClient?'<span style="color:#5a6473">від клієнта</span>':(r.uah?r.uah.toLocaleString("uk-UA"):"—");
+      var typ=pmAvailLabel(r.avail)||"—";
+      h+='<tr><td>'+(i+1)+'</td><td>'+(r.variant?'<span style="color:#5a6473">↳ </span>':'')+actEsc(r.name)+'</td><td>'+actEsc(typ)+'</td><td class="num">'+(r.qty||1)+'</td><td class="num">'+priceCell+'</td></tr>';
+    });
+    h+='<tr class="akt-tot"><td colspan="4">Усього запчастин та матеріалів</td><td class="num">'+parts.totalUAH.toLocaleString("uk-UA")+'</td></tr></tbody></table>'
+      +'<p class="akt-small">Тип деталі визначає термін гарантії (див. Акт, розділ 3).</p>'
+      +'<div class="akt-signs" style="margin-top:32px"><div><div class="akt-slbl">Виконавець</div><div class="akt-sline"><span>підпис</span><span></span></div></div><div><div class="akt-slbl">Замовник</div><div class="akt-sline"><span>підпис</span><span></span></div></div></div>'
+      +'</div>';
+  }
+
+  var docEl=document.getElementById("act-doc");
+  docEl.innerHTML=h;
+
+  closePrintModal();
+  var origTitle=document.title;
+  document.title="Акт "+actNo;
+  document.body.classList.add("act-print");
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      document.body.classList.remove("act-print");
+      document.title=origTitle;
+    }, 800);
+  }, 150);
 }
 
 // ── AUTO INVOICE NUMBER ───────────────────────────────────────────────────────

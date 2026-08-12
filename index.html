@@ -359,6 +359,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ps.s-error{background:rgba(211,47,47,.2);color:#b71c1c;font-weight:700}
 .ps.s-client-wait{background:rgba(255,152,0,.15);color:#e65100;font-weight:600}
 .ps.s-client-delivered{background:rgba(27,94,32,.2);color:#1b5e20;font-weight:700}
+.ps.s-hidden{background:rgba(120,120,120,.2);color:#555;font-weight:600}
 
 /* Markup display */
 .pm-calc{font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:right;white-space:nowrap}
@@ -396,6 +397,15 @@ tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
   body.print-prio-only .pb:not(:has(tr.pr-prio)){display:none!important}
   tr.pr-prio td{background:transparent!important;box-shadow:none!important}
 }
+/* Приховані (необрані) варіанти: типово сховані; кнопка «Показати приховані» додає body.pm-show-hidden */
+tr.pr-hidden td{opacity:.5}
+tr.pr-hidden td:nth-child(2){box-shadow:inset 3px 0 0 #9e9e9e}
+body:not(.pm-show-hidden) tr.pr-hidden{display:none!important}
+body.pm-show-hidden tr.pr-hidden td{background:rgba(120,120,120,.08)}
+.pm-hidden-btn{width:100%;font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:var(--tx2);background:var(--bg);border:1px dashed var(--bda);border-radius:3px;padding:6px 8px;cursor:pointer;transition:all .15s}
+.pm-hidden-btn:hover{color:var(--bl);border-color:var(--bl)}
+body.pm-show-hidden .pm-hidden-btn{color:#e65100;border-color:#e65100;border-style:solid;font-weight:bold}
+@media print{ .pm-hidden-btn{display:none!important} }
 /* Рядок, підтягнутий з каси і ще не перевірений майстром — червоний */
 .pr-cash-new td{color:var(--rd)!important;background:rgba(192,57,43,.07)!important}
 .pr-cash-new td input,.pr-cash-new td select{color:var(--rd)!important;font-weight:bold}
@@ -1065,6 +1075,9 @@ input, select, button, .btn, .pp-inp, .cinp,
             <span class="pm-slbl" style="font-size:11px;color:var(--gr)">Прибуток (після податку 6%)</span>
             <span class="pm-sval" id="pm-profit-total" style="font-size:13px;font-weight:bold">0 грн</span>
           </div>
+          <div id="pm-hidden-row" style="display:none;padding-top:8px">
+            <button type="button" id="pm-hidden-toggle" class="pm-hidden-btn" onclick="toggleHiddenVariants()">👁 Показати приховані</button>
+          </div>
 
           <!-- Payment records -->
           <div class="pm-payments">
@@ -1165,6 +1178,9 @@ input, select, button, .btn, .pp-inp, .cinp,
         <div class="pm-srow main">
           <span class="pm-slbl" style="font-size:12px;color:var(--tx)">ВСЬОГО</span>
           <span class="pm-sval total" id="so-grand-total">0 грн</span>
+        </div>
+        <div id="so-hidden-row" style="display:none;padding-top:8px">
+          <button type="button" id="so-hidden-toggle" class="pm-hidden-btn" onclick="toggleHiddenVariants()">👁 Показати приховані</button>
         </div>
         <div class="pm-payments" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
           <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Оплати клієнта</div>
@@ -1857,14 +1873,14 @@ function partsSnapshot(){
   return JSON.stringify({
     car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),dt:_v("pm-date"),st:_v("pm-status"),dc:_v("pm-disc"),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
-      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.buyPrice,i.markupType,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code];})];});}),
+      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.buyPrice,i.markupType,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];});}),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
 function serviceSnapshot(){
   return JSON.stringify({
     car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),dt:_v("so-date"),st:_v("so-status"),dc:_v("so-disc"),inv:_v("so-invoice-num"),
-    pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.avail,i.code,i.altCode,i.link,i.status];}),
+    pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.avail,i.code,i.altCode,i.link,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price];}),
     p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -3193,7 +3209,8 @@ var PM_STATUSES = [
   {val:"received", label:"Отримано на складі",  cls:"s-received"},
   {val:"error",    label:"ERROR ⚠",             cls:"s-error"},
   {val:"client_wait",      label:"Очікується від клієнта",    cls:"s-client-wait"},
-  {val:"client_delivered", label:"Клієнт доставив на склад",  cls:"s-client-delivered"}
+  {val:"client_delivered", label:"Клієнт доставив на склад",  cls:"s-client-delivered"},
+  {val:"hidden",           label:"Приховати варіант",          cls:"s-hidden"}
 ];
 
 // Фон рядка залежно від статусу (спільний для таблиці запчастин/ТО і замовлень)
@@ -3206,6 +3223,7 @@ function pmRowStatusBg(val, isVariant){
   if(val==="inquiry")          return "rgba(156,39,176,.08)";
   if(val==="check")            return "rgba(255,235,59,.15)";
   if(val==="client_wait")      return "rgba(255,152,0,.1)";
+  if(val==="hidden")           return "rgba(120,120,120,.14)";
   return isVariant ? "rgba(21,101,192,.03)" : "";
 }
 
@@ -3234,6 +3252,7 @@ function uid(){ return "p" + Date.now() + Math.random().toString(36).substr(2,5)
 
 
 function pmProfit(item, disc){
+  if(item.status === "hidden") return 0;
   var isClientItem = item.status === "client_wait" || item.status === "client_delivered";
   if(isClientItem || !item.buyPrice) return 0;
   var finalPrice = pmFinalWithDisc(pmFinalPrice(item), disc);
@@ -3255,6 +3274,7 @@ function pmMarkup(price, markupType){
 }
 
 function pmFinalPrice(item){
+  if(item.status === "hidden") return 0;
   var isClientItem = item.status === "client_wait" || item.status === "client_delivered";
   if(isClientItem) return 0;
   if(!item.buyPrice) return 0;
@@ -3385,6 +3405,9 @@ function pmUpdItemStatus(blockId, itemId, selectEl){
     row.style.background = pmRowStatusBg(val, false);
     row.classList.toggle("pr-error", val==="error");
   }
+  if(val==="hidden" && !document.body.classList.contains("pm-show-hidden")){
+    showToast("Варіант приховано. «Показати приховані» — у підсумках справа");
+  }
   pmUpdItem(blockId, itemId, "status", val);
 }
 
@@ -3410,6 +3433,42 @@ function pmReorderItem(blockId, dragId, targetId, after){
   block.items.splice(insertAt,0,moved);
   pmRender(); pmUpdateSummary();
   if(typeof showToast==="function") showToast("Порядок оновлено");
+}
+
+// Приховані (необрані) варіанти: спільний перемикач для Запчастин і ТО
+var PM_SHOW_HIDDEN = false;
+function pmCountHidden(){
+  var n=0;
+  if(typeof PM_BLOCKS!=="undefined") PM_BLOCKS.forEach(function(b){ b.items.forEach(function(i){
+    if(i.status==="hidden") n++;
+    (i.variants||[]).forEach(function(v){ if(v.status==="hidden") n++; });
+  }); });
+  return n;
+}
+function soCountHidden(){
+  var n=0;
+  if(typeof soParts!=="undefined") soParts.forEach(function(i){
+    if(i.status==="hidden") n++;
+    (i.variants||[]).forEach(function(v){ if(v.status==="hidden") n++; });
+  });
+  return n;
+}
+function refreshHiddenToggleBtns(){
+  var show=PM_SHOW_HIDDEN;
+  var lbl=function(n){ return (show?"🙈 Приховати необрані":"👁 Показати приховані")+" ("+n+")"; };
+  var pc=pmCountHidden();
+  var pRow=document.getElementById("pm-hidden-row"), pBtn=document.getElementById("pm-hidden-toggle");
+  if(pRow) pRow.style.display = (pc>0||show) ? "block" : "none";
+  if(pBtn) pBtn.textContent = lbl(pc);
+  var sc=soCountHidden();
+  var sRow=document.getElementById("so-hidden-row"), sBtn=document.getElementById("so-hidden-toggle");
+  if(sRow) sRow.style.display = (sc>0||show) ? "block" : "none";
+  if(sBtn) sBtn.textContent = lbl(sc);
+}
+function toggleHiddenVariants(){
+  PM_SHOW_HIDDEN = !PM_SHOW_HIDDEN;
+  document.body.classList.toggle("pm-show-hidden", PM_SHOW_HIDDEN);
+  refreshHiddenToggleBtns();
 }
 
 // #2 Перенос рядка запчастини в інший блок
@@ -3440,6 +3499,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var finalRaw = pmFinalPrice(item);
   var finalDisc = pmFinalWithDisc(finalRaw, disc);
   var isClientItem = item.status==="client_wait"||item.status==="client_delivered";
+  var isHidden = item.status==="hidden";
 
   var rowBg = pmRowStatusBg(item.status, isVariant);
 
@@ -3451,6 +3511,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var isPrio = isVariant ? !!parentPrio : !!item.priority;
   if(isPrio) tr.classList.add("pr-prio");
   if(item.status==="error") tr.classList.add("pr-error");
+  if(isHidden) tr.classList.add("pr-hidden");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 
@@ -3551,14 +3612,14 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
 
   // Col 4: Price without discount (Вартість)
   var td4a=mkTd("width:5%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
-  if(isClientItem){ td4a.textContent="\u2014"; td4a.style.color="var(--tx3)"; }
+  if(isClientItem||isHidden){ td4a.textContent="\u2014"; td4a.style.color="var(--tx3)"; }
   else td4a.textContent=finalRaw?finalRaw.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014";
   tr.appendChild(td4a);
 
   // Col 5: Final price with discount (Фін.вартість)
   var td4=mkTd("width:6%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
-  td4.textContent=isClientItem?"\u0432\u0456\u0434 \u043a\u043b\u0456\u0454\u043d\u0442\u0430":(finalDisc?finalDisc.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014");
-  if(isClientItem) td4.style.color="var(--tx3)";
+  td4.textContent=isHidden?"\u043f\u0440\u0438\u0445\u043e\u0432\u0430\u043d\u043e":(isClientItem?"\u0432\u0456\u0434 \u043a\u043b\u0456\u0454\u043d\u0442\u0430":(finalDisc?finalDisc.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014"));
+  if(isClientItem||isHidden) td4.style.color="var(--tx3)";
   tr.appendChild(td4);
 
   // Col 5: Main code
@@ -4358,6 +4419,8 @@ function pmUpdateSummary(){
       if(sumEl) sumEl.textContent = blockTotal ? blockTotal.toLocaleString("uk-UA") + " грн" : "";
     }
   });
+
+  refreshHiddenToggleBtns();
 }
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
@@ -4759,6 +4822,7 @@ function soMarkup(buyPrice, markupType){
   return pmMarkup(buyPrice, markupType);
 }
 function soFinalPrice(item){
+  if(item.status==="hidden") return 0;
   var isClient = item.status==="client_wait"||item.status==="client_delivered";
   if(isClient||!item.buyPrice) return 0;
   return Math.round(item.buyPrice * soMarkup(item.buyPrice, item.markupType||"auto") * (item.qty||1));
@@ -4889,6 +4953,7 @@ function soRenderParts(){
 
 function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var isClient = item.status==="client_wait"||item.status==="client_delivered";
+  var isHidden = item.status==="hidden";
   var finalRaw = soFinalPrice(item);
   var finalDisc = soFinalWithDisc(finalRaw, disc);
   var markup = soMarkup(item.buyPrice, item.markupType||"auto");
@@ -4899,6 +4964,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   if(rowBg) tr.style.background=rowBg;
   tr.setAttribute("data-item-id",item.id);
   if(item.status==="error") tr.classList.add("pr-error");
+  if(isHidden) tr.classList.add("pr-hidden");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
   function mkInp(val,ph,field,type){
@@ -4958,12 +5024,12 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
 
   // Col4: price without disc
   var td4a=mkTd("width:8%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
-  td4a.textContent=isClient?"—":(finalRaw?finalRaw.toLocaleString("uk-UA")+" грн":"—"); tr.appendChild(td4a);
+  td4a.textContent=(isClient||isHidden)?"—":(finalRaw?finalRaw.toLocaleString("uk-UA")+" грн":"—"); tr.appendChild(td4a);
 
   // Col5: final price with disc
   var td4=mkTd("width:9%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
-  td4.textContent=isClient?"від клієнта":(finalDisc?finalDisc.toLocaleString("uk-UA")+" грн":"—");
-  if(isClient) td4.style.color="var(--tx3)"; tr.appendChild(td4);
+  td4.textContent=isHidden?"приховано":(isClient?"від клієнта":(finalDisc?finalDisc.toLocaleString("uk-UA")+" грн":"—"));
+  if(isClient||isHidden) td4.style.color="var(--tx3)"; tr.appendChild(td4);
 
   // Col6: main code
   var td5=mkTd("width:10%;vertical-align:middle");
@@ -5007,6 +5073,9 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
     if(row){
       row.style.background = pmRowStatusBg(v, isVariant);
       row.classList.toggle("pr-error", v==="error");
+    }
+    if(v==="hidden" && !document.body.classList.contains("pm-show-hidden")){
+      showToast("Варіант приховано. «Показати приховані» — у підсумках справа");
     }
     soUpdPart(item.id,"status",v);
   });
@@ -5188,6 +5257,8 @@ function soUpdateSummary(){
   var paidTotal = paySumUAH(soPayments);
   var ptotEl = document.getElementById("so-paid-total"); if(ptotEl) ptotEl.textContent=paidTotal.toLocaleString("uk-UA")+" грн";
   var balEl = document.getElementById("so-balance"); if(balEl) balEl.textContent=(grandTotal-paidTotal).toLocaleString("uk-UA")+" грн";
+
+  refreshHiddenToggleBtns();
 }
 
 // ── SAVE / LOAD ──────────────────────────────────────────────────────────────

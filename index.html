@@ -412,7 +412,12 @@ body.pm-show-hidden .pm-hidden-btn{color:#e65100;border-color:#e65100;border-sty
 .pr-qbtn-p.on{background:rgba(255,235,59,.35);border-color:#fbc02d;color:#795548}
 .pr-qbtn-z:hover{color:#e65100;border-color:#e65100}
 .pr-qbtn-z.on{background:rgba(230,81,0,.18);border-color:#e65100;color:#bf360c}
+.pr-qbtn-k:hover{color:#00838f;border-color:#00838f}
+.pr-qbtn-k.on{background:rgba(0,188,212,.22);border-color:#00acc1;color:#006064}
 @media print{ .pr-qbtn{display:none!important} }
+/* Tooltip звірки корзини по постачальнику */
+#sup-tip{position:fixed;z-index:1200;display:none;background:var(--blue-dark);color:#fff;font-family:var(--mono);font-size:11px;padding:8px 11px;border-radius:4px;box-shadow:0 6px 22px rgba(0,0,0,.4);max-width:280px;line-height:1.55;pointer-events:none}
+#sup-tip b{color:#7fd4e6}
 /* Підсвітка знайденого дубля артикула */
 .pr-flash td{background:rgba(255,193,7,.5)!important;transition:background .5s}
 /* Друк: не виводити порожні блоки (роботи і запчастини) */
@@ -869,6 +874,9 @@ input, select, button, .btn, .pp-inp, .cinp,
   <option value="GENERAL AUTO"></option>
   <option value="ORIGINAL AUTO"></option>
 </datalist>
+
+<!-- Спливаюча звірка корзини по постачальнику -->
+<div id="sup-tip"></div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -3516,6 +3524,62 @@ function pmHighlightItem(id, blockId){
   }, 60);
 }
 
+// ── Корзина по постачальнику: звірка (tooltip) + розповсюдження посилання ──
+function pmSupplierCart(name){
+  name=(name||"").trim(); var key=name.toLowerCase(); var count=0, sum=0;
+  if(name) PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){
+    ci(it); (it.variants||[]).forEach(ci);
+  }); });
+  function ci(it){ if(it.status==="cart" && (it.supplierName||"").trim().toLowerCase()===key){ count++; sum+=(it.buyPrice||0)*(it.qty||1); } }
+  return {name:name, count:count, sum:sum};
+}
+function soSupplierCart(name){
+  name=(name||"").trim(); var key=name.toLowerCase(); var count=0, sum=0;
+  if(name) (typeof soParts!=="undefined"?soParts:[]).forEach(function(it){ ci(it); (it.variants||[]).forEach(ci); });
+  function ci(it){ if(it.status==="cart" && (it.supplierName||"").trim().toLowerCase()===key){ count++; sum+=(it.buyPrice||0)*(it.qty||1); } }
+  return {name:name, count:count, sum:sum};
+}
+function showSupCartTip(el, info){
+  var tip=document.getElementById("sup-tip"); if(!tip) return;
+  if(!info || !info.name || info.count===0){ tip.style.display="none"; return; }
+  tip.innerHTML="🛒 У корзині від <b>"+actEsc(info.name)+"</b>:<br>"+info.count+" найм. · <b>"+info.sum.toLocaleString("uk-UA")+" грн</b> (закупка)";
+  tip.style.display="block";
+  var r=el.getBoundingClientRect();
+  var w=tip.offsetWidth||240;
+  var left=Math.min(r.left, window.innerWidth-w-10);
+  tip.style.left=Math.max(6,left)+"px";
+  tip.style.top=(r.bottom+6)+"px";
+}
+function hideSupTip(){ var t=document.getElementById("sup-tip"); if(t) t.style.display="none"; }
+
+// Розповсюдити посилання на всі позиції того ж постачальника у статусі «Корзина»
+function pmPropagateLinkToCart(currentItem, link){
+  var sup=((currentItem.supplierName||"").trim()); link=(link||"").trim();
+  if(!sup || !link) return;
+  var key=sup.toLowerCase(); var targets=[];
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ col(it); (it.variants||[]).forEach(col); }); });
+  function col(it){ if(it!==currentItem && it.status==="cart" && (it.supplierName||"").trim().toLowerCase()===key) targets.push(it); }
+  if(!targets.length) return;
+  if(confirm("Постачальник «"+sup+"»: у Корзині ще "+targets.length+" поз.\n\nВставити це посилання в них і позначити «Замовлено»?")){
+    targets.forEach(function(it){ it.link=link; it.status="ordered"; });
+    pmRender(); pmUpdateSummary();
+    showToast("Оновлено "+targets.length+" поз. → Замовлено");
+  }
+}
+function soPropagateLinkToCart(currentItem, link){
+  var sup=((currentItem.supplierName||"").trim()); link=(link||"").trim();
+  if(!sup || !link) return;
+  var key=sup.toLowerCase(); var targets=[];
+  soParts.forEach(function(it){ col(it); (it.variants||[]).forEach(col); });
+  function col(it){ if(it!==currentItem && it.status==="cart" && (it.supplierName||"").trim().toLowerCase()===key) targets.push(it); }
+  if(!targets.length) return;
+  if(confirm("Постачальник «"+sup+"»: у Корзині ще "+targets.length+" поз.\n\nВставити це посилання в них і позначити «Замовлено»?")){
+    targets.forEach(function(it){ it.link=link; it.status="ordered"; });
+    soRenderParts(); soUpdateSummary();
+    showToast("Оновлено "+targets.length+" поз. → Замовлено");
+  }
+}
+
 function pmUpdItemStatus(blockId, itemId, selectEl){
   var val = selectEl.value;
   var statusObj = PM_STATUSES.find(function(s){return s.val===val;}) || PM_STATUSES[0];
@@ -3662,6 +3726,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
       // Заповнили «Посилання» — деталь вважається замовленою
       if(f==="link" && pmLinkShouldOrder(item, v)) item.status="ordered";
       pmUpdItem(blockId,item.id,f,v);
+      if(f==="link" && v) pmPropagateLinkToCart(item, v);
     }); })(field,type||"text");
     // Вставка посилання (Ctrl+V) — статус міняємо одразу, не чекаючи виходу з поля
     if(field==="link"){
@@ -3673,6 +3738,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
           item.link=v; item.status="ordered";
           pmSyncRowStatus(inp.closest("tr"), "ordered", isVariant);
           showToast("Статус → Замовлено");
+          pmPropagateLinkToCart(item, v);
         },0);
       });
     }
@@ -3770,12 +3836,19 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var td8=mkTd("width:5%;vertical-align:middle");
   td8.appendChild(mkInp(item.link,"\u043f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f","link","text")); tr.appendChild(td8);
 
-  // Col 8b: Supplier name (datalist + \u043a\u043d\u043e\u043f\u043a\u0430 \u00ab\u0417\u00bb \u2014 \u0417\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043e)
+  // Col 8b: Supplier name (datalist + \u0437\u0432\u0456\u0440\u043a\u0430 \u043a\u043e\u0440\u0437\u0438\u043d\u0438 + \u043a\u043d\u043e\u043f\u043a\u0438 \u00ab\u041a\u00bb/\u00ab\u0417\u00bb)
   var td8b=mkTd("width:7%;vertical-align:middle");
   var supWrap=document.createElement("div"); supWrap.style.cssText="display:flex;align-items:center;gap:2px";
   var supInp=mkInp(item.supplierName||"","\u041d\u0430\u0437\u0432\u0430 \u043f\u043e\u0441\u0442\u0430\u0447.","supplierName","text");
   supInp.setAttribute("list","ckr-suppliers");
+  supInp.addEventListener("mouseenter",function(){ showSupCartTip(this, pmSupplierCart(this.value)); });
+  supInp.addEventListener("mouseleave",hideSupTip);
   supWrap.appendChild(supInp);
+  var kbtn=document.createElement("span");
+  kbtn.className="pr-qbtn pr-qbtn-k"+(item.status==="cart"?" on":"");
+  kbtn.textContent="\u041a"; kbtn.title="\u041a\u043e\u0440\u0437\u0438\u043d\u0430";
+  (function(bid,iid){ kbtn.onclick=function(){ pmQuickStatus(bid,iid,"cart"); }; })(blockId,item.id);
+  supWrap.appendChild(kbtn);
   var zbtn=document.createElement("span");
   zbtn.className="pr-qbtn pr-qbtn-z"+(item.status==="ordered"?" on":"");
   zbtn.textContent="\u0417"; zbtn.title="\u0417\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043e";
@@ -5168,6 +5241,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
       // Заповнили «Посилання» — деталь вважається замовленою
       if(f==="link" && pmLinkShouldOrder(item, v)) item.status="ordered";
       soUpdPart(item.id,f,v);
+      if(f==="link" && v) soPropagateLinkToCart(item, v);
     }); })(field,type||"text");
     // Вставка посилання (Ctrl+V) — статус міняємо одразу, не чекаючи виходу з поля
     if(field==="link"){
@@ -5179,6 +5253,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
           item.link=v; item.status="ordered";
           pmSyncRowStatus(inp.closest("tr"), "ordered", isVariant);
           showToast("Статус → Замовлено");
+          soPropagateLinkToCart(item, v);
         },0);
       });
     }
@@ -5232,12 +5307,19 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var td8=mkTd("width:7%;vertical-align:middle");
   td8.appendChild(mkInp(item.link,"посилання","link","text")); tr.appendChild(td8);
 
-  // Col9: supplier name (datalist + кнопка «З» — Замовлено)
+  // Col9: supplier name (datalist + звірка корзини + кнопки «К»/«З»)
   var td8b=mkTd("width:9%;vertical-align:middle");
   var supWrap=document.createElement("div"); supWrap.style.cssText="display:flex;align-items:center;gap:2px";
   var supInp=mkInp(item.supplierName||"","Назва постач.","supplierName","text");
   supInp.setAttribute("list","ckr-suppliers");
+  supInp.addEventListener("mouseenter",function(){ showSupCartTip(this, soSupplierCart(this.value)); });
+  supInp.addEventListener("mouseleave",hideSupTip);
   supWrap.appendChild(supInp);
+  var kbtn=document.createElement("span");
+  kbtn.className="pr-qbtn pr-qbtn-k"+(item.status==="cart"?" on":"");
+  kbtn.textContent="К"; kbtn.title="Корзина";
+  (function(iid){ kbtn.onclick=function(){ soQuickStatus(iid,"cart"); }; })(item.id);
+  supWrap.appendChild(kbtn);
   var zbtn=document.createElement("span");
   zbtn.className="pr-qbtn pr-qbtn-z"+(item.status==="ordered"?" on":"");
   zbtn.textContent="З"; zbtn.title="Замовлено";

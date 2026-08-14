@@ -414,6 +414,9 @@ body.pm-show-hidden .pm-hidden-btn{color:#e65100;border-color:#e65100;border-sty
 .pr-qbtn-z.on{background:rgba(230,81,0,.18);border-color:#e65100;color:#bf360c}
 .pr-qbtn-k:hover{color:#00838f;border-color:#00838f}
 .pr-qbtn-k.on{background:rgba(0,188,212,.22);border-color:#00acc1;color:#006064}
+.pr-qbtn-skl{width:auto;padding:0 4px;font-size:8.5px;letter-spacing:.3px}
+.pr-qbtn-skl:hover{color:#1b5e20;border-color:#1b5e20}
+.pr-qbtn-skl.on{background:rgba(27,94,32,.2);border-color:#2e7d32;color:#1b5e20}
 @media print{ .pr-qbtn{display:none!important} }
 /* Tooltip звірки корзини по постачальнику */
 #sup-tip{position:fixed;z-index:1200;display:none;background:var(--blue-dark);color:#fff;font-family:var(--mono);font-size:11px;padding:8px 11px;border-radius:4px;box-shadow:0 6px 22px rgba(0,0,0,.4);max-width:280px;line-height:1.55;pointer-events:none}
@@ -3540,7 +3543,7 @@ function pmQuickStatus(blockId, itemId, val){
   if((val==="check"||val==="received") && it.fromCash) it.cashConfirmed=true;
   it.status=val;
   pmRender(); pmUpdateSummary();
-  showToast(val==="check"?"Перевірена вартість":val==="ordered"?"Замовлено":"Статус оновлено");
+  showToast(val==="check"?"Перевірена вартість":val==="ordered"?"Замовлено":val==="received"?"Отримано на складі":val==="cart"?"У корзині":"Статус оновлено");
 }
 
 // Захист від дублів артикула (лише основні позиції; варіанти навмисне дублюються)
@@ -3919,10 +3922,17 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   markupSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";
   td10.appendChild(markupSel); tr.appendChild(td10);
 
-  // Col 11: Status
+  // Col 11: Status (+ кнопка «СКЛ» — Отримано на складі)
   var td11=mkTd("width:11%;vertical-align:middle");
+  var stWrap=document.createElement("div"); stWrap.style.cssText="display:flex;align-items:center;gap:3px";
+  var sklBtn=document.createElement("span");
+  sklBtn.className="pr-qbtn pr-qbtn-skl"+(item.status==="received"?" on":"");
+  sklBtn.textContent="СКЛ"; sklBtn.title="Отримано на складі";
+  (function(bid,iid){ sklBtn.onclick=function(){ pmQuickStatus(bid,iid,"received"); }; })(blockId,item.id);
   var statSel=mkSel(PM_STATUSES,item.status||"dash","status","ps "+statusObj.cls);
-  td11.appendChild(statSel); tr.appendChild(td11);
+  statSel.style.width="auto"; statSel.style.flex="1"; statSel.style.minWidth="0";
+  stWrap.appendChild(sklBtn); stWrap.appendChild(statSel);
+  td11.appendChild(stWrap); tr.appendChild(td11);
 
   // Col 12: Actions
   var td12=mkTd("width:6%;white-space:nowrap;vertical-align:middle");
@@ -5203,7 +5213,7 @@ function soQuickStatus(id, val){
   if(!it) return;
   it.status=val;
   soRenderParts(); soUpdateSummary();
-  showToast(val==="check"?"Перевірена вартість":val==="ordered"?"Замовлено":"Статус оновлено");
+  showToast(val==="check"?"Перевірена вартість":val==="ordered"?"Замовлено":val==="received"?"Отримано на складі":val==="cart"?"У корзині":"Статус оновлено");
 }
 
 // Захист від дублів артикула у ТО (лише основні позиції)
@@ -5407,7 +5417,14 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
     }
     soUpdPart(item.id,"status",v);
   });
-  td11.appendChild(statSel); tr.appendChild(td11);
+  var stWrap=document.createElement("div"); stWrap.style.cssText="display:flex;align-items:center;gap:3px";
+  var sklBtn=document.createElement("span");
+  sklBtn.className="pr-qbtn pr-qbtn-skl"+(item.status==="received"?" on":"");
+  sklBtn.textContent="СКЛ"; sklBtn.title="Отримано на складі";
+  (function(iid){ sklBtn.onclick=function(){ soQuickStatus(iid,"received"); }; })(item.id);
+  statSel.style.width="auto"; statSel.style.flex="1"; statSel.style.minWidth="0";
+  stWrap.appendChild(sklBtn); stWrap.appendChild(statSel);
+  td11.appendChild(stWrap); tr.appendChild(td11);
 
   // Col13: actions
   var td12=mkTd("width:4%;white-space:nowrap;vertical-align:middle");

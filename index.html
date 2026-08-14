@@ -231,6 +231,12 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .hist-car{font-family:var(--disp);font-size:15px;letter-spacing:1px}
 .hist-vin{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:1px}
 .hist-tot{font-family:var(--mono);font-size:14px;color:var(--blue-dark);font-weight:500}
+/* Праві дії картки — фіксовані колонки, щоб суми/статуси вирівнювались по вертикалі */
+.card-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.card-actions .ca-status{width:118px;display:flex;justify-content:flex-end;flex-shrink:0}
+.card-actions .ca-del{width:20px;display:flex;justify-content:center;flex-shrink:0}
+.card-actions .ca-sum{width:150px;flex-shrink:0;text-align:right}
+.card-actions .ca-sum > div{text-align:right}
 .hist-meta{font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:3px}
 .hist-tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
 .hist-tag{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:2px;background:var(--bg3);color:var(--tx2)}
@@ -2481,21 +2487,23 @@ function buildCard(doc, showMoveBtn) {
     + (r.masterName?'<span class="hist-tag master">'+r.masterName+'</span>':'');
 
   card.innerHTML = '<div class="hist-top">'
-    + '<div style="flex:1">'
+    + '<div style="flex:1;min-width:0">'
     + '<div class="hist-car">' + (r.car||"—") + '</div>'
     + (r.vin?'<div class="hist-vin">VIN: '+r.vin+'</div>':'')
     + '<div class="hist-meta">'+(r.client||"—")+' · '+dt+'</div>'
     + '</div>'
-    + '<div style="display:flex;align-items:center;gap:6px" class="card-actions">'
-    + '<div style="text-align:right">'
+    + '<div class="card-actions">'
+    + '<div class="ca-status"></div>'
+    + '<div class="ca-del"></div>'
+    + '<div class="ca-sum">'
     + '<div class="hist-tot">'+totalUAH+'</div>'
     + '<div style="font-family:var(--mono);font-size:10px;color:var(--tx3)">'+totalUSD+'</div>'
-    + '</div></div></div>'
+    + '</div>'
+    + '</div></div>'
     + '<div class="hist-tags">'+tagsHtml+'</div>';
 
-  var actions = card.querySelector(".card-actions");
-  if (showMoveBtn) actions.insertBefore(moveBtn, actions.lastChild);
-  if (isAdmin()) actions.insertBefore(delBtn, actions.lastChild);
+  if (showMoveBtn) card.querySelector(".ca-status").appendChild(moveBtn);
+  if (isAdmin())   card.querySelector(".ca-del").appendChild(delBtn);
 
   return card;
 }

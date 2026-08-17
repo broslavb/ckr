@@ -3410,6 +3410,11 @@ function pmLinkShouldOrder(item, val){
 
 function uid(){ return "p" + Date.now() + Math.random().toString(36).substr(2,5); }
 
+// Нормалізація артикулів: прибрати пробіли всередині кожного коду; кому лишити як роздільник
+function normCode(v){
+  return String(v==null?"":v).split(",").map(function(s){return s.replace(/\s+/g,"");}).filter(function(s){return s.length;}).join(", ");
+}
+
 
 function pmProfit(item, disc){
   if(item.status === "hidden") return 0;
@@ -3783,6 +3788,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     if(field==="buyPrice") el.style.color="var(--ac)";
     (function(f,t){ el.addEventListener("change",function(){
       var v = t==="number" ? +this.value : this.value;
+      // Артикули: прибрати пробіли всередині кожного коду (до коми)
+      if(f==="code"||f==="altCode"){ v=normCode(v); this.value=v; }
       // Заповнили «Посилання» — деталь вважається замовленою
       if(f==="link" && pmLinkShouldOrder(item, v)) item.status="ordered";
       pmUpdItem(blockId,item.id,f,v);
@@ -5305,6 +5312,8 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
     if(field==="buyPrice") el.style.color="var(--ac)";
     (function(f,t){ el.addEventListener("change",function(){
       var v = t==="number" ? +this.value : this.value;
+      // Артикули: прибрати пробіли всередині кожного коду (до коми)
+      if(f==="code"||f==="altCode"){ v=normCode(v); this.value=v; }
       // Заповнили «Посилання» — деталь вважається замовленою
       if(f==="link" && pmLinkShouldOrder(item, v)) item.status="ordered";
       soUpdPart(item.id,f,v);

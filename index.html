@@ -1758,6 +1758,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// Надійніший транспорт: авто-довгий-полінг усуває «зависання» запитів (.get)
+// за нестабільної мережі / проксі / блокувальників — типова причина вічного «Завантаження...».
+try { db.settings({ experimentalAutoDetectLongPolling: true }); } catch(e){ console.warn("Firestore settings:", e); }
 
 // ── DB & CONSTANTS ───────────────────────────────────────────────────────────
 // ── ROLES ────────────────────────────────────────────────────────────────────
@@ -2564,10 +2567,21 @@ function setActiveType(t, btn){
   loadActive();
 }
 
+// Запобіжник: якщо запит завис (мережа) — показати кнопку «Оновити», а не вічне «Завантаження...»
+function loadGuard(listEl, retryFn){
+  return setTimeout(function(){
+    if(listEl && /Завантаження\.\.\./.test(listEl.innerHTML)){
+      listEl.innerHTML='<div class="arch-empty">Завантаження затяглось — можливо, проблеми зі зʼєднанням.<br><button class="btn btn-p" style="margin-top:8px;padding:4px 12px">🔄 Оновити</button></div>';
+      var b=listEl.querySelector("button"); if(b) b.onclick=retryFn;
+    }
+  }, 14000);
+}
+
 function loadActive(vin) {
   var list = document.getElementById("active-list");
   if(!list){ console.warn("active-list not found"); return; }
   list.innerHTML = '<div class="arch-loading">Завантаження...</div>';
+  var _guard = loadGuard(list, function(){ loadActive(vin); });
   var query;
   if (vin) {
     query = db.collection("calculations").where("vin","==",vin);
@@ -2575,6 +2589,7 @@ function loadActive(vin) {
     query = db.collection("calculations").orderBy("createdAt","desc").limit(200);
   }
   query.get().then(function(snap){
+    clearTimeout(_guard);
     var docs = snap.docs.filter(function(d){
       var r = d.data();
       // Калькуляції = все, що ще не переведено в роботу і не завершено
@@ -2645,6 +2660,7 @@ function loadActive(vin) {
 
     document.getElementById("active-cnt").textContent = "("+totalCards+")";
   }).catch(function(e){
+    clearTimeout(_guard);
     console.error("loadActive error:", e);
     list.innerHTML='<div class="arch-empty">Помилка: '+e.message+'<br><small>'+e.code+'</small></div>';
   });
@@ -2672,6 +2688,7 @@ function loadArchive(vin) {
   var list = document.getElementById("arch-list");
   if(!list){ console.warn("arch-list not found"); return; }
   list.innerHTML = '<div class="arch-loading">Завантаження...</div>';
+  var _guard = loadGuard(list, function(){ loadArchive(vin); });
   var query;
   if (vin) {
     query = db.collection("calculations").where("vin","==",vin);
@@ -2679,12 +2696,13 @@ function loadArchive(vin) {
     query = db.collection("calculations").orderBy("createdAt","desc").limit(200);
   }
   query.get().then(function(snap){
+    clearTimeout(_guard);
     var docs = snap.docs.filter(function(d){ return d.data().status === "done"; });
     if (vin) docs = docs.filter(function(d){ return d.data().status === "done"; });
     if (!docs.length) { list.innerHTML='<div class="arch-empty">Архів порожній</div>'; return; }
     list.innerHTML=""; docs.forEach(function(doc){ list.appendChild(buildCard(doc, false)); });
     document.getElementById("arch-cnt").textContent = "("+docs.length+")";
-  }).catch(function(e){ console.error("loadActive error:", e); list.innerHTML='<div class="arch-empty">Помилка: '+e.message+'<br><small>'+e.code+'</small></div>'; });
+  }).catch(function(e){ clearTimeout(_guard); console.error("loadArchive error:", e); list.innerHTML='<div class="arch-empty">Помилка: '+e.message+'<br><small>'+e.code+'</small></div>'; });
 }
 
 function searchByVin(){

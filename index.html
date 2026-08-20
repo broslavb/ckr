@@ -425,7 +425,7 @@ body.pm-show-hidden .pm-hidden-btn{color:#e65100;border-color:#e65100;border-sty
 .pr-qbtn-skl.on{background:rgba(27,94,32,.2);border-color:#2e7d32;color:#1b5e20}
 @media print{ .pr-qbtn{display:none!important} }
 /* Tooltip звірки корзини по постачальнику */
-#sup-tip{position:fixed;z-index:1200;display:none;background:var(--blue-dark);color:#fff;font-family:var(--mono);font-size:11px;padding:8px 11px;border-radius:4px;box-shadow:0 6px 22px rgba(0,0,0,.4);max-width:280px;line-height:1.55;pointer-events:none}
+#sup-tip{position:fixed;z-index:1200;display:none;background:var(--blue-dark);color:#fff;font-family:var(--mono);font-size:11px;padding:9px 12px;border-radius:4px;box-shadow:0 6px 22px rgba(0,0,0,.4);min-width:230px;max-width:340px;line-height:1.5;pointer-events:none}
 #sup-tip b{color:#7fd4e6}
 /* Підсвітка знайденого дубля артикула */
 .pr-flash td{background:rgba(255,193,7,.5)!important;transition:background .5s}
@@ -3608,27 +3608,37 @@ function pmHighlightItem(id, blockId){
 }
 
 // ── Корзина по постачальнику: звірка (tooltip) + розповсюдження посилання ──
+// Підсумок по постачальнику з розбивкою по статусах (корзина / замовлено / отримано)
+function supGroupInit(name){ return {name:name, cart:{c:0,s:0}, ordered:{c:0,s:0}, received:{c:0,s:0}}; }
+function supGroupAdd(g, it, key){
+  if((it.supplierName||"").trim().toLowerCase()!==key) return;
+  var slot = it.status==="cart"?g.cart : it.status==="ordered"?g.ordered : it.status==="received"?g.received : null;
+  if(!slot) return;
+  slot.c++; slot.s += (it.buyPrice||0)*(it.qty||1);
+}
 function pmSupplierCart(name){
-  name=(name||"").trim(); var key=name.toLowerCase(); var count=0, sum=0;
-  if(name) PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){
-    ci(it); (it.variants||[]).forEach(ci);
-  }); });
-  function ci(it){ if(it.status==="cart" && (it.supplierName||"").trim().toLowerCase()===key){ count++; sum+=(it.buyPrice||0)*(it.qty||1); } }
-  return {name:name, count:count, sum:sum};
+  name=(name||"").trim(); var key=name.toLowerCase(); var g=supGroupInit(name);
+  if(name) PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ supGroupAdd(g,it,key); (it.variants||[]).forEach(function(v){supGroupAdd(g,v,key);}); }); });
+  return g;
 }
 function soSupplierCart(name){
-  name=(name||"").trim(); var key=name.toLowerCase(); var count=0, sum=0;
-  if(name) (typeof soParts!=="undefined"?soParts:[]).forEach(function(it){ ci(it); (it.variants||[]).forEach(ci); });
-  function ci(it){ if(it.status==="cart" && (it.supplierName||"").trim().toLowerCase()===key){ count++; sum+=(it.buyPrice||0)*(it.qty||1); } }
-  return {name:name, count:count, sum:sum};
+  name=(name||"").trim(); var key=name.toLowerCase(); var g=supGroupInit(name);
+  if(name) (typeof soParts!=="undefined"?soParts:[]).forEach(function(it){ supGroupAdd(g,it,key); (it.variants||[]).forEach(function(v){supGroupAdd(g,v,key);}); });
+  return g;
 }
-function showSupCartTip(el, info){
+function showSupCartTip(el, g){
   var tip=document.getElementById("sup-tip"); if(!tip) return;
-  if(!info || !info.name || info.count===0){ tip.style.display="none"; return; }
-  tip.innerHTML="🛒 У корзині від <b>"+actEsc(info.name)+"</b>:<br>"+info.count+" найм. · <b>"+info.sum.toLocaleString("uk-UA")+" грн</b> (закупка)";
+  var total = (g && g.name) ? (g.cart.c+g.ordered.c+g.received.c) : 0;
+  if(!total){ tip.style.display="none"; return; }
+  var rows="";
+  function row(icon,label,slot,color){ if(slot.c>0) rows+='<div style="display:flex;justify-content:space-between;gap:16px;margin-top:3px"><span>'+icon+' '+label+' · '+slot.c+' найм.</span><b style="color:'+color+'">'+slot.s.toLocaleString("uk-UA")+' грн</b></div>'; }
+  row("🛒","У корзині",g.cart,"#7fd4e6");
+  row("📦","Замовлено",g.ordered,"#ffcc80");
+  row("✅","Отримано",g.received,"#a5d6a7");
+  tip.innerHTML='<div style="color:#cdd8ee;margin-bottom:2px"><b>'+actEsc(g.name)+'</b> · закупка</div>'+rows;
   tip.style.display="block";
   var r=el.getBoundingClientRect();
-  var w=tip.offsetWidth||240;
+  var w=tip.offsetWidth||260;
   var left=Math.min(r.left, window.innerWidth-w-10);
   tip.style.left=Math.max(6,left)+"px";
   tip.style.top=(r.bottom+6)+"px";

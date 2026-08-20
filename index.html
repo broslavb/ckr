@@ -254,6 +254,8 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rcv-main{flex:1;min-width:0}
 .rcv-name{font-family:Verdana,sans-serif;font-size:13px;color:var(--tx);font-weight:600}
 .rcv-typ{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:6px}
+.rcv-code{font-family:var(--mono);font-size:14px;font-weight:bold;color:var(--blue-dark);letter-spacing:.5px;margin-top:3px}
+.rcv-code .rcv-alt{font-size:11px;font-weight:normal;color:var(--tx3)}
 .rcv-meta{font-family:var(--mono);font-size:10.5px;color:var(--tx2);margin-top:3px}
 .rcv-ttn{color:#1565c0;font-weight:bold}
 .rcv-nottn{color:var(--tx3)}
@@ -2724,7 +2726,7 @@ function loadReceive(){
       function col(it, blockId){
         if(it && it.status==="ordered" && it.name){
           RECEIVE_ROWS.push({docId:d.id, type:r.type, car:r.car||"—", vin:r.vin||"", blockId:blockId, itemId:it.id,
-            name:it.name, avail:it.avail, qty:it.qty||1, buyPrice:it.buyPrice||0, supplier:it.supplierName||"", link:it.link||"", ttn:it.ttn||"", ttnStatus:it.ttnStatus||""});
+            name:it.name, code:it.code||"", altCode:it.altCode||"", avail:it.avail, qty:it.qty||1, buyPrice:it.buyPrice||0, supplier:it.supplierName||"", link:it.link||"", ttn:it.ttn||"", ttnStatus:it.ttnStatus||""});
           has=true;
         }
       }
@@ -2749,8 +2751,10 @@ function renderReceive(){
       var idx=RECEIVE_ROWS.indexOf(r);
       var typ=pmAvailLabel(r.avail)||"";
       var ttnHtml = ttnDigits(r.ttn).length>=10 ? '<span class="rcv-ttn">🚚 '+actEsc(r.ttn)+(r.ttnStatus?' · '+actEsc(r.ttnStatus):'')+'</span>' : '<span class="rcv-nottn">без ТТН</span>';
+      var codeHtml = r.code ? '<div class="rcv-code">'+actEsc(r.code)+(r.altCode?' <span class="rcv-alt">/ '+actEsc(r.altCode)+'</span>':'')+'</div>' : '';
       html+='<div class="rcv-row">'
         +'<div class="rcv-main"><span class="rcv-name">'+actEsc(r.name)+'</span>'+(typ?' <span class="rcv-typ">'+actEsc(typ)+'</span>':'')
+        +codeHtml
         +'<div class="rcv-meta">'+(r.supplier?actEsc(r.supplier)+' · ':'')+'к-ть '+r.qty+(r.buyPrice?' · закупка '+r.buyPrice.toLocaleString("uk-UA")+' грн':'')+' · '+ttnHtml+'</div></div>'
         +'<button class="btn btn-p rcv-btn" onclick="receiveMark('+idx+')">✅ Отримано</button>'
         +'</div>';
@@ -2770,9 +2774,17 @@ function saveReceiveDoc(docId, rec, cb){
 }
 function receiveMark(idx){
   var r=RECEIVE_ROWS[idx]; if(!r) return;
-  var rec=RECEIVE_DOCS[r.docId]; if(!rec) return;
-  markReceivedInRec(rec, r.itemId);
-  saveReceiveDoc(r.docId, rec, function(){ showToast("✅ Отримано на складі"); loadReceive(); });
+  if(!RECEIVE_DOCS[r.docId]) return;
+  markReceivedInRec(RECEIVE_DOCS[r.docId], r.itemId);
+  var affected={}; affected[r.docId]=true;
+  // Пропозиція відмітити інші позиції того ж замовлення avto.pro
+  var ord=avtoOrderNum(r.link), extra=[];
+  if(ord) RECEIVE_ROWS.forEach(function(x){ if(x!==r && avtoOrderNum(x.link)===ord) extra.push(x); });
+  if(extra.length && confirm("Замовлення avto.pro #"+ord+": ще "+extra.length+" поз.\n\nВідмітити їх усі «Отримано на складі»?")){
+    extra.forEach(function(x){ if(RECEIVE_DOCS[x.docId]){ markReceivedInRec(RECEIVE_DOCS[x.docId], x.itemId); affected[x.docId]=true; } });
+  }
+  var ids=Object.keys(affected), saved=0;
+  ids.forEach(function(id){ saveReceiveDoc(id, RECEIVE_DOCS[id], function(){ saved++; if(saved===ids.length){ showToast("✅ Отримано на складі"); loadReceive(); } }); });
 }
 function receiveCheckAll(){
   var withTtn=RECEIVE_ROWS.filter(function(r){ return ttnDigits(r.ttn).length>=10; });

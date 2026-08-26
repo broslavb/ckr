@@ -260,13 +260,13 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rcv-ttn{color:#1565c0;font-weight:bold}
 .rcv-row-canc{border-left-color:#d32f2f!important;background:rgba(211,47,47,.06)}
 .rcv-canc{color:#c62828;font-weight:bold}
-.status-date{font-size:9px;color:var(--tx3);font-family:var(--mono);margin-top:2px;white-space:nowrap;letter-spacing:-.2px}
+.status-date{font-size:8.5px;color:var(--tx3);font-family:var(--mono);white-space:nowrap;letter-spacing:-.3px;flex-shrink:0}
 @media print{ .status-date{display:none!important} }
 /* Прострочене отримання (>5 днів, «в наявності») — блимає, щоб звернути увагу */
 @keyframes overduePulse{0%,100%{background:rgba(255,152,0,.12)}50%{background:rgba(255,152,0,.42)}}
 tr.pr-overdue td{animation:overduePulse 1.4s ease-in-out infinite}
 tr.pr-overdue td:nth-child(2){box-shadow:inset 3px 0 0 #ef6c00!important}
-.overdue-badge{font-size:9.5px;color:#e65100;font-weight:bold;font-family:var(--mono);margin-top:2px;white-space:nowrap}
+.overdue-badge{font-size:9px;color:#e65100;font-weight:bold;font-family:var(--mono);white-space:nowrap;flex-shrink:0}
 @media (prefers-reduced-motion: reduce){ tr.pr-overdue td{animation:none;background:rgba(255,152,0,.30)!important} }
 @media print{ tr.pr-overdue td{animation:none!important;background:transparent!important} .overdue-badge{display:none!important} }
 .cancel-banner{background:rgba(211,47,47,.12);border:1px solid #d32f2f;border-left:4px solid #d32f2f;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:#b71c1c;font-family:Verdana,sans-serif;font-size:13px;line-height:1.5}
@@ -4375,17 +4375,17 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var statSel=mkSel(PM_STATUSES,item.status||"dash","status","ps "+statusObj.cls);
   statSel.style.width="auto"; statSel.style.flex="1"; statSel.style.minWidth="0";
   stWrap.appendChild(sklBtn); stWrap.appendChild(statSel);
-  td11.appendChild(stWrap);
   if(item.statusDate && item.status && item.status!=="dash"){
-    var sd=document.createElement("div"); sd.className="status-date"; sd.textContent="📅 "+fmtDMY(item.statusDate);
-    td11.appendChild(sd);
+    var sd=document.createElement("span"); sd.className="status-date"; sd.textContent=fmtDMY(item.statusDate);
+    stWrap.appendChild(sd);
   }
   var odN=overdueDays(item);
   if(odN>RECV_LIMIT_DAYS){
     tr.classList.add("pr-overdue");
-    var od=document.createElement("div"); od.className="overdue-badge"; od.textContent="⏰ "+odN+" дн — не отримано!";
-    td11.appendChild(od);
+    var od=document.createElement("span"); od.className="overdue-badge"; od.title=odN+" дн — не отримано!"; od.textContent="⏰"+odN+"дн";
+    stWrap.appendChild(od);
   }
+  td11.appendChild(stWrap);
   tr.appendChild(td11);
 
   // Col 12: Actions
@@ -5970,17 +5970,17 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   (function(iid){ sklBtn.onclick=function(){ soQuickStatus(iid,"received"); }; })(item.id);
   statSel.style.width="auto"; statSel.style.flex="1"; statSel.style.minWidth="0";
   stWrap.appendChild(sklBtn); stWrap.appendChild(statSel);
-  td11.appendChild(stWrap);
   if(item.statusDate && item.status && item.status!=="dash"){
-    var sd=document.createElement("div"); sd.className="status-date"; sd.textContent="📅 "+fmtDMY(item.statusDate);
-    td11.appendChild(sd);
+    var sd=document.createElement("span"); sd.className="status-date"; sd.textContent=fmtDMY(item.statusDate);
+    stWrap.appendChild(sd);
   }
   var odN=overdueDays(item);
   if(odN>RECV_LIMIT_DAYS){
     tr.classList.add("pr-overdue");
-    var od=document.createElement("div"); od.className="overdue-badge"; od.textContent="⏰ "+odN+" дн — не отримано!";
-    td11.appendChild(od);
+    var od=document.createElement("span"); od.className="overdue-badge"; od.title=odN+" дн — не отримано!"; od.textContent="⏰"+odN+"дн";
+    stWrap.appendChild(od);
   }
+  td11.appendChild(stWrap);
   tr.appendChild(td11);
 
   // Col13: actions

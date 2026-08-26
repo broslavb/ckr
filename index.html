@@ -262,6 +262,13 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rcv-canc{color:#c62828;font-weight:bold}
 .status-date{font-size:9px;color:var(--tx3);font-family:var(--mono);margin-top:2px;white-space:nowrap;letter-spacing:-.2px}
 @media print{ .status-date{display:none!important} }
+/* Прострочене отримання (>5 днів, «в наявності») — блимає, щоб звернути увагу */
+@keyframes overduePulse{0%,100%{background:rgba(255,152,0,.12)}50%{background:rgba(255,152,0,.42)}}
+tr.pr-overdue td{animation:overduePulse 1.4s ease-in-out infinite}
+tr.pr-overdue td:nth-child(2){box-shadow:inset 3px 0 0 #ef6c00!important}
+.overdue-badge{font-size:9.5px;color:#e65100;font-weight:bold;font-family:var(--mono);margin-top:2px;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){ tr.pr-overdue td{animation:none;background:rgba(255,152,0,.30)!important} }
+@media print{ tr.pr-overdue td{animation:none!important;background:transparent!important} .overdue-badge{display:none!important} }
 .cancel-banner{background:rgba(211,47,47,.12);border:1px solid #d32f2f;border-left:4px solid #d32f2f;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:#b71c1c;font-family:Verdana,sans-serif;font-size:13px;line-height:1.5}
 @media print{ .cancel-banner{display:none!important} }
 mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
@@ -3838,6 +3845,15 @@ function pmUpdItem(blockId, itemId, field, value){
 function ttnDigits(v){ return String(v||"").replace(/\D/g,""); }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function fmtDMY(d){ if(!d) return ""; var p=String(d).slice(0,10).split("-"); return p.length===3?(p[2]+"."+p[1]+"."+p[0]):String(d); }
+function daysSince(iso){ if(!iso) return 0; var d=new Date(String(iso).slice(0,10)+"T00:00:00"); if(isNaN(d)) return 0; return Math.floor((new Date() - d)/86400000); }
+// Прострочення отримання: 5 днів для позицій «в наявності» (avail_*) у статусі «Замовлено»
+var RECV_LIMIT_DAYS = 5;
+function overdueDays(item){
+  if(item.status!=="ordered") return 0;
+  if(!/^avail_/.test(item.avail||"")) return 0;   // «під замовлення» (order_*) — без ліміту
+  if(!item.statusDate) return 0;
+  return daysSince(item.statusDate);
+}
 function avtoOrderNum(link){ var m=String(link||"").match(/orders\/(\d+)/); return m?m[1]:""; }
 function npTrack(ttn){
   return fetch("https://api.novaposhta.ua/v2.0/json/",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -4363,6 +4379,12 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(item.statusDate && item.status && item.status!=="dash"){
     var sd=document.createElement("div"); sd.className="status-date"; sd.textContent="📅 "+fmtDMY(item.statusDate);
     td11.appendChild(sd);
+  }
+  var odN=overdueDays(item);
+  if(odN>RECV_LIMIT_DAYS){
+    tr.classList.add("pr-overdue");
+    var od=document.createElement("div"); od.className="overdue-badge"; od.textContent="⏰ "+odN+" дн — не отримано!";
+    td11.appendChild(od);
   }
   tr.appendChild(td11);
 
@@ -5952,6 +5974,12 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   if(item.statusDate && item.status && item.status!=="dash"){
     var sd=document.createElement("div"); sd.className="status-date"; sd.textContent="📅 "+fmtDMY(item.statusDate);
     td11.appendChild(sd);
+  }
+  var odN=overdueDays(item);
+  if(odN>RECV_LIMIT_DAYS){
+    tr.classList.add("pr-overdue");
+    var od=document.createElement("div"); od.className="overdue-badge"; od.textContent="⏰ "+odN+" дн — не отримано!";
+    td11.appendChild(od);
   }
   tr.appendChild(td11);
 

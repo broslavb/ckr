@@ -258,6 +258,10 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rcv-code .rcv-alt{font-size:11px;font-weight:normal;color:var(--tx3)}
 .rcv-meta{font-family:var(--mono);font-size:10.5px;color:var(--tx2);margin-top:3px}
 .rcv-ttn{color:#1565c0;font-weight:bold}
+.rcv-row-canc{border-left-color:#d32f2f!important;background:rgba(211,47,47,.06)}
+.rcv-canc{color:#c62828;font-weight:bold}
+.cancel-banner{background:rgba(211,47,47,.12);border:1px solid #d32f2f;border-left:4px solid #d32f2f;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:#b71c1c;font-family:Verdana,sans-serif;font-size:13px;line-height:1.5}
+@media print{ .cancel-banner{display:none!important} }
 mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .rcv-nottn{color:var(--tx3)}
 .rcv-btn{padding:6px 12px;font-size:11px;white-space:nowrap;flex-shrink:0}
@@ -463,6 +467,12 @@ tr.pr-error td input,tr.pr-error td select,tr.pr-error td .pr-avail-txt{color:#c
 tr.pr-error td:nth-child(2){box-shadow:inset 3px 0 0 #d32f2f!important}
 tr.pr-error td .ps.s-error{background:rgba(211,47,47,.4)!important;color:#b71c1c!important}
 @media print{ tr.pr-error td{background:transparent!important;color:#000!important;box-shadow:none!important} }
+/* Статус СКАСОВАНО — червоний рядок */
+.ps.s-cancelled{background:rgba(211,47,47,.22);color:#b71c1c;font-weight:700}
+tr.pr-cancelled td{background:rgba(211,47,47,.14)!important}
+tr.pr-cancelled td:nth-child(2){box-shadow:inset 3px 0 0 #d32f2f!important}
+tr.pr-cancelled td input,tr.pr-cancelled td .pr-avail-txt{color:#c62828!important}
+@media print{ tr.pr-cancelled td{background:transparent!important;color:#000!important;box-shadow:none!important} }
 
 /* Summary panel */
 .pm-summary{background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:12px}
@@ -1190,6 +1200,7 @@ body.hero-on .hero-pad{margin-right:40vw}
         </div>
       </div>
 
+      <div id="pm-cancel-banner" class="cancel-banner" style="display:none"></div>
       <!-- Parts blocks will be rendered here -->
       <div id="pm-blocks"></div>
 
@@ -1287,6 +1298,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       </div>
     </div>
     <div id="so-parts-body">
+      <div id="so-cancel-banner" class="cancel-banner" style="display:none"></div>
       <div id="so-parts-table"></div>
       <div class="pt-add-row">
         <span class="pt-add-btn" onclick="soAddPart()">+ Додати запчастину</span>
@@ -1591,7 +1603,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div style="font-family:var(--disp);font-size:16px;letter-spacing:1px;color:var(--blue-dark)">📦 ОТРИМАННЯ · очікувані деталі (статус «Замовлено»)</div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-p" onclick="receiveApplyTTN()">📥 Підтягнути ТТН з пошти</button>
+        <button class="btn btn-p" onclick="receiveApplyTTN()">📥 Синхронізувати з поштою (ТТН + скасування)</button>
         <button class="btn btn-p" onclick="receiveCheckAll()">🚚 Перевірити доставку (Нова Пошта)</button>
         <button class="btn btn-o" onclick="loadReceive()">Оновити</button>
       </div>
@@ -2727,9 +2739,9 @@ function loadReceive(){
       var r=d.data(); if(r.status==="done") return;
       var has=false;
       function col(it, blockId){
-        if(it && it.status==="ordered" && it.name){
-          RECEIVE_ROWS.push({docId:d.id, type:r.type, car:r.car||"—", vin:r.vin||"", blockId:blockId, itemId:it.id,
-            name:it.name, code:it.code||"", altCode:it.altCode||"", avail:it.avail, qty:it.qty||1, buyPrice:it.buyPrice||0, supplier:it.supplierName||"", link:it.link||"", ttn:it.ttn||"", ttnStatus:it.ttnStatus||""});
+        if(it && (it.status==="ordered"||it.status==="cancelled") && it.name){
+          RECEIVE_ROWS.push({docId:d.id, type:r.type, car:r.car||"—", vin:r.vin||"", blockId:blockId, itemId:it.id, status:it.status,
+            name:it.name, code:it.code||"", altCode:it.altCode||"", avail:it.avail, qty:it.qty||1, buyPrice:it.buyPrice||0, supplier:it.supplierName||"", link:it.link||"", ttn:it.ttn||"", ttnStatus:it.ttnStatus||"", cancelReason:it.cancelReason||""});
           has=true;
         }
       }
@@ -2768,19 +2780,28 @@ function renderReceive(){
       var ttnHtml = ttnDigits(r.ttn).length>=10 ? '<span class="rcv-ttn">🚚 '+actEsc(r.ttn)+(r.ttnStatus?' · '+actEsc(r.ttnStatus):'')+'</span>' : '<span class="rcv-nottn">без ТТН</span>';
       var qq=(RECEIVE_QUERY||"").trim();
       var codeHtml = r.code ? '<div class="rcv-code">'+rcvHL(r.code,qq)+(r.altCode?' <span class="rcv-alt">/ '+rcvHL(r.altCode,qq)+'</span>':'')+'</div>' : '';
-      html+='<div class="rcv-row">'
+      var isCanc = r.status==="cancelled";
+      var metaTail = isCanc ? '<span class="rcv-canc">🚫 СКАСОВАНО'+(r.cancelReason?' — '+actEsc(r.cancelReason):'')+'</span>' : ttnHtml;
+      var btn = isCanc
+        ? '<button class="btn btn-o rcv-btn" onclick="receiveRevert('+idx+')" title="Перезамовили — повернути в «Замовлено»">↩ Замовлено</button>'
+        : '<button class="btn btn-p rcv-btn" onclick="receiveMark('+idx+')">✅ Отримано</button>';
+      html+='<div class="rcv-row'+(isCanc?' rcv-row-canc':'')+'">'
         +'<div class="rcv-main"><span class="rcv-name">'+rcvHL(r.name,qq)+'</span>'+(typ?' <span class="rcv-typ">'+actEsc(typ)+'</span>':'')
         +codeHtml
-        +'<div class="rcv-meta">'+(r.supplier?actEsc(r.supplier)+' · ':'')+'к-ть '+r.qty+(r.buyPrice?' · закупка '+r.buyPrice.toLocaleString("uk-UA")+' грн':'')+' · '+ttnHtml+'</div></div>'
-        +'<button class="btn btn-p rcv-btn" onclick="receiveMark('+idx+')">✅ Отримано</button>'
+        +'<div class="rcv-meta">'+(r.supplier?actEsc(r.supplier)+' · ':'')+'к-ть '+r.qty+(r.buyPrice?' · закупка '+r.buyPrice.toLocaleString("uk-UA")+' грн':'')+' · '+metaTail+'</div></div>'
+        +btn
         +'</div>';
     });
     html+='</div>';
   });
   list.innerHTML=html;
 }
-function markReceivedInRec(rec, itemId){
-  function mk(arr){ (arr||[]).forEach(function(it){ if(it.id===itemId) it.status="received"; (it.variants||[]).forEach(function(v){ if(v.id===itemId) v.status="received"; }); }); }
+function markReceivedInRec(rec, itemId){ setStatusInRec(rec, itemId, "received"); }
+function setStatusInRec(rec, itemId, status, reason){
+  function mk(arr){ (arr||[]).forEach(function(it){
+    if(it.id===itemId){ it.status=status; if(reason!==undefined) it.cancelReason=reason; }
+    (it.variants||[]).forEach(function(v){ if(v.id===itemId){ v.status=status; if(reason!==undefined) v.cancelReason=reason; } });
+  }); }
   if(rec.type==="parts_v2"){ (rec.blocks||[]).forEach(function(b){ mk(b.items); }); }
   else { mk(rec.parts); }
 }
@@ -2814,58 +2835,63 @@ function setTtnInRec(rec, itemId, ttn){
   else { mk(rec.parts); }
 }
 
-function receiveApplyTTN(){
-  // Позиції без ТТН, у яких посилання веде на замовлення avto.pro
-  var need={};
-  RECEIVE_ROWS.forEach(function(r){
-    if(ttnDigits(r.ttn).length>=10) return;
-    var ord=avtoOrderNum(r.link); if(!ord) return;
-    (need[ord]=need[ord]||[]).push(r);
-  });
-  var orders=Object.keys(need);
-  if(!orders.length){ showToast("Усі позиції вже з ТТН"); return; }
+function receiveRevert(idx){
+  var r=RECEIVE_ROWS[idx]; if(!r||!RECEIVE_DOCS[r.docId]) return;
+  setStatusInRec(RECEIVE_DOCS[r.docId], r.itemId, "ordered", "");
+  saveReceiveDoc(r.docId, RECEIVE_DOCS[r.docId], function(){ showToast("↩ Повернено в «Замовлено»"); loadReceive(); });
+}
 
-  showToast("Шукаю ТТН: замовлень "+orders.length+"…");
+function receiveApplyTTN(){
+  var need={}, allOrds={};
+  RECEIVE_ROWS.forEach(function(r){
+    var ord=avtoOrderNum(r.link); if(!ord) return;
+    allOrds[ord]=true;
+    if(ttnDigits(r.ttn).length<10 && r.status!=="cancelled") (need[ord]=need[ord]||[]).push(r);
+  });
+  if(!Object.keys(allOrds).length){ showToast("Немає позицій з посиланням avto.pro"); return; }
+
+  showToast("Синхронізую з поштою…");
   db.collection("settings").doc("avtopro_ttn").get().then(function(d){
     var data = d.exists ? (d.data()||{}) : {};
+    var affected={};
+
+    // ── 1) СКАСУВАННЯ ──
+    var cancelRows=[];
+    Object.keys(allOrds).forEach(function(ord){
+      if(!data["c"+ord]) return;
+      RECEIVE_ROWS.forEach(function(r){ if(avtoOrderNum(r.link)===ord && r.status!=="cancelled") cancelRows.push({r:r, reason:(data["c"+ord].reason||"")}); });
+    });
+    var cancelCnt=0;
+    if(cancelRows.length){
+      var byOrd={}; cancelRows.forEach(function(x){ var o=avtoOrderNum(x.r.link); (byOrd[o]=byOrd[o]||{reason:x.reason,n:0}).n++; });
+      var msg="🚫 Знайдено СКАСОВАНІ замовлення:\n\n"+Object.keys(byOrd).map(function(o){ return "№"+o+" ("+byOrd[o].n+" поз.)"+(byOrd[o].reason?" — "+byOrd[o].reason:""); }).join("\n")+"\n\nПозначити ці позиції «СКАСОВАНО»?";
+      if(confirm(msg)){
+        cancelRows.forEach(function(x){ var rec=RECEIVE_DOCS[x.r.docId]; if(rec){ setStatusInRec(rec, x.r.itemId, "cancelled", x.reason); affected[x.r.docId]=true; cancelCnt++; } });
+      }
+    }
+
+    // ── 2) ТТН ──
     var hits=[], multi=[];
-    orders.forEach(function(ord){
+    Object.keys(need).forEach(function(ord){
       var rec=data["o"+ord]; if(!rec) return;
-      var list=(rec.all&&rec.all.length?rec.all:[rec.ttn])
-        .map(ttnDigits).filter(function(t){ return t.length>=10; });
+      var list=(rec.all&&rec.all.length?rec.all:[rec.ttn]).map(ttnDigits).filter(function(t){ return t.length>=10; });
       list=list.filter(function(t,i){ return list.indexOf(t)===i; });
       if(list.length===1) hits.push({ord:ord, ttn:list[0]});
-      // Кілька посилок на одне замовлення — яка позиція в якій, лист не каже.
-      // Такі не чіпаємо: майстер проставляє вручну.
       else if(list.length>1) multi.push({ord:ord, list:list});
     });
-
     if(multi.length){
       alert("Замовлення з кількома ТТН — проставте вручну:\n\n"
-        + multi.map(function(x){ return "№"+x.ord+" ("+need[x.ord].length+" поз.):\n   "
-            + x.list.join("\n   "); }).join("\n\n"));
+        + multi.map(function(x){ return "№"+x.ord+" ("+need[x.ord].length+" поз.):\n   "+x.list.join("\n   "); }).join("\n\n"));
     }
-    if(!hits.length){
-      if(!multi.length) showToast("У пошті поки немає ТТН для цих замовлень");
-      return;
-    }
+    var ttnCnt=0;
+    hits.forEach(function(h){ need[h.ord].forEach(function(r){ var rec=RECEIVE_DOCS[r.docId]; if(rec){ setTtnInRec(rec, r.itemId, h.ttn); affected[r.docId]=true; ttnCnt++; } }); });
 
-    var rowCnt=0; hits.forEach(function(h){ rowCnt+=need[h.ord].length; });
-    if(!confirm("Знайдено ТТН для "+hits.length+" замовлень ("+rowCnt+" поз.).\n\nПроставити їх?")) return;
-
-    var affected={};
-    hits.forEach(function(h){
-      need[h.ord].forEach(function(r){
-        var rec=RECEIVE_DOCS[r.docId]; if(!rec) return;
-        setTtnInRec(rec, r.itemId, h.ttn);
-        affected[r.docId]=true;
-      });
-    });
-    var ids=Object.keys(affected), saved=0;
-    if(!ids.length){ showToast("Нічого оновлювати"); return; }
+    var ids=Object.keys(affected);
+    if(!ids.length){ showToast("Нічого нового з пошти"); return; }
+    var saved=0;
     ids.forEach(function(id){ saveReceiveDoc(id, RECEIVE_DOCS[id], function(){
       saved++;
-      if(saved===ids.length){ showToast("✅ Проставлено ТТН: "+rowCnt); loadReceive(); }
+      if(saved===ids.length){ showToast("✅ ТТН: "+ttnCnt+" · 🚫 Скасовано: "+cancelCnt); loadReceive(); }
     }); });
   }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
@@ -3605,6 +3631,7 @@ var PM_STATUSES = [
   {val:"error",    label:"ERROR ⚠",             cls:"s-error"},
   {val:"client_wait",      label:"Очікується від клієнта",    cls:"s-client-wait"},
   {val:"client_delivered", label:"Клієнт доставив на склад",  cls:"s-client-delivered"},
+  {val:"cancelled",        label:"СКАСОВАНО ✖",                cls:"s-cancelled"},
   {val:"hidden",           label:"Приховати варіант",          cls:"s-hidden"}
 ];
 
@@ -3619,6 +3646,7 @@ function pmRowStatusBg(val, isVariant){
   if(val==="check")            return "rgba(255,235,59,.15)";
   if(val==="client_wait")      return "rgba(255,152,0,.1)";
   if(val==="hidden")           return "rgba(120,120,120,.14)";
+  if(val==="cancelled")        return "rgba(211,47,47,.16)";
   return isVariant ? "rgba(21,101,192,.03)" : "";
 }
 
@@ -3794,6 +3822,50 @@ function npTrack(ttn){
 function npIsDelivered(code){ return ["9","10","11"].indexOf(String(code))>=0; }
 
 // Масова перевірка ТТН у Запчастинах: доставлені → «Отримано на складі»
+// ── Скасовані замовлення avto.pro (попередження в редакторі) ──────────────────
+function renderCancelBanner(banner, already, newCanc, applyFn){
+  if(!banner) return;
+  if(!newCanc.length && !already){ banner.style.display="none"; banner.innerHTML=""; return; }
+  var html="";
+  if(newCanc.length){
+    html='<b>⚠ УВАГА: скасовані замовлення avto.pro!</b> '
+      + newCanc.map(function(x){ return "№"+x.ord+(x.reason?" ("+actEsc(x.reason)+")":""); }).join(", ")
+      + ' <button class="btn btn-o" style="margin-left:8px;padding:3px 10px" onclick="'+applyFn+'()">Позначити «Скасовано»</button>';
+  } else {
+    html='<b>🚫 У цій калькуляції є скасовані позиції ('+already+') — перезамовте деталі.</b>';
+  }
+  banner.innerHTML=html; banner.style.display="block";
+}
+function pmCheckCancellations(){
+  var banner=document.getElementById("pm-cancel-banner"); if(!banner) return;
+  var already=0, orders={};
+  function scan(it){ if(it.status==="cancelled") already++; var o=avtoOrderNum(it.link); if(o) orders[o]=true; }
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ scan(it); (it.variants||[]).forEach(scan); }); });
+  var ordList=Object.keys(orders);
+  if(!ordList.length && !already){ banner.style.display="none"; return; }
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data=d.exists?(d.data()||{}):{}; var newCanc=[];
+    ordList.forEach(function(o){ if(!data["c"+o]) return;
+      var pending=false;
+      PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){
+        if(avtoOrderNum(it.link)===o && it.status!=="cancelled" && it.status!=="received") pending=true;
+        (it.variants||[]).forEach(function(v){ if(avtoOrderNum(v.link)===o && v.status!=="cancelled" && v.status!=="received") pending=true; });
+      }); });
+      if(pending) newCanc.push({ord:o, reason:(data["c"+o].reason||"")});
+    });
+    renderCancelBanner(banner, already, newCanc, "pmApplyCancel");
+  }).catch(function(){ renderCancelBanner(banner, already, [], "pmApplyCancel"); });
+}
+function pmApplyCancel(){
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data=d.exists?(d.data()||{}):{}; var n=0;
+    function mark(it){ var o=avtoOrderNum(it.link); if(o && data["c"+o] && it.status!=="cancelled" && it.status!=="received"){ it.status="cancelled"; it.cancelReason=(data["c"+o].reason||""); n++; } }
+    PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ mark(it); (it.variants||[]).forEach(mark); }); });
+    pmRender(); pmUpdateSummary(); pmCheckCancellations();
+    showToast("🚫 Позначено скасованих: "+n+" — не забудьте Зберегти");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
 function pmCheckTTNs(){
   var items=[];
   PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ col(it); (it.variants||[]).forEach(col); }); });
@@ -4071,6 +4143,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var isPrio = isVariant ? !!parentPrio : !!item.priority;
   if(isPrio) tr.classList.add("pr-prio");
   if(item.status==="error") tr.classList.add("pr-error");
+  if(item.status==="cancelled") tr.classList.add("pr-cancelled");
   if(isHidden) tr.classList.add("pr-hidden");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
@@ -5301,6 +5374,7 @@ function pmLoadFromRecord(r, docId){
   pmRenderPayments();
   takeSnap("parts");
   pmPullCashExpenses(r.car||"", r.vin||"");   // підтягнути витрати з каси по цьому авто
+  pmCheckCancellations();                     // попередження про скасовані замовлення
 }
 
 // Init parts module when tab opens
@@ -5536,6 +5610,36 @@ function soUpdPart(id, field, value){
 }
 
 // ── ТТН у ТО ──────────────────────────────────────────────────────────────────
+function soCheckCancellations(){
+  var banner=document.getElementById("so-cancel-banner"); if(!banner) return;
+  var already=0, orders={};
+  function scan(it){ if(it.status==="cancelled") already++; var o=avtoOrderNum(it.link); if(o) orders[o]=true; }
+  soParts.forEach(function(it){ scan(it); (it.variants||[]).forEach(scan); });
+  var ordList=Object.keys(orders);
+  if(!ordList.length && !already){ banner.style.display="none"; return; }
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data=d.exists?(d.data()||{}):{}; var newCanc=[];
+    ordList.forEach(function(o){ if(!data["c"+o]) return;
+      var pending=false;
+      soParts.forEach(function(it){
+        if(avtoOrderNum(it.link)===o && it.status!=="cancelled" && it.status!=="received") pending=true;
+        (it.variants||[]).forEach(function(v){ if(avtoOrderNum(v.link)===o && v.status!=="cancelled" && v.status!=="received") pending=true; });
+      });
+      if(pending) newCanc.push({ord:o, reason:(data["c"+o].reason||"")});
+    });
+    renderCancelBanner(banner, already, newCanc, "soApplyCancel");
+  }).catch(function(){ renderCancelBanner(banner, already, [], "soApplyCancel"); });
+}
+function soApplyCancel(){
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data=d.exists?(d.data()||{}):{}; var n=0;
+    function mark(it){ var o=avtoOrderNum(it.link); if(o && data["c"+o] && it.status!=="cancelled" && it.status!=="received"){ it.status="cancelled"; it.cancelReason=(data["c"+o].reason||""); n++; } }
+    soParts.forEach(function(it){ mark(it); (it.variants||[]).forEach(mark); });
+    soRenderParts(); soUpdateSummary(); soCheckCancellations();
+    showToast("🚫 Позначено скасованих: "+n+" — не забудьте Зберегти");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
 function soCheckTTNs(){
   var items=[];
   soParts.forEach(function(it){ col(it); (it.variants||[]).forEach(col); });
@@ -5652,6 +5756,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   if(rowBg) tr.style.background=rowBg;
   tr.setAttribute("data-item-id",item.id);
   if(item.status==="error") tr.classList.add("pr-error");
+  if(item.status==="cancelled") tr.classList.add("pr-cancelled");
   if(isHidden) tr.classList.add("pr-hidden");
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
@@ -6045,6 +6150,7 @@ function soLoadFromRecord(r, docId){
   if(soSt) soSt.value = r.status || "preliminary";
   soInit();
   takeSnap("service");
+  soCheckCancellations();   // попередження про скасовані замовлення
 }
 
 function soClear(){

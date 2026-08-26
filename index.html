@@ -678,6 +678,11 @@ input, select, button, .btn, .pp-inp, .cinp,
 .cash-btn-minus{background:#b71c1c!important;color:#fff!important;font-size:14px!important;padding:10px 20px!important;border-radius:6px!important}
 .cash-btn-minus:hover{background:#c62828!important}
 .cash-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cash-quick{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 20px;background:var(--bg3);border-bottom:1px solid var(--bd)}
+.cash-quick-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx3);margin-right:2px}
+.cash-quick-btn{font-family:Verdana,sans-serif;font-size:12px;color:var(--tx2);background:var(--bg2);border:1px solid var(--bda);border-radius:20px;padding:6px 13px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.cash-quick-btn:hover{color:#b71c1c;border-color:#b71c1c;background:#fff;box-shadow:0 2px 8px rgba(183,28,28,.15)}
+.cash-quick-btn:active{transform:translateY(1px)}
 .cash-filter-inp{background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:4px 8px;border-radius:3px;outline:none}
 .cash-filter-inp:focus{border-color:var(--ac)}
 .cash-table-wrap{overflow-y:auto;flex:1;padding:0 20px 20px}
@@ -1493,6 +1498,21 @@ body.hero-on .hero-pad{margin-right:40vw}
         <button class="btn btn-o" onclick="cashClearFilters()" style="font-size:11px;padding:4px 10px">✕ Скинути</button>
         <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--tx3)" id="cash-filter-info"></span>
       </div>
+    </div>
+
+    <!-- Швидкі витрати -->
+    <div class="cash-quick">
+      <span class="cash-quick-lbl">Швидка витрата:</span>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Таксі')">🚕 Таксі</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Стоянка')">🅿️ Стоянка</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Мийка')">🚿 Мийка</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Сторонній електрик')">⚡ Електрик</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Прибирання / Уборка')">🧹 Прибирання</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Розвал/сходження')">🔧 Розвал/сходж.</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Вібростенд')">📳 Вібростенд</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Коригування рівня фар')">💡 Рівень фар</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Кава / Продукти')">☕ Кава/прод.</button>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Метізи / Кліпси')">🔩 Метізи</button>
     </div>
 
     <!-- Table -->
@@ -6824,7 +6844,7 @@ var CASH_EDIT_ID = null; // editing existing op
 
 var CASH_PRESETS = {
   "+": ["Оплата від клієнта", "Внесення готівки", "Аванс від клієнта", "Повернення коштів"],
-  "-": ["Таксі", "Стоянка", "Мийка", "Прибирання / Уборка", "Розвал/сходження", "Діагностика (УкрДіагностика)", "Бензин", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
+  "-": ["Таксі", "Стоянка", "Мийка", "Сторонній електрик", "Прибирання / Уборка", "Розвал/сходження", "Вібростенд", "Коригування рівня фар", "Діагностика (УкрДіагностика)", "Бензин", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
 };
 
 // ── МАРШРУТИЗАЦІЯ ВИТРАТ У КАЛЬКУЛЯЦІЮ АВТО ──────────────────────────────────
@@ -6838,6 +6858,9 @@ var CASH_DEST_RULES = [
   {m:["розвал","сходжен"],                   dest:"works",       markup:1.3},
   {m:["діагностик"],                         dest:"works",       markup:1.3},
   {m:["електрик","кодуван"],                 dest:"works",       markup:1.3},
+  {m:["стоянк"],                             dest:"works",       markup:1.3},
+  {m:["вібростенд","вибростенд"],            dest:"works",       markup:1.3},
+  {m:["коригуван","корегуван","рівня фар","рівень фар"], dest:"works", markup:1.3},
   {m:["олив","мастил","фільтр"],             dest:"to_parts",    markup:1.3},
   {m:["метіз","кліпс"],                      dest:"consumables", markup:1.3},
   {m:["запчастин"],                          dest:"consumables", markup:1.3},
@@ -7037,7 +7060,7 @@ function cashRenderTable(){
 function escH(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
-function cashShowModal(type){
+function cashShowModal(type, desc){
   CASH_OP_TYPE = type;
   CASH_EDIT_ID = null;
   var title = document.getElementById("cash-modal-title");
@@ -7053,7 +7076,7 @@ function cashShowModal(type){
   }
   // Reset
   document.getElementById("cash-modal-amount").value = "";
-  document.getElementById("cash-modal-desc").value = "";
+  document.getElementById("cash-modal-desc").value = desc || "";
   document.getElementById("cash-modal-car").value = "";
   document.getElementById("cash-modal-date").value = new Date().toISOString().split("T")[0];
   document.getElementById("cash-presets-dd").style.display = "none";

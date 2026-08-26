@@ -106,6 +106,11 @@ RE_TTN = re.compile(r"ТТН\s*[:№]?\s*(\d{13,18})", re.IGNORECASE)
 RE_ORDER_URL = re.compile(r"avtopro\.ua/orders/(\d{5,12})", re.IGNORECASE)
 RE_ORDER_TXT = re.compile(r"замовлен\w*\s*[№#]\s*(\d{5,12})", re.IGNORECASE)
 
+# Лист-скасування: «Продавець X скасував замовлення № 10514457 з причини: "…"»
+RE_CANCEL = re.compile(r"скасув\w*\s+замовленн", re.IGNORECASE)
+RE_CANCEL_REASON = re.compile(r"причин\w*\s*[:\-]?\s*[\"'«”“]?\s*([^\"'»”\n\.]{3,120})", re.IGNORECASE)
+RE_CANCEL_SELLER = re.compile(r"Продавець\s+(.{2,60}?)\s+скасув", re.IGNORECASE)
+
 RE_TAGS = re.compile(r"<[^>]+>")
 # У листах avto.pro усередині HTML лежить великий блок CSS — його треба
 # викинути цілком, інакше стилі вклиняться між номером замовлення і ТТН.
@@ -182,6 +187,23 @@ def extract_pairs(text, subject=""):
     return [(order, unique_ttns[0])]
 
 
+def extract_cancel(text, subject=""):
+    """Повертає (номер замовлення, причина, продавець) з листа-скасування, або None."""
+    if not RE_CANCEL.search(text):
+        return None
+    subject = RE_ZEROWIDTH.sub("", subject or "")
+    orders = RE_SUBJ_ORDER.findall(subject) or RE_ORDER_URL.findall(text) or RE_ORDER_TXT.findall(text)
+    if not orders:
+        log("  ⚠ скасування є, а номера замовлення не видно — пропускаю")
+        return None
+    order = orders[0]
+    rm = RE_CANCEL_REASON.search(text)
+    reason = (rm.group(1).strip() if rm else "")[:120]
+    sm = RE_CANCEL_SELLER.search(text)
+    seller = (sm.group(1).strip() if sm else "")[:60]
+    return (order, reason, seller)
+
+
 # ── Firestore ───────────────────────────────────────────────────────────────
 
 def http_json(url, payload=None, token=None, method=None):
@@ -217,15 +239,23 @@ def firestore_read(token):
         raise
 
 
-def firestore_sync(token, found):
-    """Дописує пари в settings/avtopro_ttn одним запитом.
+def firestore_sync(token, found, cancels=None):
+    """Дописує пари ТТН і скасування в settings/avtopro_ttn одним запитом.
 
-    На одне замовлення avto.pro буває кілька ТТН (різні посилки), тому
-    зберігаємо список `all`, а не одне значення. updateMask лишає решту
-    документа недоторканою.
+    ТТН: поле "o<номер>" → {ttn, all[…], subject, at}.
+    Скасування: поле "c<номер>" → {reason, seller, at}.
+    updateMask лишає решту документа недоторканою.
     """
+    cancels = cancels or []
     existing = firestore_read(token)
     updates, now = {}, datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    for order, reason, seller in cancels:
+        updates["c" + order] = {"mapValue": {"fields": {
+            "reason": {"stringValue": reason},
+            "seller": {"stringValue": seller},
+            "at":     {"timestampValue": now},
+        }}}
 
     for order, ttn, subject in found:
         key = "o" + order
@@ -313,21 +343,29 @@ def main():
         save_state(state)
         return
 
-    found = []
+    found, cancels = [], []
     for uid, subject, text in messages:
         pairs = extract_pairs(text, subject)
-        if not pairs:
-            log("  UID %s «%s» — ТТН не знайдено" % (uid, subject[:60]))
+        if pairs:
+            for order, ttn in pairs:
+                log("  UID %s → замовлення %s, ТТН %s" % (uid, order, ttn))
+                found.append((order, ttn, subject))
             continue
-        for order, ttn in pairs:
-            log("  UID %s → замовлення %s, ТТН %s" % (uid, order, ttn))
-            found.append((order, ttn, subject))
+        cancel = extract_cancel(text, subject)
+        if cancel:
+            order, reason, seller = cancel
+            log("  UID %s → 🚫 СКАСОВАНО замовлення %s (%s%s)"
+                % (uid, order, seller or "?", (", " + reason) if reason else ""))
+            cancels.append(cancel)
+            continue
+        log("  UID %s «%s» — ТТН/скасування не знайдено" % (uid, subject[:60]))
 
-    if found:
+    if found or cancels:
         token = firebase_login(cfg["FB_EMAIL"], cfg["FB_PASS"])
         try:
-            n = firestore_sync(token, found)
-            log("Записано в базу: %d замовлень (%d ТТН)" % (n, len(found)))
+            n = firestore_sync(token, found, cancels)
+            log("Записано в базу: %d записів (%d ТТН, %d скасувань)"
+                % (n, len(found), len(cancels)))
         except RuntimeError as e:
             log("  ✖ запис у базу не вдався: %s" % e)
             return   # стан не рухаємо — на наступному запуску спробуємо ще раз

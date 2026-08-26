@@ -29,7 +29,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ENV_FILE = os.path.join(HERE, ".env")
+CONFIG_FILE = os.path.join(HERE, "config.txt")
 STATE_FILE = os.path.join(HERE, ".state.json")
 LOG_FILE = os.path.join(HERE, "avtopro_ttn.log")
 
@@ -51,12 +51,13 @@ def log(msg):
 # ── Налаштування ────────────────────────────────────────────────────────────
 
 def load_env():
-    """Читає tools/.env у вигляді KEY=VALUE. Значення в лапках теж приймає."""
+    """Читає tools/config.txt у вигляді KEY=VALUE. Значення в лапках теж приймає."""
     cfg = {}
-    if not os.path.exists(ENV_FILE):
-        log("НЕМАЄ файлу %s — скопіюй .env.example у .env і заповни" % ENV_FILE)
+    if not os.path.exists(CONFIG_FILE):
+        log("НЕМАЄ файлу %s — скопіюй config.example.txt у config.txt і заповни"
+            % CONFIG_FILE)
         sys.exit(1)
-    with open(ENV_FILE, encoding="utf-8") as f:
+    with open(CONFIG_FILE, encoding="utf-8") as f:
         for raw in f:
             line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
@@ -68,7 +69,7 @@ def load_env():
             cfg[k.strip()] = v
     missing = [k for k in ("IMAP_USER", "IMAP_PASS", "FB_EMAIL", "FB_PASS") if not cfg.get(k)]
     if missing:
-        log("У .env не заповнено: %s" % ", ".join(missing))
+        log("У config.txt не заповнено: %s" % ", ".join(missing))
         sys.exit(1)
     return cfg
 

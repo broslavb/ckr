@@ -6,6 +6,6 @@ CLAUDE.md
 Скріншоти тестові */
 
 # Секрети парсера ТТН
-tools/.env
+tools/config.txt
 tools/.state.json
 tools/*.log

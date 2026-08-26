@@ -1591,6 +1591,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div style="font-family:var(--disp);font-size:16px;letter-spacing:1px;color:var(--blue-dark)">📦 ОТРИМАННЯ · очікувані деталі (статус «Замовлено»)</div>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-p" onclick="receiveApplyTTN()">📥 Підтягнути ТТН з пошти</button>
         <button class="btn btn-p" onclick="receiveCheckAll()">🚚 Перевірити доставку (Нова Пошта)</button>
         <button class="btn btn-o" onclick="loadReceive()">Оновити</button>
       </div>
@@ -2801,6 +2802,57 @@ function receiveMark(idx){
   var ids=Object.keys(affected), saved=0;
   ids.forEach(function(id){ saveReceiveDoc(id, RECEIVE_DOCS[id], function(){ saved++; if(saved===ids.length){ showToast("✅ Отримано на складі"); loadReceive(); } }); });
 }
+// ТТН, зібрані з пошти скриптом tools/avtopro_ttn.py, лежать у колекції
+// avtopro_ttn документом з іменем = номер замовлення avto.pro.
+function setTtnInRec(rec, itemId, ttn){
+  function mk(arr){ (arr||[]).forEach(function(it){
+    if(it.id===itemId) it.ttn=ttn;
+    (it.variants||[]).forEach(function(v){ if(v.id===itemId) v.ttn=ttn; });
+  }); }
+  if(rec.type==="parts_v2"){ (rec.blocks||[]).forEach(function(b){ mk(b.items); }); }
+  else { mk(rec.parts); }
+}
+
+function receiveApplyTTN(){
+  // Позиції без ТТН, у яких посилання веде на замовлення avto.pro
+  var need={};
+  RECEIVE_ROWS.forEach(function(r){
+    if(ttnDigits(r.ttn).length>=10) return;
+    var ord=avtoOrderNum(r.link); if(!ord) return;
+    (need[ord]=need[ord]||[]).push(r);
+  });
+  var orders=Object.keys(need);
+  if(!orders.length){ showToast("Усі позиції вже з ТТН"); return; }
+
+  showToast("Шукаю ТТН: замовлень "+orders.length+"…");
+  Promise.all(orders.map(function(ord){
+    return db.collection("avtopro_ttn").doc(ord).get()
+      .then(function(d){ return d.exists ? {ord:ord, ttn:ttnDigits(d.data().ttn)} : null; })
+      .catch(function(){ return null; });
+  })).then(function(res){
+    var hits=res.filter(function(x){ return x && x.ttn.length>=10; });
+    if(!hits.length){ showToast("У пошті поки немає ТТН для цих замовлень"); return; }
+
+    var rowCnt=0; hits.forEach(function(h){ rowCnt+=need[h.ord].length; });
+    if(!confirm("Знайдено ТТН для "+hits.length+" замовлень ("+rowCnt+" поз.).\n\nПроставити їх?")) return;
+
+    var affected={};
+    hits.forEach(function(h){
+      need[h.ord].forEach(function(r){
+        var rec=RECEIVE_DOCS[r.docId]; if(!rec) return;
+        setTtnInRec(rec, r.itemId, h.ttn);
+        affected[r.docId]=true;
+      });
+    });
+    var ids=Object.keys(affected), saved=0;
+    if(!ids.length){ showToast("Нічого оновлювати"); return; }
+    ids.forEach(function(id){ saveReceiveDoc(id, RECEIVE_DOCS[id], function(){
+      saved++;
+      if(saved===ids.length){ showToast("✅ Проставлено ТТН: "+rowCnt); loadReceive(); }
+    }); });
+  });
+}
+
 function receiveCheckAll(){
   var withTtn=RECEIVE_ROWS.filter(function(r){ return ttnDigits(r.ttn).length>=10; });
   if(!withTtn.length){ showToast("Немає ТТН для перевірки"); return; }

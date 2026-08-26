@@ -4,3 +4,8 @@ index-BACKUP-*.html
 CLAUDE.md
 .DS_Store
 Скріншоти тестові */
+
+# Секрети парсера ТТН
+tools/.env
+tools/.state.json
+tools/*.log

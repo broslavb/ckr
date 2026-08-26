@@ -98,6 +98,9 @@ RE_ORDER_URL = re.compile(r"avtopro\.ua/orders/(\d{5,12})", re.IGNORECASE)
 RE_ORDER_TXT = re.compile(r"замовлен\w*\s*[№#]\s*(\d{5,12})", re.IGNORECASE)
 RE_TTN = re.compile(r"ТТН\s*[:№]?\s*(\d{10,18})", re.IGNORECASE)
 RE_TAGS = re.compile(r"<[^>]+>")
+# У листах avto.pro усередині HTML лежить великий блок CSS — його треба
+# викинути цілком, інакше стилі вклиняться між номером замовлення і ТТН.
+RE_STYLE = re.compile(r"<(style|script|head)\b.*?</\1>", re.IGNORECASE | re.DOTALL)
 
 
 def decode_header(value):
@@ -127,7 +130,9 @@ def message_text(msg):
         charset = part.get_content_charset() or "utf-8"
         text = payload.decode(charset, errors="replace")
         if ctype == "text/html":
-            # теги геть, але посилання в href лишаються в тексті
+            # спершу CSS і скрипти цілком, потім теги;
+            # посилання в href при цьому лишаються в тексті
+            text = RE_STYLE.sub(" ", text)
             text = RE_TAGS.sub(" ", text.replace("href=", " href="))
         # у листах № і пробіли часто екрановані: &#x2116;, &nbsp;
         text = html_mod.unescape(text).replace("\xa0", " ")

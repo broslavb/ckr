@@ -13,6 +13,8 @@
 «Отримання»), бо тільки він знає внутрішній формат калькуляцій.
 
 Залежностей немає — лише стандартна бібліотека Python 3.
+Разовий запуск без фільтра за відправником (наприклад, щоб розібрати
+переслані листи): python3 avtopro_ttn.py --all
 """
 
 import email
@@ -25,6 +27,7 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -91,18 +94,25 @@ def save_state(state):
 
 # ── Розбір листа ────────────────────────────────────────────────────────────
 
-# «до вашого замовлення № 10514428 … створено ТТН 20451519906235»
-RE_PAIR = re.compile(
-    r"замовлен\w*\s*[№#]?\s*(\d{5,12}).{0,400}?ТТН\s*[:№]?\s*(\d{10,18})",
-    re.IGNORECASE | re.DOTALL,
-)
+# Номер замовлення avto.pro ставить у тему листа: «[10473219] До вашого …»
+RE_SUBJ_ORDER = re.compile(r"\[(\d{5,12})\]")
+
+# «створено ТТН 59001740377579». ТТН Нової Пошти — 14 цифр; коротшу межу
+# беремо із запасом, але не нижче 13, щоб не хапати артикули деталей
+# (у тілі листа трапляються 11-значні номери на кшталт 51118077277).
+RE_TTN = re.compile(r"ТТН\s*[:№]?\s*(\d{13,18})", re.IGNORECASE)
+
+# Запасні шляхи на випадок теми без номера
 RE_ORDER_URL = re.compile(r"avtopro\.ua/orders/(\d{5,12})", re.IGNORECASE)
 RE_ORDER_TXT = re.compile(r"замовлен\w*\s*[№#]\s*(\d{5,12})", re.IGNORECASE)
-RE_TTN = re.compile(r"ТТН\s*[:№]?\s*(\d{10,18})", re.IGNORECASE)
+
 RE_TAGS = re.compile(r"<[^>]+>")
 # У листах avto.pro усередині HTML лежить великий блок CSS — його треба
 # викинути цілком, інакше стилі вклиняться між номером замовлення і ТТН.
 RE_STYLE = re.compile(r"<(style|script|head)\b.*?</\1>", re.IGNORECASE | re.DOTALL)
+# Навколо номера ТТН avto.pro ставить невидимі символи (zero-width space),
+# через які \s у регулярці не спрацьовує. Викидаємо їх з тексту одразу.
+RE_ZEROWIDTH = re.compile(r"[\u200b\u200c\u200d\u2060\ufeff\u00ad]")
 
 
 def decode_header(value):
@@ -138,24 +148,38 @@ def message_text(msg):
             text = RE_TAGS.sub(" ", text.replace("href=", " href="))
         # у листах № і пробіли часто екрановані: &#x2116;, &nbsp;
         text = html_mod.unescape(text).replace("\xa0", " ")
+        text = RE_ZEROWIDTH.sub("", text)
+        # посилання приходять через трекер AWS із %2F замість /
+        text = urllib.parse.unquote(text)
         chunks.append(text)
     return "\n".join(chunks)
 
 
-def extract_pairs(text):
-    """Повертає [(номер замовлення, ТТН)] з тексту листа."""
-    pairs = RE_PAIR.findall(text)
-    if pairs:
-        return [(o, t) for o, t in pairs]
-    # Запасний шлях: номер замовлення і ТТН знайшлися нарізно
-    orders = RE_ORDER_URL.findall(text) or RE_ORDER_TXT.findall(text)
+def extract_pairs(text, subject=""):
+    """Повертає [(номер замовлення, ТТН)] з листа.
+
+    Номер замовлення беремо з теми — це найнадійніше джерело: у тілі
+    посилання загорнуті у трекер розсилки, а сам номер може згадуватись
+    у кількох місцях.
+    """
+    subject = RE_ZEROWIDTH.sub("", subject or "")
     ttns = RE_TTN.findall(text)
-    if len(orders) == 1 and len(ttns) == 1:
-        return [(orders[0], ttns[0])]
-    if orders and ttns:
-        log("  ⚠ у листі %d замовлень і %d ТТН — пропускаю, треба глянути очима"
-            % (len(orders), len(ttns)))
-    return []
+    if not ttns:
+        return []
+
+    orders = RE_SUBJ_ORDER.findall(subject)
+    if not orders:
+        orders = RE_ORDER_URL.findall(text) or RE_ORDER_TXT.findall(text)
+    if not orders:
+        log("  ⚠ ТТН є, а номера замовлення не видно — пропускаю")
+        return []
+
+    order = orders[0]
+    unique_ttns = list(dict.fromkeys(ttns))
+    if len(unique_ttns) > 1:
+        log("  ⚠ у листі кілька різних ТТН (%s) — беру перший"
+            % ", ".join(unique_ttns))
+    return [(order, unique_ttns[0])]
 
 
 # ── Firestore ───────────────────────────────────────────────────────────────
@@ -181,21 +205,54 @@ def firebase_login(email_addr, password):
     return res["idToken"]
 
 
-def firestore_put(token, order, ttn, subject):
-    """Дописує одну пару в settings/avtopro_ttn.
-
-    updateMask лишає решту полів документа недоторканими — паралельні
-    записи не затирають одне одного.
-    """
-    field = "o" + order
+def firestore_read(token):
+    """Повертає поточний вміст settings/avtopro_ttn (порожньо, якщо ще нема)."""
     url = ("https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s"
-           "?updateMask.fieldPaths=%s" % (FIREBASE_PROJECT, DOC_PATH, field))
-    payload = {"fields": {field: {"mapValue": {"fields": {
-        "ttn":     {"stringValue": ttn},
-        "subject": {"stringValue": subject[:200]},
-        "at":      {"timestampValue": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
-    }}}}}
-    http_json(url, payload, token=token, method="PATCH")
+           % (FIREBASE_PROJECT, DOC_PATH))
+    try:
+        return http_json(url, token=token).get("fields", {})
+    except RuntimeError as e:
+        if "404" in str(e):
+            return {}
+        raise
+
+
+def firestore_sync(token, found):
+    """Дописує пари в settings/avtopro_ttn одним запитом.
+
+    На одне замовлення avto.pro буває кілька ТТН (різні посилки), тому
+    зберігаємо список `all`, а не одне значення. updateMask лишає решту
+    документа недоторканою.
+    """
+    existing = firestore_read(token)
+    updates, now = {}, datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    for order, ttn, subject in found:
+        key = "o" + order
+        prev = updates.get(key)
+        if prev is not None:
+            known = [v["stringValue"] for v in prev["mapValue"]["fields"]["all"]["arrayValue"]["values"]]
+        else:
+            cur = existing.get(key, {}).get("mapValue", {}).get("fields", {})
+            known = [v["stringValue"] for v in cur.get("all", {}).get("arrayValue", {}).get("values", [])]
+            if not known and cur.get("ttn"):
+                known = [cur["ttn"]["stringValue"]]          # запис старого формату
+        if ttn not in known:
+            known.append(ttn)
+        updates[key] = {"mapValue": {"fields": {
+            "ttn":     {"stringValue": known[0]},            # для сумісності
+            "all":     {"arrayValue": {"values": [{"stringValue": t} for t in known]}},
+            "subject": {"stringValue": subject[:200]},
+            "at":      {"timestampValue": now},
+        }}}
+
+    if not updates:
+        return 0
+    mask = "&".join("updateMask.fieldPaths=" + k for k in updates)
+    url = ("https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s?%s"
+           % (FIREBASE_PROJECT, DOC_PATH, mask))
+    http_json(url, {"fields": updates}, token=token, method="PATCH")
+    return len(updates)
 
 
 # ── Пошта ───────────────────────────────────────────────────────────────────
@@ -204,7 +261,7 @@ def fetch_new_messages(cfg, state):
     host = cfg.get("IMAP_HOST", "imap.gmail.com")
     port = int(cfg.get("IMAP_PORT", "993"))
     folder = cfg.get("IMAP_FOLDER", "INBOX")
-    sender = cfg.get("MAIL_FROM", "").strip()
+    sender = "" if "--all" in sys.argv else cfg.get("MAIL_FROM", "").strip()
 
     mail = imaplib.IMAP4_SSL(host, port)
     try:
@@ -258,7 +315,7 @@ def main():
 
     found = []
     for uid, subject, text in messages:
-        pairs = extract_pairs(text)
+        pairs = extract_pairs(text, subject)
         if not pairs:
             log("  UID %s «%s» — ТТН не знайдено" % (uid, subject[:60]))
             continue
@@ -268,14 +325,12 @@ def main():
 
     if found:
         token = firebase_login(cfg["FB_EMAIL"], cfg["FB_PASS"])
-        ok = 0
-        for order, ttn, subject in found:
-            try:
-                firestore_put(token, order, ttn, subject)
-                ok += 1
-            except RuntimeError as e:
-                log("  ✖ %s: %s" % (order, e))
-        log("Записано в Firestore: %d з %d" % (ok, len(found)))
+        try:
+            n = firestore_sync(token, found)
+            log("Записано в базу: %d замовлень (%d ТТН)" % (n, len(found)))
+        except RuntimeError as e:
+            log("  ✖ запис у базу не вдався: %s" % e)
+            return   # стан не рухаємо — на наступному запуску спробуємо ще раз
 
     # Стан рухаємо тільки після успішної обробки — інакше лист опрацюється ще раз
     save_state(state)

@@ -2803,7 +2803,8 @@ function receiveMark(idx){
   ids.forEach(function(id){ saveReceiveDoc(id, RECEIVE_DOCS[id], function(){ saved++; if(saved===ids.length){ showToast("✅ Отримано на складі"); loadReceive(); } }); });
 }
 // ТТН, зібрані з пошти скриптом tools/avtopro_ttn.py, лежать одним
-// документом settings/avtopro_ttn: поле "o<номер замовлення avto.pro>" → {ttn}.
+// документом settings/avtopro_ttn: поле "o<номер замовлення avto.pro>" →
+// {ttn, all:[…]}. На одне замовлення буває кілька посилок, тому all — список.
 function setTtnInRec(rec, itemId, ttn){
   function mk(arr){ (arr||[]).forEach(function(it){
     if(it.id===itemId) it.ttn=ttn;
@@ -2827,13 +2828,27 @@ function receiveApplyTTN(){
   showToast("Шукаю ТТН: замовлень "+orders.length+"…");
   db.collection("settings").doc("avtopro_ttn").get().then(function(d){
     var data = d.exists ? (d.data()||{}) : {};
-    var hits=[];
+    var hits=[], multi=[];
     orders.forEach(function(ord){
       var rec=data["o"+ord]; if(!rec) return;
-      var ttn=ttnDigits(rec.ttn);
-      if(ttn.length>=10) hits.push({ord:ord, ttn:ttn});
+      var list=(rec.all&&rec.all.length?rec.all:[rec.ttn])
+        .map(ttnDigits).filter(function(t){ return t.length>=10; });
+      list=list.filter(function(t,i){ return list.indexOf(t)===i; });
+      if(list.length===1) hits.push({ord:ord, ttn:list[0]});
+      // Кілька посилок на одне замовлення — яка позиція в якій, лист не каже.
+      // Такі не чіпаємо: майстер проставляє вручну.
+      else if(list.length>1) multi.push({ord:ord, list:list});
     });
-    if(!hits.length){ showToast("У пошті поки немає ТТН для цих замовлень"); return; }
+
+    if(multi.length){
+      alert("Замовлення з кількома ТТН — проставте вручну:\n\n"
+        + multi.map(function(x){ return "№"+x.ord+" ("+need[x.ord].length+" поз.):\n   "
+            + x.list.join("\n   "); }).join("\n\n"));
+    }
+    if(!hits.length){
+      if(!multi.length) showToast("У пошті поки немає ТТН для цих замовлень");
+      return;
+    }
 
     var rowCnt=0; hits.forEach(function(h){ rowCnt+=need[h.ord].length; });
     if(!confirm("Знайдено ТТН для "+hits.length+" замовлень ("+rowCnt+" поз.).\n\nПроставити їх?")) return;

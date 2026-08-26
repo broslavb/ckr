@@ -2802,8 +2802,8 @@ function receiveMark(idx){
   var ids=Object.keys(affected), saved=0;
   ids.forEach(function(id){ saveReceiveDoc(id, RECEIVE_DOCS[id], function(){ saved++; if(saved===ids.length){ showToast("✅ Отримано на складі"); loadReceive(); } }); });
 }
-// ТТН, зібрані з пошти скриптом tools/avtopro_ttn.py, лежать у колекції
-// avtopro_ttn документом з іменем = номер замовлення avto.pro.
+// ТТН, зібрані з пошти скриптом tools/avtopro_ttn.py, лежать одним
+// документом settings/avtopro_ttn: поле "o<номер замовлення avto.pro>" → {ttn}.
 function setTtnInRec(rec, itemId, ttn){
   function mk(arr){ (arr||[]).forEach(function(it){
     if(it.id===itemId) it.ttn=ttn;
@@ -2825,12 +2825,14 @@ function receiveApplyTTN(){
   if(!orders.length){ showToast("Усі позиції вже з ТТН"); return; }
 
   showToast("Шукаю ТТН: замовлень "+orders.length+"…");
-  Promise.all(orders.map(function(ord){
-    return db.collection("avtopro_ttn").doc(ord).get()
-      .then(function(d){ return d.exists ? {ord:ord, ttn:ttnDigits(d.data().ttn)} : null; })
-      .catch(function(){ return null; });
-  })).then(function(res){
-    var hits=res.filter(function(x){ return x && x.ttn.length>=10; });
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data = d.exists ? (d.data()||{}) : {};
+    var hits=[];
+    orders.forEach(function(ord){
+      var rec=data["o"+ord]; if(!rec) return;
+      var ttn=ttnDigits(rec.ttn);
+      if(ttn.length>=10) hits.push({ord:ord, ttn:ttn});
+    });
     if(!hits.length){ showToast("У пошті поки немає ТТН для цих замовлень"); return; }
 
     var rowCnt=0; hits.forEach(function(h){ rowCnt+=need[h.ord].length; });
@@ -2850,7 +2852,7 @@ function receiveApplyTTN(){
       saved++;
       if(saved===ids.length){ showToast("✅ Проставлено ТТН: "+rowCnt); loadReceive(); }
     }); });
-  });
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
 function receiveCheckAll(){

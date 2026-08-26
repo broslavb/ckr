@@ -35,7 +35,9 @@ LOG_FILE = os.path.join(HERE, "avtopro_ttn.log")
 
 FIREBASE_PROJECT = "car-calculator-2dbd2"
 FIREBASE_API_KEY = "AIzaSyBz8Imv904HpJdtSjJxb2UCi5nWGugvCBA"  # той самий, що в index.html
-COLLECTION = "avtopro_ttn"
+# Правила бази дозволяють запис у settings, але не в довільні нові колекції,
+# тому всі пари лежать одним документом: поле "o<номер замовлення>" → {ttn, at}.
+DOC_PATH = "settings/avtopro_ttn"
 
 
 def log(msg):
@@ -180,15 +182,19 @@ def firebase_login(email_addr, password):
 
 
 def firestore_put(token, order, ttn, subject):
-    url = ("https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s/%s"
-           % (FIREBASE_PROJECT, COLLECTION, order))
-    payload = {"fields": {
-        "order":   {"stringValue": order},
+    """Дописує одну пару в settings/avtopro_ttn.
+
+    updateMask лишає решту полів документа недоторканими — паралельні
+    записи не затирають одне одного.
+    """
+    field = "o" + order
+    url = ("https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s"
+           "?updateMask.fieldPaths=%s" % (FIREBASE_PROJECT, DOC_PATH, field))
+    payload = {"fields": {field: {"mapValue": {"fields": {
         "ttn":     {"stringValue": ttn},
         "subject": {"stringValue": subject[:200]},
-        "source":  {"stringValue": "email"},
         "at":      {"timestampValue": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
-    }}
+    }}}}}
     http_json(url, payload, token=token, method="PATCH")
 
 

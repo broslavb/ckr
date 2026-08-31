@@ -290,6 +290,8 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .settings-section-title{font-family:var(--disp);font-size:15px;letter-spacing:2px;color:var(--blue-dark);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
 .price-table{width:100%;border-collapse:collapse;font-size:12px}
 .price-table td.pt-name{width:100%}
+.price-table td.pt-price{white-space:nowrap}
+.price-table td.pt-price .price-inp{width:70px}
 .price-table th{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;padding:6px 10px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3)}
 .price-table td{padding:5px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
 .price-table tr:last-child td{border-bottom:none}
@@ -3422,6 +3424,7 @@ function makePriceRow(cat, item, cur){
   tdName.appendChild(nameInp); tr.appendChild(tdName);
 
   var tdPrice=document.createElement("td");
+  tdPrice.className="pt-price";
   var priceInp=document.createElement("input");
   priceInp.className="price-inp"; priceInp.type="number";
   priceInp.value=item.p; priceInp.min="0"; priceInp.step="1";

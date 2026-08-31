@@ -305,6 +305,14 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .price-move-sel{background:var(--bg);border:1px solid var(--bd);color:var(--tx2);font-size:10px;padding:3px 4px;border-radius:3px;max-width:150px}
 .price-subhdr{font-family:var(--disp);font-size:12px;letter-spacing:1px;font-weight:700;color:var(--tx);background:var(--bg3);padding:6px 10px;margin:10px 0 0;border-radius:3px;border-left:3px solid var(--blue-dark)}
 .price-subhdr.drop-on{background:var(--acd);border-left-color:var(--ac)}
+.wtpl-back{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.4);align-items:center;justify-content:center}
+.wtpl-box{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;width:min(520px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.wtpl-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bd);font-family:var(--disp);font-size:14px;letter-spacing:1px;font-weight:700;color:var(--tx)}
+.wtpl-list{overflow-y:auto;padding:8px}
+.wtpl-row{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--bd)}
+.wtpl-info{flex:1;cursor:pointer;min-width:0}
+.wtpl-name{font-size:13px;color:var(--tx);font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.wtpl-meta{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px}
 .settings-actions{display:flex;gap:10px;margin-bottom:20px;align-items:center}
 .settings-note{font-family:var(--mono);font-size:10px;color:var(--tx3);line-height:1.6;padding:8px 12px;background:var(--bg3);border-radius:3px;border-left:2px solid var(--bda);margin-bottom:12px}
 
@@ -1076,6 +1084,8 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="tpl-btn" onclick="applyTemplate('rear')">▼ Задній удар</button>
       <button class="tpl-btn" onclick="applyTemplate('side')">▶ Боковий удар</button>
       <button class="tpl-btn" onclick="applyTemplate('full')">★ Повний</button>
+      <button class="tpl-btn" onclick="openWTemplatesModal()" style="color:var(--blue-dark);border-color:var(--blue-dark)">☰ Мої шаблони</button>
+      <button class="tpl-btn" onclick="saveCurrentAsWTemplate()" title="Зберегти поточні роботи як шаблон">＋ Зберегти як шаблон</button>
       <button class="tpl-btn" onclick="clearW()" style="margin-left:auto;color:var(--tx3)">✕ Очистити</button>
     </div>
     <div class="srch"><span class="srch-ic">⌕</span><input type="text" placeholder="Пошук роботи..." oninput="filterWorks(this.value)"/></div>
@@ -1996,6 +2006,7 @@ auth.onAuthStateChanged(function(user) {
     }
     loadNBURate();
     loadPricesFromDB();
+    loadWorkTemplates();
     initApp();
   } else {
     currentUser = null;
@@ -2320,6 +2331,93 @@ function getPriceByName(cat, name) {
   for (var i=0;i<items.length;i++){if(items[i].n===name)return items[i].p;}
   return 0;
 }
+
+// ── КОРИСТУВАЦЬКІ ШАБЛОНИ РОБІТ (settings/work_templates) ─────────────────────
+var USER_WTEMPLATES = [];   // [{id,name,works:[{cat,name,side,coeff,price}],ts}]
+
+function loadWorkTemplates(){
+  db.collection("settings").doc("work_templates").get().then(function(doc){
+    if(doc.exists && doc.data().list) USER_WTEMPLATES = doc.data().list;
+  }).catch(function(){});
+}
+function persistWorkTemplates(){
+  return db.collection("settings").doc("work_templates").set({list:USER_WTEMPLATES});
+}
+
+function saveCurrentAsWTemplate(){
+  if(!isAdmin()){ showToast("Тільки адміністратор може зберігати шаблони"); return; }
+  var works = [];
+  Object.keys(wsel).forEach(function(uid){
+    var w = wsel[uid];
+    works.push({cat:w.cat, name:w.name, side:w.side||"", coeff:w.coeff||1, price:w.price||0});
+  });
+  if(!works.length){ showToast("Немає обраних робіт для шаблону"); return; }
+  var name = prompt("Назва шаблону (напр. «Передній удар — Tesla Model 3»):", "");
+  if(name===null) return;
+  name = name.trim(); if(!name){ showToast("Вкажіть назву шаблону"); return; }
+  USER_WTEMPLATES.push({id:"wt"+Date.now(), name:name, works:works, ts:Date.now()});
+  persistWorkTemplates().then(function(){ showToast("Шаблон збережено: "+name); })
+    .catch(function(e){ showToast("Помилка збереження: "+e.message); });
+}
+
+function applyWTemplate(id){
+  var tpl=null;
+  for(var i=0;i<USER_WTEMPLATES.length;i++){ if(USER_WTEMPLATES[i].id===id){ tpl=USER_WTEMPLATES[i]; break; } }
+  if(!tpl) return;
+  if(Object.keys(wsel).length && !confirm("Замінити поточні роботи шаблоном «"+tpl.name+"»?")) return;
+  wsel = {}; uidCounter = 0;
+  (tpl.works||[]).forEach(function(w){
+    var uid="u"+(++uidCounter);
+    var p = getPriceByName(w.cat, w.name) || w.price || 0;
+    wsel[uid] = {cat:w.cat, name:w.name, price:p, side:w.side||"", coeff:w.coeff||1, uid:uid};
+  });
+  document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
+  renderSecs(DB); wRecalc();
+  closeWTemplatesModal();
+  showToast("Шаблон застосовано: "+tpl.name);
+}
+
+function delWTemplate(id){
+  if(!isAdmin()){ showToast("Тільки адміністратор може видаляти шаблони"); return; }
+  var tpl=null;
+  for(var i=0;i<USER_WTEMPLATES.length;i++){ if(USER_WTEMPLATES[i].id===id){ tpl=USER_WTEMPLATES[i]; break; } }
+  if(!tpl || !confirm("Видалити шаблон «"+tpl.name+"»?")) return;
+  USER_WTEMPLATES = USER_WTEMPLATES.filter(function(t){ return t.id!==id; });
+  persistWorkTemplates().then(function(){ openWTemplatesModal(); showToast("Шаблон видалено"); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+function openWTemplatesModal(){
+  var back=document.getElementById("wtpl-modal");
+  if(!back){
+    back=document.createElement("div");
+    back.id="wtpl-modal"; back.className="wtpl-back";
+    back.onclick=function(e){ if(e.target===back) closeWTemplatesModal(); };
+    document.body.appendChild(back);
+  }
+  var rows="";
+  if(!USER_WTEMPLATES.length){
+    rows='<div style="padding:20px;text-align:center;color:var(--tx3);font-size:12px">Ще немає збережених шаблонів.<br>Оберіть роботи і натисніть «＋ Зберегти як шаблон».</div>';
+  } else {
+    USER_WTEMPLATES.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).forEach(function(t){
+      var cnt=(t.works||[]).length;
+      rows+='<div class="wtpl-row">'
+        +'<div class="wtpl-info" onclick="applyWTemplate(\''+t.id+'\')">'
+        +'<div class="wtpl-name">'+t.name+'</div>'
+        +'<div class="wtpl-meta">'+cnt+' '+wtplPlural(cnt)+'</div></div>'
+        +'<button class="btn btn-p" style="font-size:11px;padding:5px 10px" onclick="applyWTemplate(\''+t.id+'\')">Застосувати</button>'
+        +(isAdmin()?'<button class="btn btn-o" style="font-size:11px;padding:5px 8px" onclick="delWTemplate(\''+t.id+'\')" title="Видалити">✕</button>':'')
+        +'</div>';
+    });
+  }
+  back.innerHTML='<div class="wtpl-box" onclick="event.stopPropagation()">'
+    +'<div class="wtpl-hdr"><span>☰ Мої шаблони робіт</span>'
+    +'<span onclick="closeWTemplatesModal()" style="cursor:pointer;color:var(--tx3);font-size:18px">✕</span></div>'
+    +'<div class="wtpl-list">'+rows+'</div></div>';
+  back.style.display="flex";
+}
+function closeWTemplatesModal(){ var b=document.getElementById("wtpl-modal"); if(b) b.style.display="none"; }
+function wtplPlural(n){ n=n%100; if(n>=11&&n<=14)return "робіт"; n=n%10; return n===1?"робота":(n>=2&&n<=4?"роботи":"робіт"); }
 
 // ── RENDER WORKS LIST ─────────────────────────────────────────────────────────
 function renderSecs(data) {

@@ -91,6 +91,15 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .sec.collapsed .sec-chev{transform:rotate(-90deg)}
 .sec-body{display:none;padding:6px}
 .sec:not(.collapsed) .sec-body{display:block}
+.subsec{border:1px solid var(--bd);border-radius:4px;margin-bottom:6px;overflow:hidden}
+.subsec-hdr{display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--bg2);cursor:pointer;user-select:none}
+.subsec-hdr:hover{background:var(--bg3)}
+.subsec-lbl{font-family:var(--disp);font-size:11px;letter-spacing:.5px;color:var(--tx2);font-weight:700}
+.subsec-cnt{font-family:var(--mono);font-size:9px;color:var(--ac);background:var(--acd);padding:1px 5px;border-radius:2px;margin-left:auto}
+.subsec-chev{font-size:9px;color:var(--tx3);transition:transform .2s}
+.subsec.collapsed .subsec-chev{transform:rotate(-90deg)}
+.subsec-body{display:block;padding:4px}
+.subsec.collapsed .subsec-body{display:none}
 
 /* ── WORK ROWS ── */
 .wrow{display:flex;align-items:center;border-radius:3px;transition:background .12s;position:relative}
@@ -288,6 +297,14 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .price-inp{width:90px;background:var(--bg);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-size:12px;padding:4px 7px;border-radius:3px;outline:none;text-align:right}
 .price-inp:focus{border-color:var(--ac)}
 .price-cur{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:4px}
+.price-grip{cursor:grab;color:var(--tx3);text-align:center;width:20px;font-size:13px;user-select:none}
+.price-grip:active{cursor:grabbing}
+.price-table tr.pdragging td{opacity:.4}
+.price-table tr.drop-before td{box-shadow:inset 0 2px 0 var(--ac)}
+.price-table tr.drop-after td{box-shadow:inset 0 -2px 0 var(--ac)}
+.price-move-sel{background:var(--bg);border:1px solid var(--bd);color:var(--tx2);font-size:10px;padding:3px 4px;border-radius:3px;max-width:150px}
+.price-subhdr{font-family:var(--disp);font-size:12px;letter-spacing:1px;font-weight:700;color:var(--tx);background:var(--bg3);padding:6px 10px;margin:10px 0 0;border-radius:3px;border-left:3px solid var(--blue-dark)}
+.price-subhdr.drop-on{background:var(--acd);border-left-color:var(--ac)}
 .settings-actions{display:flex;gap:10px;margin-bottom:20px;align-items:center}
 .settings-note{font-family:var(--mono);font-size:10px;color:var(--tx3);line-height:1.6;padding:8px 12px;background:var(--bg3);border-radius:3px;border-left:2px solid var(--bda);margin-bottom:12px}
 
@@ -1879,6 +1896,47 @@ var SIDES = ["\u043b\u0456\u0432\u0438\u0439","\u043f\u0440\u0430\u0432\u0438\u0
 
 var STO_DEFAULTS = ["Діагностика авто","Розвал/сходження","Мийка первинна","Заправка кондиціонеру","Вібростенд"];
 
+// ── ПІДРОЗДІЛИ РОБІТ (для зручного заповнення) ────────────────────────────────
+// Категорії, у яких увімкнено підрозділи; порядок = порядок відображення.
+var SUBSECTIONS = {
+  "КУЗОВНІ РОБОТИ":  ["Передня частина","Задня частина","Бокова частина"],
+  "СЛЮСАРНІ РОБОТИ": ["Кузовні слюсарні","Батареї та двигуни","ТО та інші слюсарні"],
+  "МАЛЯРНІ РОБОТИ":  ["Передня частина","Задня частина","Бокова частина і дах"]
+};
+
+// Дефолтне рознесення позиції по підрозділу (евристика за назвою).
+// Власник може перекинути будь-яку позицію вручну — вибір зберігається.
+function classifySub(cat, n){
+  if(cat==="КУЗОВНІ РОБОТИ"){
+    if(/задн|багажник|ляди|чверт[іi] задн/i.test(n)) return "Задня частина";
+    if(/передн|капот|телевізор|стакан/i.test(n))     return "Передня частина";
+    if(/поріг|порог|стійк|двер|дах|лонжерон|днищ|боков|чверт/i.test(n)) return "Бокова частина";
+    return "Передня частина";
+  }
+  if(cat==="СЛЮСАРНІ РОБОТИ"){
+    if(/мастил|фільтр|гальмів|тормозн|колодок|ходов|рульов|стабіліз|ричаг|шаров|сайлент|ступич|цапф|амортизатор|напівос|кардан|диск|ABS|проточк/i.test(n)) return "ТО та інші слюсарні";
+    if(/двигун|батаре|піддон|генератор|АКБ|МКПП|АКПП|вихлоп|привідн|приводн/i.test(n)) return "Батареї та двигуни";
+    return "Кузовні слюсарні";
+  }
+  if(cat==="МАЛЯРНІ РОБОТИ"){
+    if(/поріг|стійка ц|^дах|внутрішн|пластиков/i.test(n))  return "Бокова частина і дах";
+    if(/задн|багажник|панель задня|ПЗ|ЛЗ|ЗП|ЗЛ/i.test(n))  return "Задня частина";
+    return "Передня частина";
+  }
+  return "";
+}
+
+// Проставити sub усім позиціям, де його ще нема (або він недійсний для категорії).
+function applyDefaultSubs(){
+  for(var cat in SUBSECTIONS){
+    if(!DB[cat]) continue;
+    var valid = SUBSECTIONS[cat];
+    DB[cat].items.forEach(function(it){
+      if(!it.sub || valid.indexOf(it.sub)<0) it.sub = classifySub(cat, it.n);
+    });
+  }
+}
+
 var PM_AVAIL = [
   {val:"",                 label:"—"},
   {val:"avail_orig_used",  label:"Ориг. б.в. · наявн."},
@@ -1970,6 +2028,7 @@ function initApp() {
   if(pmdate) pmdate.value = today;
   selectStoDefaults();
   loadPresetsFromStorage();
+  applyDefaultSubs();
   renderSecs(DB);
   wRecalc();
 }
@@ -2042,33 +2101,49 @@ function loadPricesFromDB() {
       var saved = doc.data();
       for (var cat in saved) {
         if (!DB[cat]) continue;
-        // Update prices for existing items
-        DB[cat].items.forEach(function(item) {
-          if (saved[cat][item.n] !== undefined) item.p = saved[cat][item.n];
-        });
-        // Add items that were saved but don't exist in default DB (newly added)
-        var existingNames = DB[cat].items.map(function(i){ return i.n; });
-        for (var name in saved[cat]) {
-          if (existingNames.indexOf(name) === -1) {
-            DB[cat].items.push({n: name, p: saved[cat][name]});
+        var cd = saved[cat];
+        if (cd && cd.list && cd.list.length) {
+          // НОВИЙ формат: збережений порядок + підрозділ + ціна.
+          // sides/editable лишаємо з коду (за назвою).
+          var byName = {};
+          DB[cat].items.forEach(function(it){ byName[it.n] = it; });
+          var newItems = [];
+          cd.list.forEach(function(s){
+            var it = byName[s.n];
+            if (it) { if(s.p!==undefined) it.p = s.p; if(s.sub!==undefined) it.sub = s.sub; newItems.push(it); delete byName[s.n]; }
+            else    { newItems.push({n:s.n, p:s.p||0, sub:s.sub||""}); }  // додана вручну
+          });
+          // Позиції з коду, яких нема у збереженому списку (нові дефолти) — у кінець
+          DB[cat].items.forEach(function(it){ if(byName[it.n]) newItems.push(it); });
+          DB[cat].items = newItems;
+        } else {
+          // СТАРИЙ формат: пласка мапа «назва → ціна»
+          DB[cat].items.forEach(function(item) {
+            if (cd[item.n] !== undefined) item.p = cd[item.n];
+          });
+          var existingNames = DB[cat].items.map(function(i){ return i.n; });
+          for (var name in cd) {
+            if (name === "list") continue;
+            if (existingNames.indexOf(name) === -1) DB[cat].items.push({n: name, p: cd[name]});
           }
         }
       }
+      applyDefaultSubs();
       renderSecs(DB);
       wRecalc();
+    } else {
+      applyDefaultSubs(); renderSecs(DB);
     }
-  }).catch(function(){});
+  }).catch(function(){ applyDefaultSubs(); });
 }
 
 function savePrices() {
   if (!isAdmin()) { showToast("Тільки адміністратор може змінювати ціни"); return; }
   var saved = {};
   for (var cat in DB) {
-    saved[cat] = {};
-    DB[cat].items.forEach(function(item) {
-      // item.p is already updated via change event on each input
-      if (item.n && item.p > 0) saved[cat][item.n] = item.p;
-    });
+    saved[cat] = { list: DB[cat].items
+      .filter(function(item){ return item.n; })
+      .map(function(item){ return {n:item.n, p:item.p||0, sub:item.sub||""}; }) };
   }
   db.collection("settings").doc("prices").set(saved).then(function() {
     renderSecs(DB); wRecalc(); showToast("Ціни збережено в базі");
@@ -2258,7 +2333,7 @@ function renderSecs(data) {
     var sec = document.createElement("div");
     sec.className = "sec"; sec.id = "sec-"+cat.replace(/ /g,"_");
     var catCur = (DB[cat]||{cur:"usd"}).cur;
-    var rows = items.map(function(w) {
+    var buildWRow = function(w) {
       var hasSide = !!w.sides, isEditable = !!w.editable;
       var isAnySel = Object.keys(wsel).some(function(uid){return wsel[uid].cat===cat&&wsel[uid].name===w.n;});
       var pUSD = catCur==="uah" ? Math.round(w.p/usdRate*10)/10 : w.p;
@@ -2294,7 +2369,34 @@ function renderSecs(data) {
         +'</div>'+addBtn
         +'<div class="side-popup" id="'+popId+'">'+popupContent+'</div>'
         +'</div>';
-    }).join("");
+    };
+    var rows;
+    var subs = SUBSECTIONS[cat];
+    if (subs) {
+      // Групуємо по підрозділах у заданому порядку; невідомі sub — у кінець.
+      var groups = {}; subs.forEach(function(s){ groups[s]=[]; });
+      var extra = [];
+      items.forEach(function(w){
+        var s = w.sub;
+        if (s && groups[s]) groups[s].push(w); else extra.push(w);
+      });
+      var order = subs.slice(); if (extra.length) order.push("__extra__"); groups["__extra__"]=extra;
+      var safeCat = cat.replace(/[^a-zA-ZЀ-ӿ0-9]/g,"_");
+      rows = order.map(function(s, gi){
+        var arr = groups[s]; if(!arr || !arr.length) return "";
+        var label = s==="__extra__" ? "Інше" : s;
+        var gSel = 0;
+        arr.forEach(function(w){ if(Object.keys(wsel).some(function(uid){return wsel[uid].cat===cat&&wsel[uid].name===w.n;})) gSel++; });
+        var gid = "subsec-"+safeCat+"-"+gi;
+        return '<div class="subsec" id="'+gid+'">'
+          +'<div class="subsec-hdr" onclick="toggleSubsec(this)"><span class="subsec-chev">▾</span>'
+          +'<span class="subsec-lbl">'+label+'</span>'
+          +(gSel?'<span class="subsec-cnt">'+gSel+'</span>':'')
+          +'</div><div class="subsec-body">'+arr.map(buildWRow).join("")+'</div></div>';
+      }).join("");
+    } else {
+      rows = items.map(buildWRow).join("");
+    }
     sec.innerHTML = '<div class="sec-hdr" onclick="toggleSec(\''+cat.replace(/ /g,"_")+'\')">'
       +'<div style="display:flex;align-items:center;gap:8px"><span class="sec-lbl">'+cat+'</span>'
       +(selCount?'<span class="sec-cnt">'+selCount+'</span>':'')
@@ -2303,6 +2405,7 @@ function renderSecs(data) {
     c.appendChild(sec);
   }
 }
+function toggleSubsec(el){ var s=el.parentNode; if(s) s.classList.toggle("collapsed"); }
 
 function toggleSec(id){var s=document.getElementById("sec-"+id);if(s)s.classList.toggle("collapsed");}
 function toggleSimpleW(cat,name,price,hasSide){
@@ -3178,6 +3281,84 @@ function initDefaultPrices(){
 
 
 function slugify(s){return s.replace(/[^a-zA-Z0-9\u0400-\u04FF]/g,"_");}
+var PRICE_DRAG = null;   // {cat, item} — активне перетягування рядка цін
+
+// Перемістити позицію в межах категорії: змінити підрозділ і/або порядок.
+// beforeItem — перед якою позицією вставити (null → у кінець групи targetSub).
+function priceMoveTo(cat, item, targetSub, beforeItem){
+  var arr = DB[cat].items;
+  var idx = arr.indexOf(item); if(idx<0) return;
+  arr.splice(idx,1);
+  if(SUBSECTIONS[cat]) item.sub = targetSub;
+  var pos = -1;
+  if(beforeItem && beforeItem!==item){ pos = arr.indexOf(beforeItem); }
+  if(pos<0){
+    if(SUBSECTIONS[cat]){
+      var last=-1;
+      for(var k=0;k<arr.length;k++){ if(arr[k].sub===targetSub) last=k; }
+      pos = last<0 ? arr.length : last+1;
+    } else pos = arr.length;
+  }
+  arr.splice(pos,0,item);
+  renderSettingsContent();
+}
+
+function makePriceRow(cat, item, cur){
+  var subs = SUBSECTIONS[cat];
+  var tr=document.createElement("tr");
+
+  var tdGrip=document.createElement("td");
+  tdGrip.className="price-grip"; tdGrip.innerHTML="&#10303;"; tdGrip.title="Перетягнути для сортування";
+  tdGrip.draggable=true;
+  tdGrip.addEventListener("dragstart",function(e){ PRICE_DRAG={cat:cat,item:item}; tr.classList.add("pdragging"); e.dataTransfer.effectAllowed="move"; try{e.dataTransfer.setData("text","1");}catch(_){} });
+  tdGrip.addEventListener("dragend",function(){ tr.classList.remove("pdragging"); PRICE_DRAG=null; });
+  tr.appendChild(tdGrip);
+
+  var tdName=document.createElement("td");
+  var nameInp=document.createElement("input");
+  nameInp.className="price-inp"; nameInp.style.cssText="width:100%;text-align:left";
+  nameInp.value=item.n;
+  nameInp.addEventListener("change",function(){ item.n=this.value; });
+  tdName.appendChild(nameInp); tr.appendChild(tdName);
+
+  var tdPrice=document.createElement("td");
+  var priceInp=document.createElement("input");
+  priceInp.className="price-inp"; priceInp.type="number";
+  priceInp.value=item.p; priceInp.min="0"; priceInp.step="1";
+  priceInp.addEventListener("change",function(){ item.p=+this.value; });
+  var curSpan=document.createElement("span");
+  curSpan.className="price-cur"; curSpan.textContent=cur;
+  tdPrice.appendChild(priceInp); tdPrice.appendChild(curSpan); tr.appendChild(tdPrice);
+
+  var tdMove=document.createElement("td");
+  if(subs){
+    var sel=document.createElement("select");
+    sel.className="price-move-sel"; sel.title="Перенести в підрозділ";
+    subs.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s; if(s===item.sub)o.selected=true; sel.appendChild(o); });
+    sel.addEventListener("change",function(){ priceMoveTo(cat,item,this.value,null); });
+    tdMove.appendChild(sel);
+  }
+  tr.appendChild(tdMove);
+
+  var tdDel=document.createElement("td");
+  var delBtn=document.createElement("button");
+  delBtn.className="btn btn-o"; delBtn.style.cssText="padding:2px 6px;font-size:10px";
+  delBtn.innerHTML="&#215;";
+  delBtn.onclick=function(){ DB[cat].items=DB[cat].items.filter(function(x){return x!==item;}); renderSettingsContent(); };
+  tdDel.appendChild(delBtn); tr.appendChild(tdDel);
+
+  tr.addEventListener("dragover",function(e){ if(!PRICE_DRAG||PRICE_DRAG.cat!==cat)return; e.preventDefault(); var r=tr.getBoundingClientRect(); var after=(e.clientY-r.top)>r.height/2; tr.classList.remove("drop-before","drop-after"); tr.classList.add(after?"drop-after":"drop-before"); });
+  tr.addEventListener("dragleave",function(){ tr.classList.remove("drop-before","drop-after"); });
+  tr.addEventListener("drop",function(e){ if(!PRICE_DRAG||PRICE_DRAG.cat!==cat)return; e.preventDefault(); tr.classList.remove("drop-before","drop-after");
+    var r=tr.getBoundingClientRect(); var after=(e.clientY-r.top)>r.height/2;
+    var arr=DB[cat].items; var ti=arr.indexOf(item);
+    var insertBefore = after ? arr[ti+1] : item;
+    priceMoveTo(cat, PRICE_DRAG.item, subs?item.sub:"", insertBefore||null);
+  });
+
+  return tr;
+}
+
 function renderSettingsContent(){
   var el=document.getElementById("settings-content");if(!el)return;
   el.innerHTML="";
@@ -3188,6 +3369,15 @@ function renderSettingsContent(){
     "МАЛЯРНІ РОБОТИ":"USD",
     "СТОРОННІ РОБОТИ":"грн"
   };
+  function addTableOfItems(sec, cat, cur, arr){
+    var table=document.createElement("table");
+    table.className="price-table";
+    var tbody=document.createElement("tbody");
+    arr.forEach(function(item){ tbody.appendChild(makePriceRow(cat,item,cur)); });
+    table.appendChild(tbody);
+    sec.appendChild(table);
+    return table;
+  }
   for(var cat in DB){
     var cur=catLabels[cat]||"";
     var sec=document.createElement("div");
@@ -3197,57 +3387,44 @@ function renderSettingsContent(){
     title.innerHTML=cat+'<span style="font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3);margin-left:8px">· ціни в '+cur+'</span>';
     sec.appendChild(title);
 
-    var table=document.createElement("table");
-    table.className="price-table";
-    var thead=document.createElement("thead");
-    thead.innerHTML='<tr><th style="width:70%">Назва</th><th>Ціна</th><th style="width:8%"></th></tr>';
-    table.appendChild(thead);
-
-    var tbody=document.createElement("tbody");
-    (function(c){
-      DB[c].items.forEach(function(item, ii){
-        var tr=document.createElement("tr");
-        var tdName=document.createElement("td");
-        var nameInp=document.createElement("input");
-        nameInp.className="price-inp"; nameInp.style.cssText="width:100%;text-align:left";
-        nameInp.value=item.n;
-        (function(i){ nameInp.addEventListener("change",function(){ i.n=this.value; }); })(item);
-        tdName.appendChild(nameInp); tr.appendChild(tdName);
-
-        var tdPrice=document.createElement("td");
-        var sid="price-inp-"+slugify(c+item.n+ii);
-        var priceInp=document.createElement("input");
-        priceInp.className="price-inp"; priceInp.type="number"; priceInp.id=sid;
-        priceInp.value=item.p; priceInp.min="0"; priceInp.step="1";
-        (function(i){ priceInp.addEventListener("change",function(){ i.p=+this.value; }); })(item);
-        var curSpan=document.createElement("span");
-        curSpan.className="price-cur"; curSpan.textContent=cur;
-        tdPrice.appendChild(priceInp); tdPrice.appendChild(curSpan); tr.appendChild(tdPrice);
-
-        var tdDel=document.createElement("td");
-        var delBtn=document.createElement("button");
-        delBtn.className="btn btn-o"; delBtn.style.cssText="padding:2px 6px;font-size:10px";
-        delBtn.innerHTML="&#215;";
-        (function(cat2,i){ delBtn.onclick=function(){ 
-          DB[cat2].items=DB[cat2].items.filter(function(x){return x!==i;});
-          renderSettingsContent();
-        }; })(c,item);
-        tdDel.appendChild(delBtn); tr.appendChild(tdDel);
-        tbody.appendChild(tr);
-      });
-    })(cat);
-
-    table.appendChild(tbody);
-    sec.appendChild(table);
-
-    var addBtn=document.createElement("button");
-    addBtn.className="btn btn-o"; addBtn.style.cssText="font-size:10px;margin:6px 0";
-    addBtn.textContent="+ Додати позицію";
-    (function(c){ addBtn.onclick=function(){
-      DB[c].items.push({n:"Нова позиція",p:0});
-      renderSettingsContent();
-    }; })(cat);
-    sec.appendChild(addBtn);
+    var subs = SUBSECTIONS[cat];
+    if(subs){
+      (function(c, cur2, subs2){
+        // Групи у заданому порядку + «Інше» для позицій без валідного підрозділу.
+        var groupNames = subs2.slice();
+        DB[c].items.forEach(function(it){ if(subs2.indexOf(it.sub)<0 && groupNames.indexOf("__extra__")<0) groupNames.push("__extra__"); });
+        groupNames.forEach(function(sub){
+          var arr = DB[c].items.filter(function(it){ return sub==="__extra__" ? subs2.indexOf(it.sub)<0 : it.sub===sub; });
+          var label = sub==="__extra__" ? "Інше (без підрозділу)" : sub;
+          var sh=document.createElement("div");
+          sh.className="price-subhdr"; sh.textContent=label+"  ·  "+arr.length;
+          // Скидання на заголовок = перенести в цей підрозділ (у кінець)
+          if(sub!=="__extra__"){
+            sh.addEventListener("dragover",function(e){ if(!PRICE_DRAG||PRICE_DRAG.cat!==c)return; e.preventDefault(); sh.classList.add("drop-on"); });
+            sh.addEventListener("dragleave",function(){ sh.classList.remove("drop-on"); });
+            sh.addEventListener("drop",function(e){ if(!PRICE_DRAG||PRICE_DRAG.cat!==c)return; e.preventDefault(); sh.classList.remove("drop-on"); priceMoveTo(c, PRICE_DRAG.item, sub, null); });
+          }
+          sec.appendChild(sh);
+          addTableOfItems(sec, c, cur2, arr);
+          if(sub!=="__extra__"){
+            var ab=document.createElement("button");
+            ab.className="btn btn-o"; ab.style.cssText="font-size:10px;margin:2px 0 8px";
+            ab.textContent="+ Додати в «"+sub+"»";
+            ab.onclick=function(){ DB[c].items.push({n:"Нова позиція",p:0,sub:sub}); renderSettingsContent(); };
+            sec.appendChild(ab);
+          }
+        });
+      })(cat, cur, subs);
+    } else {
+      addTableOfItems(sec, cat, cur, DB[cat].items);
+      (function(c){
+        var addBtn=document.createElement("button");
+        addBtn.className="btn btn-o"; addBtn.style.cssText="font-size:10px;margin:6px 0";
+        addBtn.textContent="+ Додати позицію";
+        addBtn.onclick=function(){ DB[c].items.push({n:"Нова позиція",p:0}); renderSettingsContent(); };
+        sec.appendChild(addBtn);
+      })(cat);
+    }
     el.appendChild(sec);
   }
 }

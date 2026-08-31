@@ -1182,6 +1182,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="acts">
       <button class="btn btn-p" onclick="saveW()">💾 Зберегти</button>
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
+      <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
     </div>
   </div>
 </div>
@@ -1268,6 +1269,7 @@ body.hero-on .hero-pad{margin-right:40vw}
         <div style="padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-p" onclick="pmSave()">&#128190; Зберегти</button>
           <button class="btn btn-o" onclick="showPrintModal('parts')">&#128424; Друк</button>
+          <button class="btn btn-o" onclick="newCalcLinked('works')" title="Створити Роботи для цього ж авто">➕ Роботи (це авто)</button>
           <button class="btn btn-o" onclick="pmClear()">&#10005; Нова</button>
         </div>
       </div>
@@ -2633,6 +2635,31 @@ function newCalc(type){
   else if(type==="parts"){ pmClear(); }
   else if(type==="service"){ soClear(); }
   switchTab(type, document.getElementById("tab-create-btn"));
+}
+
+// Створити калькуляцію іншого типу для ТОГО Ж авто (з перенесенням шапки)
+function newCalcLinked(target){
+  var srcPrefix = (target==="parts") ? "w" : "pm";   // parts <- works | works <- parts
+  var vals = {
+    car:    _v(srcPrefix+"-car"),
+    vin:    _v(srcPrefix+"-vin"),
+    client: _v(srcPrefix+"-client"),
+    phone:  _v(srcPrefix+"-phone"),
+    date:   _v(srcPrefix+"-date")
+  };
+  if(!vals.car && !vals.vin){ showToast("Спершу заповніть авто / VIN"); return; }
+  var tgtLabel = target==="works" ? "Роботи" : "Запчастини";
+  if(!confirm("Створити нову калькуляцію «"+tgtLabel+"» для авто:\n"+(vals.car||"—")+(vals.vin?"  ·  VIN "+vals.vin:"")+"?\n\n(поточна незбережена — збережіть спершу)")) return;
+  if(target==="works"){ clearW(); } else { pmClear(); }
+  switchTab(target, document.getElementById("tab-create-btn"));
+  var tp = (target==="works") ? "w" : "pm";
+  var set=function(id,v){ var e=document.getElementById(id); if(e) e.value=v||""; };
+  set(tp+"-car", vals.car); set(tp+"-vin", vals.vin); set(tp+"-client", vals.client); set(tp+"-phone", vals.phone);
+  if(vals.date) set(tp+"-date", vals.date);
+  if(target==="works"){ if(typeof wCarSync==="function") wCarSync(); }
+  else { if(typeof pmCarSync==="function") pmCarSync(); if(typeof pmUpdateSummary==="function") pmUpdateSummary(); }
+  takeSnap(target==="works"?"works":"parts");
+  showToast("Нова «"+tgtLabel+"» для "+(vals.car||vals.vin));
 }
 
 var ACTIVE_MODE = "in_work";

@@ -158,6 +158,12 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ritem-coeff-inp::-webkit-inner-spin-button,.ritem-coeff-inp::-webkit-outer-spin-button{opacity:1;height:14px}
 .ritem-rm{color:var(--tx3);cursor:pointer;font-size:12px;padding:2px;transition:color .15s;flex-shrink:0;align-self:flex-start;margin-top:2px}
 .ritem-rm:hover{color:var(--rd)}
+.ritem-coord{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.rc-sel{background:var(--bg3);border:1px solid var(--bd);color:var(--tx2);font-size:10px;padding:2px 4px;border-radius:3px;outline:none}
+.rc-act{width:80px;background:var(--bg3);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:3px;outline:none;text-align:right}
+.rc-prof{font-family:var(--mono);font-size:10px}
+.ritem-coord-sum{margin-top:8px;padding:6px 8px;background:var(--bg3);border-radius:4px;font-size:11px;color:var(--tx2);border-left:3px solid var(--blue-dark)}
+@media print{ .ritem-coord,.ritem-coord-sum{display:none!important} }
 .pp-inp{width:80px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:3px 7px;border-radius:3px;outline:none}
 .cinp{width:58px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 6px;border-radius:3px;outline:none}
 .empty{text-align:center;padding:20px 16px;color:var(--tx3)}
@@ -1811,6 +1817,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld"><label>Спеціальність</label><select id="pay-wk-role">
         <option value="slu">Слюсар</option>
         <option value="kuz">Рихтувальник</option>
+        <option value="coord">Координатор</option>
       </select></div>
     </div>
     <div class="pay-btns">
@@ -2190,7 +2197,7 @@ function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
     dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),
-    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff];}),
+    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -2550,10 +2557,12 @@ function filterWorks(q){
 function setItemCoeff(uid,val){if(wsel[uid]){wsel[uid].coeff=val;wRecalc();}}
 
 // ── RIGHT PANEL RENDER ────────────────────────────────────────────────────────
-function renderRList(elId,items,cur,disc,malBud){
+function renderRList(elId,items,cur,disc,malBud,isSto){
   var el=document.getElementById(elId);
   if(!items||!items.length){el.innerHTML='<div class="empty"><div class="empty-tx">Не обрано</div></div>';return;}
-  el.innerHTML=items.map(function(it){
+  var showCoord = isSto && isAdmin();
+  var totProfit=0, anikinBonus=0;
+  var html=items.map(function(it){
     var itemCoeff=it.coeff||1;
     var pRaw=it.price*itemCoeff;
     if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
@@ -2565,10 +2574,24 @@ function renderRList(elId,items,cur,disc,malBud){
        +'<input class="ritem-coeff-inp" type="number" value="'+itemCoeff+'" min="0.1" max="10" step="0.1"'
        +' onchange="setItemCoeff(\''+it.uid+'\',parseFloat(this.value)||1)" onclick="event.stopPropagation()"/>'
        +'</div>';
+    var coordLine="";
+    if(showCoord){
+      var actual=parseFloat(it.actualUAH)||0;
+      var prof=pUAH-actual;
+      if(actual>0){ totProfit+=prof; if(it.coord==="anikin") anikinBonus+=prof*PAY_COORD_SHARE; }
+      var sel='<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
+        +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
+        +'<option value="broslav"'+(it.coord==="broslav"?" selected":"")+'>Брослав</option>'
+        +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Анікін</option></select>';
+      var act='<input class="rc-act" type="number" min="0" step="100" placeholder="факт, грн" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
+      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(it.coord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE).toLocaleString("uk-UA"):"")+'</span>' : '';
+      coordLine='<div class="ritem-coord">'+sel+act+profTxt+'</div>';
+    }
     return '<div class="ritem">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
       +(it.side?'<div class="ritem-side">▸ '+it.side+'</div>':'')
       +wAccBadge(it.uid)
+      +coordLine
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:6px">'
       +coeffControl
@@ -2576,7 +2599,14 @@ function renderRList(elId,items,cur,disc,malBud){
       +'<span class="ritem-rm" onclick="delW(\''+it.uid+'\')">×</span>'
       +'</div></div>';
   }).join("");
+  if(showCoord){
+    html+='<div class="ritem-coord-sum">Прибуток сторонніх: <b>'+Math.round(totProfit).toLocaleString("uk-UA")+' грн</b>'
+      +' · Анікіну 20%: <b style="color:var(--gr)">'+Math.round(anikinBonus).toLocaleString("uk-UA")+' грн</b></div>';
+  }
+  el.innerHTML=html;
 }
+function setItemCoord(uid,val){ if(wsel[uid]){ wsel[uid].coord=val; wRecalc(); } }
+function setItemActual(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; if(n>0) wsel[uid].actualUAH=n; else delete wsel[uid].actualUAH; wRecalc(); } }
 
 function blockTotal(items,cur,disc,malBud){
   var sumUSD=0;
@@ -2626,7 +2656,7 @@ function wRecalc(){
   renderRList("rlist-slu",sluItems,"uah",discSlu,false);
   renderRList("rlist-bez",bezItems,"uah",0,false);
   renderRList("rlist-mal",malItems,"usd",0,malType==="bud");
-  renderRList("rlist-sto",stoItems,"uah",0,false);
+  renderRList("rlist-sto",stoItems,"uah",0,false,true);
   var tKuz=blockTotal(kuzItems,"usd",discKuz,false);
   var tSlu=blockTotal(sluItems,"uah",discSlu,false);
   var tBez=blockTotal(bezItems,"uah",0,false);
@@ -2728,14 +2758,47 @@ function saveW(){
   var col = db.collection("calculations");
   if (currentDocId) {
     col.doc(currentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){ wCashMarkLinked(); wParkMarkLinked(); takeSnap("works"); showToast("Оновлено: "+car); })
+      .then(function(){ wCashMarkLinked(); wParkMarkLinked(); takeSnap("works");
+        wSyncCoordExt(currentDocId, rec.works, rec.rate, rec.status, car); showToast("Оновлено: "+car); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   } else {
     isSaving = true;
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); wParkMarkLinked(); takeSnap("works"); showToast("Збережено: "+car); })
+      .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); wParkMarkLinked(); takeSnap("works");
+        wSyncCoordExt(currentDocId, rec.works, rec.rate, rec.status, car); showToast("Збережено: "+car); })
       .catch(function(e){ isSaving=false; showToast("Помилка збереження: "+e.message); });
   }
+}
+
+// ── 20%-БОНУС КООРДИНАТОРА ЗА СТОРОННІ РОБОТИ (coord_ext) ──────────────────────
+// Похідні записи: при кожному збереженні знищуємо старі по авто й, якщо авто
+// «Завершено», створюємо свіжі з рядків СТОРОННІХ, де координатор = Анікін.
+// Прибуток = ціна клієнту − факт; бонус = 20% прибутку (у $ по курсу калькуляції).
+function wSyncCoordExt(calcId, works, rate, status, car){
+  if(!calcId) return;
+  db.collection("work_accruals").where("calcId","==",calcId).get()
+    .then(function(snap){ var dels=[]; snap.forEach(function(d){ if(d.data().type==="coord_ext") dels.push(d.ref.delete()); }); return Promise.all(dels); })
+    .then(function(){
+      if(status!=="done") return null;
+      return db.collection("workers").where("role","==","coord").get().then(function(ws){
+        var anikin=null; ws.forEach(function(d){ var w=d.data(); if(w.active!==false && !anikin) anikin={_id:d.id, name:w.name}; });
+        if(!anikin) return null;
+        var r = rate||usdRate||44.1, today=new Date().toISOString().slice(0,10), batch=[];
+        (works||[]).forEach(function(w){
+          if(w.cat!==CAT_STO || w.coord!=="anikin") return;
+          var actual=parseFloat(w.actualUAH)||0; if(actual<=0) return;
+          var clientUAH=(w.price||0)*(w.coeff||1);
+          var profit=clientUAH-actual; if(profit<=0) return;
+          var bonusUAH=profit*PAY_COORD_SHARE;
+          batch.push({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext",
+            calcId:calcId, carName:car||"", workName:w.name,
+            profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH),
+            amountUSD:Math.round((bonusUAH/r)*100)/100, date:today,
+            author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+        });
+        return batch.length ? Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); })) : null;
+      });
+    }).catch(function(){});
 }
 
 // ── BUILD CARD HTML ─────────────────────────────────────────────────────────
@@ -2814,8 +2877,9 @@ function archiveDoc(id){
           + "Спершу додайте оплату клієнта у калькуляції. Все одно завершити й архівувати?";
     }
     if(!confirm(msg)) return;
+    var _r = doc.data();
     db.collection("calculations").doc(id).update({status:"done",updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
-      .then(function(){ showToast("Переміщено в архів"); loadActive(); })
+      .then(function(){ wSyncCoordExt(id, _r.works, _r.rate, "done", _r.car||""); showToast("Переміщено в архів"); loadActive(); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
@@ -7543,9 +7607,11 @@ document.addEventListener("click", function(e){
 // суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
+var PAY_COORD_SHARE = 0.2;   // 20% координатору: з праці 4 працівників і з прибутку сторонніх
 var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [];
 var PAY_SEL_WORKER = null, PAY_AC_REC = null;
-var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник"};
+var PAY_COORD_ENSURED = false;
+var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник", coord:"Координатор"};
 
 // Яка спеціальність «годується» з якої категорії робіт
 function payRoleOfCat(cat){
@@ -7618,7 +7684,9 @@ function payLoadAll(){
     // Роботи — лише зі статусом "В роботі". ТО зберігається завжди як preliminary
     // (soSave жорстко ставить цей статус), тож для ТО беремо всі незавершені.
     PAY_CARS = PAY_CALCS.filter(function(r){ return r.status === "in_work"; });
-    if(!PAY_WORKERS.length) paySeedWorkers(); else payRenderCards();
+    if(!PAY_WORKERS.length){ paySeedWorkers(); return; }
+    if(payEnsureCoord()) return;   // якщо додали координатора — payLoadAll перезапуститься
+    payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
 function paySeedWorkers(){
@@ -7627,12 +7695,22 @@ function paySeedWorkers(){
   Promise.all(seed.map(function(w){ return db.collection("workers").add({name:w.name,role:w.role,active:true}); }))
     .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
 }
+// Одноразово переконатись, що координатор (Анікін) є в системі. true = додаємо (буде reload).
+function payEnsureCoord(){
+  if(PAY_COORD_ENSURED) return false;
+  PAY_COORD_ENSURED = true;
+  var hasCoord = PAY_WORKERS.some(function(w){ return w.role==="coord" && w.active!==false; });
+  if(hasCoord) return false;
+  db.collection("workers").add({name:"Анікін Андрій", role:"coord", active:true})
+    .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
+  return true;
+}
 
 // ── КАРТКИ ПРАЦІВНИКІВ ──
 function payRenderCards(){
   var el = document.getElementById("pay-cards"); if(!el) return;
   el.innerHTML = "";
-  PAY_WORKERS.filter(function(w){ return w.active !== false; }).forEach(function(w){
+  PAY_WORKERS.filter(function(w){ return w.active !== false && (w.role!=="coord" || isAdmin()); }).forEach(function(w){
     var b = payBalance(w._id);
     var card = document.createElement("div");
     card.className = "pay-card" + (PAY_SEL_WORKER===w._id ? " sel" : "");
@@ -7660,9 +7738,12 @@ function payRenderLedger(){
   var w = PAY_WORKERS.find(function(x){ return x._id===PAY_SEL_WORKER; });
   if(!w){ el.innerHTML = ""; return; }
   var rows = [];
-  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id)
-    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:"нарахування",
-      txt:(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)", v:(a.amountUSD||0)}); });
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id){
+    var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
+    if(a.type==="coord_labor"){ t="20% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
+    else if(a.type==="coord_ext"){ t="20% сторонні"; txt=(a.carName||"")+" · "+(a.workName||""); }
+    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:(a.amountUSD||0)});
+  }});
   PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id)
     rows.push({id:p._id, kind:"pay", vd:!!p.void, by:p.voidedBy||"", d:p.date,
       t:(p.type==="advance"?"аванс":"виплата"),
@@ -7700,6 +7781,12 @@ function payVoid(kind, id){
       var p = PAY_PAYMENTS.find(function(x){ return x._id === id; });
       if(p && p.cashOpId) db.collection("cash_operations").doc(p.cashOpId).delete().catch(function(){});
     }
+    // Скасування нарахування працівнику — знімає й повʼязаний 20%-бонус координатора
+    if(kind === "acc"){
+      var linked = PAY_ACCRUALS.filter(function(a){ return a.srcAccrualId===id && !a.void; });
+      linked.forEach(function(a){ db.collection("work_accruals").doc(a._id).update({
+        void:true, voidedBy:currentUserName||"", voidedAt:new Date().toISOString() }).catch(function(){}); });
+    }
     showToast("Скасовано");
     payLoadAll();
   }).catch(function(e){ showToast("Помилка: "+e.message); });
@@ -7714,7 +7801,7 @@ function payRenderAudit(){
   var el = document.getElementById("pay-audit"); if(!el) return;
   var groups = {};
   PAY_ACCRUALS.forEach(function(a){
-    if(a.void) return;
+    if(a.void || a.role==="coord") return;   // координатор — поза фондовою звіркою (бонус похідний)
     var k = a.calcId + "|" + a.role;
     if(!groups[k]) groups[k] = {calcId:a.calcId, role:a.role, sum:0, car:a.carName||"", works:{}};
     groups[k].sum += (a.amountUSD||0);
@@ -7758,7 +7845,7 @@ function payRenderAudit(){
 function payClose(id){ var e=document.getElementById(id); if(e) e.style.display="none"; }
 function payOpenWorkers(){
   var el = document.getElementById("pay-wk-list");
-  el.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false;}).map(function(w){
+  el.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && (w.role!=="coord" || isAdmin());}).map(function(w){
     return '<div class="pay-wk"><span>'+escH(w.name)+' <span style="color:var(--tx3)">· '+(PAY_ROLE_LBL[w.role]||"")+'</span></span>'+
            '<span style="cursor:pointer;color:var(--rd);font-size:16px" onclick="payDelWorker(\''+w._id+'\')">&#215;</span></div>';
   }).join("") || '<div class="pay-sub">Порожньо</div>';
@@ -7784,7 +7871,7 @@ function payDelWorker(id){
 function payOpenAccrue(){
   if(!PAY_WORKERS.length){ showToast("Спершу додайте працівників"); return; }
   var ws = document.getElementById("pay-ac-worker");
-  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false;}).map(function(w){
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord";}).map(function(w){
     return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>';
   }).join("");
   var cs = document.getElementById("pay-ac-car");
@@ -7862,6 +7949,23 @@ function payDoAccrue(){
   }
   st.className="pay-status"; st.textContent="Збереження...";
   Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); }))
+    .then(function(refs){
+      // 20%-бонус координатору(ам) з праці — по кожному нарахуванню 1:1 (для чистого сторно)
+      var coords = PAY_WORKERS.filter(function(w){ return w.role==="coord" && w.active!==false; });
+      if(!coords.length) return null;
+      var extra = [];
+      refs.forEach(function(ref, i){
+        var a = batch[i];
+        coords.forEach(function(co){
+          extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor",
+            srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
+            calcId:a.calcId, carName:a.carName, vin:a.vin, workName:a.workName,
+            baseUSD:a.amountUSD, amountUSD:Math.round(a.amountUSD*PAY_COORD_SHARE*100)/100,
+            date:a.date, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+        });
+      });
+      return extra.length ? Promise.all(extra.map(function(e){ return db.collection("work_accruals").add(e); })) : null;
+    })
     .then(function(){ payClose("pay-accrue-modal");
       showToast("Нараховано "+total.toFixed(2)+" $ — "+worker.name); payLoadAll(); })
     .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });

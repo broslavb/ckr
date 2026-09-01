@@ -859,6 +859,23 @@ input, select, button, .btn, .pp-inp, .cinp,
 .pay-h1{font-family:var(--disp);font-size:18px;letter-spacing:2px;color:var(--blue-dark)}
 .pay-hint{font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:8px 12px;margin-bottom:14px;line-height:1.55}
 .pay-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:18px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.cal-nav .btn{padding:2px 12px;font-size:16px;line-height:1}
+.cal-title{font-family:var(--disp);font-size:14px;letter-spacing:1px;color:var(--blue-dark);font-weight:700;text-transform:capitalize}
+.cal-legend{display:flex;gap:16px;font-size:10px;color:var(--tx2);margin-bottom:8px}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+.cal-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.cal-dot.abs{background:var(--rd)}
+.cal-dot.off{background:var(--blue-mid)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-wd{text-align:center;font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;padding-bottom:2px}
+.cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--bd);border-radius:5px;font-size:12px;color:var(--tx);cursor:pointer;user-select:none;position:relative;background:var(--bg2)}
+.cal-cell:hover{border-color:var(--ac)}
+.cal-cell.we{background:var(--bg3);color:var(--tx3)}
+.cal-cell.empty{border:none;background:transparent;cursor:default}
+.cal-cell.abs{background:var(--rd);color:#fff;border-color:var(--rd);font-weight:700}
+.cal-cell.off{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);font-weight:700}
+.cal-sum{margin-top:10px;font-size:12px;color:var(--tx2);line-height:1.6}
 .pay-card{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
 .pay-card.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--acd)}
 .pay-nm{font-family:Verdana,sans-serif;font-size:13px;font-weight:bold;color:var(--tx)}
@@ -1743,6 +1760,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="pay-h1">ЗАРПЛАТА · БАЛАНСИ</div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-p" onclick="payOpenAccrue()">+ Нарахувати роботи</button>
+        <button class="btn btn-o" onclick="payOpenAttend()">📅 Табель</button>
         <button class="btn btn-o" onclick="payOpenWorkers()">Працівники</button>
       </div>
     </div>
@@ -1823,6 +1841,30 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="pay-btns">
       <button class="btn btn-p" onclick="payAddWorker()">Додати</button>
       <button class="btn btn-o" onclick="payClose('pay-workers-modal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ТАБЕЛЬ (прогули / відгули) ═════════════════════════════════════════════ -->
+<div class="pay-modal" id="pay-attend-modal">
+  <div class="pay-box" style="max-width:460px">
+    <div class="pay-box-t">Табель — прогули / відгули</div>
+    <div class="fld" style="margin-bottom:8px"><label>Працівник</label>
+      <select id="pay-cal-worker" onchange="payCalWorkerChanged()"></select></div>
+    <div class="cal-nav">
+      <button class="btn btn-o" onclick="payCalNav(-1)">‹</button>
+      <div class="cal-title" id="pay-cal-title"></div>
+      <button class="btn btn-o" onclick="payCalNav(1)">›</button>
+    </div>
+    <div class="cal-legend">
+      <span><i class="cal-dot abs"></i>Прогул · −<span id="pay-cal-fine">1500</span> грн</span>
+      <span><i class="cal-dot off"></i>Відгул · статистика</span>
+    </div>
+    <div id="pay-cal-grid" class="cal-grid"></div>
+    <div id="pay-cal-sum" class="cal-sum"></div>
+    <div class="pay-hint" style="margin-top:8px">Клік по дню: чисто → <b style="color:var(--rd)">Прогул</b> → <b style="color:var(--blue-mid)">Відгул</b> → чисто.</div>
+    <div class="pay-btns">
+      <button class="btn btn-o" onclick="payClose('pay-attend-modal')">Закрити</button>
     </div>
   </div>
 </div>
@@ -7608,8 +7650,10 @@ document.addEventListener("click", function(e){
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
 var PAY_COORD_SHARE = 0.2;   // 20% координатору: з праці 4 працівників і з прибутку сторонніх
-var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [];
+var PAY_ABSENCE_FINE = 1500; // штраф за прогул, грн
+var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [], PAY_ATTEND = [];
 var PAY_SEL_WORKER = null, PAY_AC_REC = null;
+var PAY_CAL_MONTH = null, PAY_CAL_WORKER = null;   // стан календаря табеля
 var PAY_COORD_ENSURED = false;
 var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник", coord:"Координатор"};
 
@@ -7664,7 +7708,8 @@ function payAccruedWork(calcId, workUid){
 function payBalance(wid){
   var acc = PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.workerId===wid && !a.void) ? (a.amountUSD||0) : 0); }, 0);
   var pd  = PAY_PAYMENTS.reduce(function(s,p){ return s + ((p.workerId===wid && !p.void) ? (p.amountUSD||0) : 0); }, 0);
-  return {acc:acc, paid:pd, bal:acc-pd};
+  var fine = PAY_ATTEND.reduce(function(s,a){ return s + ((a.workerId===wid && a.kind==="absence" && !a.void) ? (a.amountUSD||0) : 0); }, 0);
+  return {acc:acc, paid:pd, fine:fine, bal:acc-pd-fine};
 }
 
 // ── ЗАВАНТАЖЕННЯ ──
@@ -7674,11 +7719,13 @@ function payLoadAll(){
     db.collection("workers").get(),
     db.collection("work_accruals").get(),
     db.collection("worker_payments").get(),
-    db.collection("calculations").limit(600).get()
+    db.collection("calculations").limit(600).get(),
+    db.collection("attendance").get()
   ]).then(function(res){
     PAY_WORKERS = []; res[0].forEach(function(d){ PAY_WORKERS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_ACCRUALS = []; res[1].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_PAYMENTS = []; res[2].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
+    PAY_ATTEND = []; res[4].forEach(function(d){ PAY_ATTEND.push(Object.assign({_id:d.id}, d.data())); });
     PAY_CALCS = []; res[3].forEach(function(d){ var r = d.data();
       if(r.type === "works" || r.type === "service_order") PAY_CALCS.push(Object.assign({_id:d.id}, r)); });
     // Роботи — лише зі статусом "В роботі". ТО зберігається завжди як preliminary
@@ -7720,7 +7767,8 @@ function payRenderCards(){
       '<div class="pay-rl">'+(PAY_ROLE_LBL[w.role]||"")+'</div>'+
       '<div class="pay-bal '+cls+'">'+(b.bal>0?"+":"")+b.bal.toFixed(2)+' $</div>'+
       '<div class="pay-sub">≈ '+Math.round(b.bal*(usdRate||44.1)).toLocaleString("uk-UA")+' грн · нарах. '+
-      b.acc.toFixed(0)+'$ · випл. '+b.paid.toFixed(0)+'$</div>';
+      b.acc.toFixed(0)+'$ · випл. '+b.paid.toFixed(0)+'$'+
+      (b.fine>0.01?' · <span style="color:var(--rd)">штраф '+b.fine.toFixed(0)+'$</span>':'')+'</div>';
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
     var b1 = document.createElement("button"); b1.textContent = "Історія";
     (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
@@ -7748,6 +7796,9 @@ function payRenderLedger(){
     rows.push({id:p._id, kind:"pay", vd:!!p.void, by:p.voidedBy||"", d:p.date,
       t:(p.type==="advance"?"аванс":"виплата"),
       txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-(p.amountUSD||0)}); });
+  PAY_ATTEND.forEach(function(a){ if(a.workerId===w._id && a.kind==="absence")
+    rows.push({id:a._id, kind:"fine", vd:!!a.void, by:"", d:a.date, t:"прогул (штраф)",
+      txt:(a.penaltyUAH||0).toLocaleString("uk-UA")+" грн", v:-(a.amountUSD||0)}); });
   rows.sort(function(a,b){ return (b.d||"").localeCompare(a.d||""); });
   var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">'+escH(w.name)+' — історія</div>'+
           '<table><tr><th>Дата</th><th>Тип</th><th>Опис</th><th style="text-align:right">Сума, $</th><th></th></tr>';
@@ -7769,6 +7820,12 @@ function payRenderLedger(){
 // СТОРНО: запис лишається в історії, але не рахується в балансі та не займає фонд авто
 function payVoid(kind, id){
   if(kind === "pay" && !isAdmin()){ showToast("Скасувати виплату може лише власник"); return; }
+  if(kind === "fine"){   // прогул — прибираємо запис табеля (видалення)
+    if(!confirm("Прибрати прогул (штраф)?")) return;
+    db.collection("attendance").doc(id).delete().then(function(){ showToast("Прогул прибрано"); payLoadAll(); })
+      .catch(function(e){ showToast("Помилка: "+e.message); });
+    return;
+  }
   var what = (kind === "acc") ? "нарахування" : "виплату";
   if(!confirm("Скасувати "+what+"?\n\nЗапис лишиться в історії позначеним як скасований, "+
               "але перестане впливати на баланс і звільнить фонд по авто.")) return;
@@ -7865,6 +7922,83 @@ function payDelWorker(id){
   db.collection("workers").doc(id).update({active:false})
     .then(function(){ payLoadAll(); payClose("pay-workers-modal"); })
     .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+// ── ТАБЕЛЬ: ПРОГУЛИ / ВІДГУЛИ ──
+var PAY_MONTHS = ["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"];
+function payAttendGet(wid, date){ return PAY_ATTEND.find(function(a){ return a.workerId===wid && a.date===date; }); }
+function payOpenAttend(){
+  var ws = document.getElementById("pay-cal-worker");
+  var list = PAY_WORKERS.filter(function(w){ return w.active!==false; });
+  if(!list.length){ showToast("Спершу додайте працівників"); return; }
+  ws.innerHTML = list.map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
+  if(!PAY_CAL_WORKER || !list.some(function(w){return w._id===PAY_CAL_WORKER;})) PAY_CAL_WORKER = list[0]._id;
+  ws.value = PAY_CAL_WORKER;
+  if(!PAY_CAL_MONTH){ var n=new Date(); PAY_CAL_MONTH = new Date(n.getFullYear(), n.getMonth(), 1); }
+  document.getElementById("pay-cal-fine").textContent = PAY_ABSENCE_FINE.toLocaleString("uk-UA");
+  document.getElementById("pay-attend-modal").style.display = "flex";
+  payRenderCalendar();
+}
+function payCalWorkerChanged(){ PAY_CAL_WORKER = document.getElementById("pay-cal-worker").value; payRenderCalendar(); }
+function payCalNav(delta){ PAY_CAL_MONTH = new Date(PAY_CAL_MONTH.getFullYear(), PAY_CAL_MONTH.getMonth()+delta, 1); payRenderCalendar(); }
+function payRenderCalendar(){
+  var grid = document.getElementById("pay-cal-grid"); if(!grid) return;
+  var y = PAY_CAL_MONTH.getFullYear(), m = PAY_CAL_MONTH.getMonth();
+  document.getElementById("pay-cal-title").textContent = PAY_MONTHS[m]+" "+y;
+  var wd = ["ПН","ВТ","СР","ЧТ","ПТ","СБ","НД"];
+  var h = wd.map(function(d){ return '<div class="cal-wd">'+d+'</div>'; }).join("");
+  var first = new Date(y, m, 1);
+  var lead = (first.getDay()+6)%7;   // Пн=0
+  var days = new Date(y, m+1, 0).getDate();
+  for(var i=0;i<lead;i++) h += '<div class="cal-cell empty"></div>';
+  for(var d=1; d<=days; d++){
+    var mm = (m+1<10?"0":"")+(m+1), dd = (d<10?"0":"")+d;
+    var date = y+"-"+mm+"-"+dd;
+    var rec = payAttendGet(PAY_CAL_WORKER, date);
+    var cls = "cal-cell";
+    var dow = new Date(y,m,d).getDay();
+    if(dow===0||dow===6) cls += " we";
+    if(rec && rec.kind==="absence") cls += " abs";
+    else if(rec && rec.kind==="dayoff") cls += " off";
+    h += '<div class="'+cls+'" onclick="payAttendCycle(\''+date+'\')" title="'+date+'">'+d+'</div>';
+  }
+  grid.innerHTML = h;
+  // Підсумок місяця
+  var abs=0, off=0;
+  PAY_ATTEND.forEach(function(a){
+    if(a.workerId!==PAY_CAL_WORKER) return;
+    if(a.date.slice(0,7)!==(y+"-"+((m+1<10?"0":"")+(m+1)))) return;
+    if(a.kind==="absence") abs++; else if(a.kind==="dayoff") off++;
+  });
+  document.getElementById("pay-cal-sum").innerHTML =
+    'Прогулів: <b style="color:var(--rd)">'+abs+'</b> · штраф <b>'+(abs*PAY_ABSENCE_FINE).toLocaleString("uk-UA")+' грн</b>'+
+    ' · Відгулів: <b style="color:var(--blue-mid)">'+off+'</b>';
+}
+function payAttendCycle(date){
+  var wid = PAY_CAL_WORKER;
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; });
+  if(!w) return;
+  var rec = payAttendGet(wid, date);
+  var rate = usdRate||44.1;
+  var done = function(){
+    db.collection("attendance").get().then(function(s){
+      PAY_ATTEND=[]; s.forEach(function(d){ PAY_ATTEND.push(Object.assign({_id:d.id}, d.data())); });
+      payRenderCalendar(); payRenderCards();
+    });
+  };
+  if(!rec){
+    db.collection("attendance").add({ workerId:wid, workerName:w.name, role:w.role, date:date,
+      kind:"absence", penaltyUAH:PAY_ABSENCE_FINE, rate:rate,
+      amountUSD:Math.round((PAY_ABSENCE_FINE/rate)*100)/100,
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" })
+      .then(done).catch(function(e){ showToast("Помилка: "+e.message); });
+  } else if(rec.kind==="absence"){
+    db.collection("attendance").doc(rec._id).update({ kind:"dayoff", penaltyUAH:0, amountUSD:0 })
+      .then(done).catch(function(e){ showToast("Помилка: "+e.message); });
+  } else {
+    db.collection("attendance").doc(rec._id).delete()
+      .then(done).catch(function(e){ showToast("Помилка: "+e.message); });
+  }
 }
 
 // ── НАРАХУВАННЯ ──

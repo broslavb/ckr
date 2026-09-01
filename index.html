@@ -7799,7 +7799,9 @@ function payRenderCards(){
     (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
     var b2 = document.createElement("button"); b2.textContent = "Виплатити";
     (function(id){ b2.onclick = function(){ payOpenPayout(id); }; })(w._id);
-    btns.appendChild(b1); btns.appendChild(b2); card.appendChild(btns);
+    var b3 = document.createElement("button"); b3.textContent = "📅 Табель";
+    (function(id){ b3.onclick = function(){ payOpenAttend(id); }; })(w._id);
+    btns.appendChild(b1); btns.appendChild(b2); btns.appendChild(b3); card.appendChild(btns);
     el.appendChild(card);
   });
   payRenderLedger();
@@ -7953,12 +7955,13 @@ function payDelWorker(id){
 // ── ТАБЕЛЬ: ПРОГУЛИ / ВІДГУЛИ ──
 var PAY_MONTHS = ["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"];
 function payAttendGet(wid, date){ return PAY_ATTEND.find(function(a){ return a.workerId===wid && a.date===date; }); }
-function payOpenAttend(){
+function payOpenAttend(wid){
   var ws = document.getElementById("pay-cal-worker");
   var list = PAY_WORKERS.filter(function(w){ return w.active!==false; });
   if(!list.length){ showToast("Спершу додайте працівників"); return; }
   ws.innerHTML = list.map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
-  if(!PAY_CAL_WORKER || !list.some(function(w){return w._id===PAY_CAL_WORKER;})) PAY_CAL_WORKER = list[0]._id;
+  if(wid && list.some(function(w){return w._id===wid;})) PAY_CAL_WORKER = wid;
+  else if(!PAY_CAL_WORKER || !list.some(function(w){return w._id===PAY_CAL_WORKER;})) PAY_CAL_WORKER = list[0]._id;
   ws.value = PAY_CAL_WORKER;
   if(!PAY_CAL_MONTH){ var n=new Date(); PAY_CAL_MONTH = new Date(n.getFullYear(), n.getMonth(), 1); }
   document.getElementById("pay-cal-fine").textContent = PAY_ABSENCE_FINE.toLocaleString("uk-UA");

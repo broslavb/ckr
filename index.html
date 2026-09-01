@@ -1766,7 +1766,8 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div class="pay-hint">
       Нараховувати можна лише з авто у статусі <b>«В роботі»</b>. Ліміт — 50% від суми робіт по авто:
-      слюсарям (СЛЮСАРНІ + БЕЗПЕКА), рихтувальникам (КУЗОВНІ). Баланс: <b>+</b> винні працівнику, <b>−</b> аванс.
+      слюсарям (СЛЮСАРНІ + БЕЗПЕКА), рихтувальникам (КУЗОВНІ). Розрахунок: <b>рихтувальники — у $</b>, <b>слюсарі й координатор — у грн</b>.
+      Баланс: <b>+</b> винні працівнику, <b>−</b> аванс; прогули віднімаються.
     </div>
     <div id="pay-audit"></div>
     <div id="pay-cards" class="pay-cards"></div>
@@ -1810,7 +1811,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 <div class="pay-modal" id="pay-payout-modal">
   <div class="pay-box">
     <div class="pay-box-t" id="pay-po-title">Виплата</div>
-    <div class="fld"><label>Сума (грн)</label><input type="number" id="pay-po-amount" min="0" step="1"/></div>
+    <div class="fld"><label id="pay-po-amount-lbl">Сума (грн)</label><input type="number" id="pay-po-amount" min="0" step="1"/></div>
     <div class="fld"><label>Тип</label><select id="pay-po-type">
       <option value="salary">Зарплата (за виконане)</option>
       <option value="advance">Аванс (наперед)</option>
@@ -2832,7 +2833,7 @@ function wSyncCoordExt(calcId, works, rate, status, car){
           var clientUAH=(w.price||0)*(w.coeff||1);
           var profit=clientUAH-actual; if(profit<=0) return;
           var bonusUAH=profit*PAY_COORD_SHARE;
-          batch.push({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext",
+          batch.push({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext", rate:r,
             calcId:calcId, carName:car||"", workName:w.name,
             profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH),
             amountUSD:Math.round((bonusUAH/r)*100)/100, date:today,
@@ -7664,6 +7665,24 @@ function payRoleOfCat(cat){
   return "";   // малярні та сторонні — поза схемою
 }
 
+// Валюта РОЗРАХУНКУ з працівником: рихтувальник — $, слюсар/координатор — грн
+function payCurOf(role){ return role==="kuz" ? "usd" : "uah"; }
+// Форматування суми у валюті працівника
+function payFmt(v, cur){ return cur==="usd" ? (Math.round(v*100)/100)+" $" : Math.round(v).toLocaleString("uk-UA")+" грн"; }
+// Значення одного запису (нарахування/виплата/штраф) у валюті cur
+function payNative(rec, cur){
+  var rate = rec.rate || usdRate || 44.1;
+  if(cur==="usd"){
+    if(rec.amountUSD!=null) return rec.amountUSD;
+    if(rec.amountUAH!=null) return rec.amountUAH/rate;
+    if(rec.penaltyUAH!=null) return rec.penaltyUAH/rate;
+    return 0;
+  }
+  if(rec.amountUAH!=null) return rec.amountUAH;     // виплати
+  if(rec.penaltyUAH!=null) return rec.penaltyUAH;   // штрафи
+  return Math.round((rec.amountUSD||0)*rate);       // нарахування/бонуси
+}
+
 // Вартість однієї роботи в USD (коеф., знижки, валюта прайсу) — та сама логіка, що й у saveW
 function payWorkUSD(w, rec){
   var cur = (typeof DB !== "undefined" && DB[w.cat]) ? DB[w.cat].cur : "usd";
@@ -7706,10 +7725,13 @@ function payAccruedWork(calcId, workUid){
   return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.workUid===workUid && !a.void) ? (a.partPct||0) : 0); }, 0);
 }
 function payBalance(wid){
-  var acc = PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.workerId===wid && !a.void) ? (a.amountUSD||0) : 0); }, 0);
-  var pd  = PAY_PAYMENTS.reduce(function(s,p){ return s + ((p.workerId===wid && !p.void) ? (p.amountUSD||0) : 0); }, 0);
-  var fine = PAY_ATTEND.reduce(function(s,a){ return s + ((a.workerId===wid && a.kind==="absence" && !a.void) ? (a.amountUSD||0) : 0); }, 0);
-  return {acc:acc, paid:pd, fine:fine, bal:acc-pd-fine};
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; });
+  var cur = payCurOf(w ? w.role : "");
+  var acc=0, pd=0, fine=0;
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===wid && !a.void) acc += payNative(a, cur); });
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===wid && !p.void) pd += payNative(p, cur); });
+  PAY_ATTEND.forEach(function(a){ if(a.workerId===wid && a.kind==="absence" && !a.void) fine += payNative(a, cur); });
+  return {acc:acc, paid:pd, fine:fine, bal:acc-pd-fine, cur:cur};
 }
 
 // ── ЗАВАНТАЖЕННЯ ──
@@ -7762,13 +7784,16 @@ function payRenderCards(){
     var card = document.createElement("div");
     card.className = "pay-card" + (PAY_SEL_WORKER===w._id ? " sel" : "");
     var cls = b.bal > 0.5 ? "pos" : (b.bal < -0.5 ? "neg" : "zero");
+    var rate = usdRate||44.1;
+    var altTxt = b.cur==="usd"
+      ? "≈ "+Math.round(b.bal*rate).toLocaleString("uk-UA")+" грн"
+      : "≈ "+(Math.round(b.bal/rate*100)/100)+" $";
     card.innerHTML =
       '<div class="pay-nm">'+escH(w.name)+'</div>'+
-      '<div class="pay-rl">'+(PAY_ROLE_LBL[w.role]||"")+'</div>'+
-      '<div class="pay-bal '+cls+'">'+(b.bal>0?"+":"")+b.bal.toFixed(2)+' $</div>'+
-      '<div class="pay-sub">≈ '+Math.round(b.bal*(usdRate||44.1)).toLocaleString("uk-UA")+' грн · нарах. '+
-      b.acc.toFixed(0)+'$ · випл. '+b.paid.toFixed(0)+'$'+
-      (b.fine>0.01?' · <span style="color:var(--rd)">штраф '+b.fine.toFixed(0)+'$</span>':'')+'</div>';
+      '<div class="pay-rl">'+(PAY_ROLE_LBL[w.role]||"")+' · розрахунок у '+(b.cur==="usd"?"$":"грн")+'</div>'+
+      '<div class="pay-bal '+cls+'">'+(b.bal>0?"+":"")+payFmt(b.bal,b.cur)+'</div>'+
+      '<div class="pay-sub">'+altTxt+' · нарах. '+payFmt(b.acc,b.cur)+' · випл. '+payFmt(b.paid,b.cur)+
+      (b.fine>0.01?' · <span style="color:var(--rd)">штраф '+payFmt(b.fine,b.cur)+'</span>':'')+'</div>';
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
     var b1 = document.createElement("button"); b1.textContent = "Історія";
     (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
@@ -7785,23 +7810,24 @@ function payRenderLedger(){
   var el = document.getElementById("pay-ledger"); if(!el) return;
   var w = PAY_WORKERS.find(function(x){ return x._id===PAY_SEL_WORKER; });
   if(!w){ el.innerHTML = ""; return; }
+  var cur = payCurOf(w.role);
   var rows = [];
   PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="coord_labor"){ t="20% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t="20% сторонні"; txt=(a.carName||"")+" · "+(a.workName||""); }
-    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:(a.amountUSD||0)});
+    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur)});
   }});
   PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id)
     rows.push({id:p._id, kind:"pay", vd:!!p.void, by:p.voidedBy||"", d:p.date,
       t:(p.type==="advance"?"аванс":"виплата"),
-      txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-(p.amountUSD||0)}); });
+      txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-payNative(p,cur)}); });
   PAY_ATTEND.forEach(function(a){ if(a.workerId===w._id && a.kind==="absence")
     rows.push({id:a._id, kind:"fine", vd:!!a.void, by:"", d:a.date, t:"прогул (штраф)",
-      txt:(a.penaltyUAH||0).toLocaleString("uk-UA")+" грн", v:-(a.amountUSD||0)}); });
+      txt:(a.penaltyUAH||0).toLocaleString("uk-UA")+" грн", v:-payNative(a,cur)}); });
   rows.sort(function(a,b){ return (b.d||"").localeCompare(a.d||""); });
-  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">'+escH(w.name)+' — історія</div>'+
-          '<table><tr><th>Дата</th><th>Тип</th><th>Опис</th><th style="text-align:right">Сума, $</th><th></th></tr>';
+  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">'+escH(w.name)+' — історія ('+(cur==="usd"?"$":"грн")+')</div>'+
+          '<table><tr><th>Дата</th><th>Тип</th><th>Опис</th><th style="text-align:right">Сума</th><th></th></tr>';
   if(!rows.length) h += '<tr><td colspan="5" class="pay-sub">Операцій ще немає</td></tr>';
   rows.forEach(function(r){
     var st = r.vd ? ' style="opacity:.45"' : '';
@@ -7809,7 +7835,7 @@ function payRenderLedger(){
     h += '<tr'+st+'><td style="'+line+'">'+escH(r.d||"")+'</td>'+
          '<td>'+r.t+(r.vd?' <span style="color:var(--rd);font-size:10px">СКАСОВАНО'+(r.by?" · "+escH(r.by):"")+'</span>':'')+'</td>'+
          '<td style="'+line+'">'+escH(r.txt)+'</td>'+
-         '<td style="text-align:right;'+line+'" class="'+(r.v>=0?"a":"p")+'">'+(r.v>=0?"+":"")+r.v.toFixed(2)+'</td>'+
+         '<td style="text-align:right;'+line+'" class="'+(r.v>=0?"a":"p")+'">'+(r.v>=0?"+":"−")+payFmt(Math.abs(r.v),cur)+'</td>'+
          '<td style="text-align:right;width:26px">'+
          (r.vd ? '' : '<span title="Скасувати запис" style="cursor:pointer;color:var(--rd);font-size:15px" onclick="payVoid(\''+r.kind+'\',\''+r.id+'\')">&#215;</span>')+
          '</td></tr>';
@@ -8025,8 +8051,10 @@ function payAccrueCarChanged(){
   if(!worker || !rec){ fundEl.textContent=""; wrap.innerHTML=""; return; }
   var role = worker.role, funds = payFundFor(rec);
   var fund = funds[role]||0, used = payAccruedFor(rec._id, role), left = fund-used;
-  fundEl.innerHTML = 'Фонд ('+(PAY_ROLE_LBL[role]||"")+') по авто: <b>'+fund.toFixed(2)+' $</b> · нараховано '+
-    used.toFixed(2)+' $ · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+left.toFixed(2)+' $</b>';
+  var cur = payCurOf(role), rate = rec.rate||usdRate||44.1;
+  var toCur = function(usd){ return cur==="usd" ? usd : Math.round(usd*rate); };
+  fundEl.innerHTML = 'Фонд ('+(PAY_ROLE_LBL[role]||"")+', розрахунок у '+(cur==="usd"?"$":"грн")+') по авто: <b>'+payFmt(toCur(fund),cur)+'</b> · нараховано '+
+    payFmt(toCur(used),cur)+' · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+payFmt(toCur(left),cur)+'</b>';
   // ТО не має категорій робіт — усі його роботи слюсарні
   var isTO = payIsTO(rec);
   var works = isTO
@@ -8038,7 +8066,7 @@ function payAccrueCarChanged(){
             : "У цього авто немає робіт цієї спеціальності")+'</div>';
     return;
   }
-  var h = '<div class="pay-wrow head"><div>Робота</div><div style="text-align:right">Клієнту,$</div><div style="text-align:right">Готово</div><div style="text-align:right">Виконав,%</div></div>';
+  var h = '<div class="pay-wrow head"><div>Робота</div><div style="text-align:right">Клієнту,'+(cur==="usd"?"$":"грн")+'</div><div style="text-align:right">Готово</div><div style="text-align:right">Виконав,%</div></div>';
   works.forEach(function(w,i){
     var usd = isTO ? payTOWorkUSD(w, rec) : payWorkUSD(w, rec);
     var wid = w.uid || w.id || ("w"+i);       // у ТО ідентифікатор — id
@@ -8046,7 +8074,7 @@ function payAccrueCarChanged(){
     var lft = Math.max(0, 100-done);
     h += '<div class="pay-wrow">'+
          '<div>'+escH(w.name)+(w.side?' <span style="color:var(--tx3)">('+escH(w.side)+')</span>':'')+'</div>'+
-         '<div style="text-align:right">'+usd.toFixed(2)+'</div>'+
+         '<div style="text-align:right">'+(cur==="usd"?usd.toFixed(2):Math.round(usd*rate).toLocaleString("uk-UA"))+'</div>'+
          '<div style="text-align:right" class="done">'+done.toFixed(0)+'%</div>'+
          '<div><input type="number" min="0" max="'+lft+'" step="10" value="0" '+
          'data-uid="'+escH(wid)+'" data-usd="'+usd+'" data-name="'+escH(w.name)+'" data-cat="'+escH(w.cat||"ТО")+'"/></div></div>';
@@ -8059,6 +8087,7 @@ function payDoAccrue(){
   var rec = PAY_AC_REC, st = document.getElementById("pay-ac-status");
   if(!worker || !rec){ st.className="pay-status err"; st.textContent="Оберіть працівника та авто"; return; }
   var role = worker.role, today = new Date().toISOString().slice(0,10);
+  var acRate = rec.rate||usdRate||44.1, acCur = payCurOf(role);
   var inputs = document.querySelectorAll("#pay-ac-works input");
   var batch = [], total = 0;
   for(var i=0;i<inputs.length;i++){
@@ -8067,7 +8096,7 @@ function payDoAccrue(){
     var usd = parseFloat(inputs[i].getAttribute("data-usd"))||0;
     var amt = usd*(pct/100)*PAY_SHARE;
     total += amt;
-    batch.push({ workerId:worker._id, workerName:worker.name, role:role,
+    batch.push({ workerId:worker._id, workerName:worker.name, role:role, rate:acRate,
       calcId:rec._id, carName:rec.car||"", vin:rec.vin||"",
       workUid:inputs[i].getAttribute("data-uid"), workName:inputs[i].getAttribute("data-name"),
       cat:inputs[i].getAttribute("data-cat"), clientUSD:usd, partPct:pct,
@@ -8077,8 +8106,9 @@ function payDoAccrue(){
   if(!batch.length){ st.className="pay-status err"; st.textContent="Вкажіть % виконання хоча б по одній роботі"; return; }
   var left = (payFundFor(rec)[role]||0) - payAccruedFor(rec._id, role);
   if(total > left + 0.01){
+    var toCur = function(u){ return acCur==="usd"?Math.round(u*100)/100:Math.round(u*acRate); };
     st.className="pay-status err";
-    st.textContent="Перевищено ліміт 50% по авто: доступно "+left.toFixed(2)+" $, а нараховуєте "+total.toFixed(2)+" $";
+    st.textContent="Перевищено ліміт 50% по авто: доступно "+payFmt(toCur(left),acCur)+", а нараховуєте "+payFmt(toCur(total),acCur);
     return;
   }
   st.className="pay-status"; st.textContent="Збереження...";
@@ -8091,7 +8121,7 @@ function payDoAccrue(){
       refs.forEach(function(ref, i){
         var a = batch[i];
         coords.forEach(function(co){
-          extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor",
+          extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:acRate,
             srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
             calcId:a.calcId, carName:a.carName, vin:a.vin, workName:a.workName,
             baseUSD:a.amountUSD, amountUSD:Math.round(a.amountUSD*PAY_COORD_SHARE*100)/100,
@@ -8101,7 +8131,7 @@ function payDoAccrue(){
       return extra.length ? Promise.all(extra.map(function(e){ return db.collection("work_accruals").add(e); })) : null;
     })
     .then(function(){ payClose("pay-accrue-modal");
-      showToast("Нараховано "+total.toFixed(2)+" $ — "+worker.name); payLoadAll(); })
+      showToast("Нараховано "+payFmt(acCur==="usd"?total:Math.round(total*acRate),acCur)+" — "+worker.name); payLoadAll(); })
     .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
 }
 
@@ -8111,28 +8141,33 @@ function payOpenPayout(wid){
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; });
   if(!w) return;
   PAY_SEL_WORKER = wid;
-  var b = payBalance(wid), rate = usdRate||44.1;
+  var b = payBalance(wid), rate = usdRate||44.1, cur = b.cur;
   document.getElementById("pay-po-title").textContent = "Виплата — "+w.name;
-  document.getElementById("pay-po-amount").value = b.bal > 0 ? Math.round(b.bal*rate) : "";
+  document.getElementById("pay-po-amount-lbl").textContent = "Сума ("+(cur==="usd"?"$":"грн")+")";
+  document.getElementById("pay-po-amount").value = b.bal > 0 ? (cur==="usd"?Math.round(b.bal*100)/100:Math.round(b.bal)) : "";
   document.getElementById("pay-po-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("pay-po-note").value = "";
+  var alt = cur==="usd" ? ("≈ "+Math.round(b.bal*rate).toLocaleString("uk-UA")+" грн") : ("≈ "+(Math.round(b.bal/rate*100)/100)+" $");
   document.getElementById("pay-po-info").textContent =
-    "Баланс: "+b.bal.toFixed(2)+" $ ≈ "+Math.round(b.bal*rate).toLocaleString("uk-UA")+" грн (курс "+rate.toFixed(2)+")";
+    "Баланс: "+payFmt(b.bal,cur)+" "+alt+" (курс "+rate.toFixed(2)+")";
   document.getElementById("pay-payout-modal").style.display = "flex";
 }
 
 function payDoPayout(){
   var w = PAY_WORKERS.find(function(x){ return x._id===PAY_SEL_WORKER; });
   if(!w){ showToast("Оберіть працівника"); return; }
-  var uah = parseFloat(document.getElementById("pay-po-amount").value)||0;
-  if(uah <= 0){ showToast("Вкажіть суму"); return; }
+  var inp = parseFloat(document.getElementById("pay-po-amount").value)||0;
+  if(inp <= 0){ showToast("Вкажіть суму"); return; }
   var type = document.getElementById("pay-po-type").value;
   var date = document.getElementById("pay-po-date").value || new Date().toISOString().slice(0,10);
   var note = document.getElementById("pay-po-note").value.trim();
-  var rate = usdRate||44.1;
+  var rate = usdRate||44.1, cur = payCurOf(w.role);
+  // Введена сума — у валюті працівника; зберігаємо і грн, і $ (каса завжди в грн)
+  var uah = cur==="usd" ? Math.round(inp*rate) : inp;
+  var usd = cur==="usd" ? inp : Math.round((inp/rate)*100)/100;
   db.collection("worker_payments").add({
     workerId:w._id, workerName:w.name, role:w.role,
-    amountUAH:uah, rate:rate, amountUSD:Math.round((uah/rate)*100)/100,
+    amountUAH:uah, rate:rate, amountUSD:usd, payCur:cur,
     type:type, date:date, note:note,
     author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
   }).then(function(pref){
@@ -8146,7 +8181,7 @@ function payDoPayout(){
     }).then(function(cref){ pref.update({cashOpId:cref.id}).catch(function(){}); })
       .catch(function(){});
     payClose("pay-payout-modal");
-    showToast("Виплачено "+uah.toLocaleString("uk-UA")+" грн — "+w.name);
+    showToast("Виплачено "+payFmt(cur==="usd"?usd:uah,cur)+" — "+w.name);
     payLoadAll();
   }).catch(function(e){ showToast("Помилка: "+e.message); });
 }

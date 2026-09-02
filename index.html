@@ -3940,8 +3940,9 @@ function executePrint(){
   // Temporarily make BOTH tabs visible so browser renders their DOM
   var tabWorks = document.getElementById("tab-works");
   var tabParts = document.getElementById("tab-parts");
-  var worksWasHidden = tabWorks && tabWorks.style.display === "none";
-  var partsWasHidden = tabParts && tabParts.style.display === "none";
+  // Запамʼятовуємо ТОЧНИЙ попередній display, щоб коректно відновити (works — "grid", не "block")
+  var worksDisp = tabWorks ? tabWorks.style.display : "";
+  var partsDisp = tabParts ? tabParts.style.display : "";
   if(tabWorks) tabWorks.style.display = "block";
   if(tabParts) tabParts.style.display = "block";
 
@@ -4085,8 +4086,8 @@ function executePrint(){
     setTimeout(function(){
       document.title = origTitle2;
       // Restore tab visibility
-      if(tabWorks && worksWasHidden) tabWorks.style.display = "none";
-      if(tabParts && partsWasHidden) tabParts.style.display = "none";
+      if(tabWorks) tabWorks.style.display = worksDisp;
+      if(tabParts) tabParts.style.display = partsDisp;
       document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-prio-only","print-summary","print-summary-only");
     }, 1000);
   }, 300);

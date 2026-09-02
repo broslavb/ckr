@@ -137,8 +137,9 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rblock-sums{display:flex;gap:10px;align-items:center}
 .rblock-usd{font-family:Verdana,sans-serif;font-size:11px;color:#ffd080;font-weight:600}
 .rblock-uah{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5)}
-.rb-raw{text-decoration:line-through;opacity:.55;font-weight:400;margin-right:4px}
-@media print{ .rb-raw{display:inline!important;color:#888!important} }
+.rb-raw{text-decoration:line-through;font-weight:400;margin-right:6px;color:var(--tx3)}
+.rblock-usd .rb-raw{color:rgba(255,255,255,.8)}
+@media print{ .rb-raw{display:inline!important} .rblock-usd .rb-raw{color:#fff!important} }
 .rblock-body{display:none;padding:8px 14px}
 .rblock:not(.collapsed) .rblock-body{display:block}
 .rblock-disc{display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -2730,15 +2731,18 @@ function wRecalc(){
   var tMal=blockTotal(malItems,"usd",0,malType==="bud");
   var tSto=blockTotal(stoItems,"uah",0,false);
   function setHead(id,t){
-    var hd = t.rawUsd && Math.abs(t.rawUsd - t.usd) > 0.01;   // є знижка → показати «було → стало»
-    document.getElementById("rb-"+id+"-usd").innerHTML = t.usd
-      ? (hd?'<span class="rb-raw">'+(Math.round(t.rawUsd*100)/100)+' $</span> ':'')+(Math.round(t.usd*100)/100)+' $' : "—";
-    document.getElementById("rb-"+id+"-uah").innerHTML = t.uah
-      ? (hd?'<span class="rb-raw">'+t.rawUah.toLocaleString("uk-UA")+'</span> ':'')+t.uah.toLocaleString("uk-UA")+' грн' : "";
-    document.getElementById("gt-"+id+"-usd").innerHTML=t.usd
-      ? (hd?'<span class="rb-raw">'+(Math.round(t.rawUsd*100)/100)+' $</span> ':'')+(Math.round(t.usd*100)/100)+' $' : "—";
-    document.getElementById("gt-"+id+"-uah").innerHTML=t.uah
-      ? (hd?'<span class="rb-raw">'+t.rawUah.toLocaleString("uk-UA")+'</span> ':'')+t.uah.toLocaleString("uk-UA")+' грн' : "";
+    var hd = t.rawUsd && Math.abs(t.rawUsd - t.usd) > 0.01;   // є знижка → «до знижки → зі знижкою»
+    // Порядок подачі: спершу ціна ДО знижки (обидві валюти), потім ЗІ знижкою (обидві валюти)
+    var raw = hd ? '<span class="rb-raw">'+(Math.round(t.rawUsd*100)/100)+' $ / '+t.rawUah.toLocaleString("uk-UA")+' грн</span> ' : '';
+    var hu=document.getElementById("rb-"+id+"-usd"), ha=document.getElementById("rb-"+id+"-uah");
+    if(hu) hu.innerHTML = t.usd ? raw
+      +'<span style="color:#ffd080;font-weight:600">'+(Math.round(t.usd*100)/100)+' $</span> '
+      +'<span style="color:rgba(255,255,255,.6);font-family:var(--mono);font-size:10px">'+t.uah.toLocaleString("uk-UA")+' грн</span>' : "—";
+    if(ha) ha.innerHTML = "";
+    var gu=document.getElementById("gt-"+id+"-usd"), ga=document.getElementById("gt-"+id+"-uah");
+    if(gu) gu.innerHTML = t.usd ? raw
+      +(Math.round(t.usd*100)/100)+' $ <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">'+t.uah.toLocaleString("uk-UA")+' грн</span>' : "—";
+    if(ga) ga.innerHTML = "";
   }
   setHead("kuz",tKuz);setHead("slu",tSlu);setHead("bez",tBez);setHead("mal",tMal);setHead("sto",tSto);
   var totalUSD=tKuz.usd+tSlu.usd+tBez.usd+tMal.usd+tSto.usd;
@@ -4717,7 +4721,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   tr.appendChild(td1);
 
   // Col 2: Avail + Name (ширша для малих екранів)
-  var td2=mkTd("min-width:300px;vertical-align:middle");
+  var td2=mkTd("min-width:200px;vertical-align:middle");
   var wrap=document.createElement("div");
   wrap.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=mkSel(PM_AVAIL,item.avail||"","avail");
@@ -5455,13 +5459,13 @@ function pmRender(){
     table.className = "pt";
     var thead = document.createElement("thead");
     var hrow = document.createElement("tr");
-    [["3%","\u0412\u0430\u0440"],["47%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
-     ["4%","\u041a-\u0442\u044c"],["5%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["6%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
-     ["5%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
-     ["5%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
-     ["4%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["6%","\u0422\u0422\u041d"],["6%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
-     ["6%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
-     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["6%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%","\u0414\u0456\u044f"]
+    [["3%","\u0412\u0430\u0440"],["33%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
+     ["4%","\u041a-\u0442\u044c"],["6%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["7%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
+     ["7%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
+     ["7%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
+     ["3%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["7%","\u0422\u0422\u041d"],["8%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
+     ["7%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
+     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["4%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%","\u0414\u0456\u044f"]
     ].forEach(function(h){
       var th = document.createElement("th");
       th.style.width = h[0];
@@ -6223,11 +6227,11 @@ function soRenderParts(){
   table.className = "so-pt";
   var thead = document.createElement("thead");
   var hrow = document.createElement("tr");
-  [["3%","Вар"],["44%","Наявність / Назва"],["4%","К-ть"],
-   ["6%","Вартість"],["7%","Фін.вартість"],
-   ["7%","Артикул осн."],["7%","Артикул альт."],
-   ["5%","Посилання"],["6%","ТТН"],["7%","Постач.назва"],
-   ["6%","Закупка,грн"],["6%","Наценка"],["5%","Статус"],["4%",""]
+  [["3%","Вар"],["31%","Наявність / Назва"],["4%","К-ть"],
+   ["7%","Вартість"],["8%","Фін.вартість"],
+   ["8%","Артикул осн."],["8%","Артикул альт."],
+   ["3%","Посилання"],["7%","ТТН"],["9%","Постач.назва"],
+   ["7%","Закупка,грн"],["6%","Наценка"],["4%","Статус"],["4%",""]
   ].forEach(function(h){
     var th=document.createElement("th"); th.style.width=h[0]; th.textContent=h[1]; hrow.appendChild(th);
   });
@@ -6310,7 +6314,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   tr.appendChild(td1);
 
   // Col2: avail + name
-  var td2=mkTd("min-width:300px;vertical-align:middle");
+  var td2=mkTd("min-width:200px;vertical-align:middle");
   var wrap2=document.createElement("div"); wrap2.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=document.createElement("select");
   availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";

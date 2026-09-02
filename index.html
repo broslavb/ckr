@@ -137,9 +137,11 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rblock-sums{display:flex;gap:10px;align-items:center}
 .rblock-usd{font-family:Verdana,sans-serif;font-size:11px;color:#ffd080;font-weight:600}
 .rblock-uah{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5)}
-.rb-raw{text-decoration:line-through;font-weight:400;margin-right:6px;color:var(--tx3)}
+.rb-raw{text-decoration:line-through;font-weight:400;margin-right:6px;color:var(--tx3);font-size:11px}
 .rblock-usd .rb-raw{color:rgba(255,255,255,.8)}
 @media print{ .rb-raw{display:inline!important} .rblock-usd .rb-raw{color:#fff!important} }
+.print-words{display:none}
+@media print{ .print-words{display:block!important;font-family:Arial,sans-serif;font-size:10pt;font-style:italic;color:#444;margin-top:6px;text-align:right} }
 .rblock-body{display:none;padding:8px 14px}
 .rblock:not(.collapsed) .rblock-body{display:block}
 .rblock-disc{display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -1228,6 +1230,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <div class="gt-sub" id="gt-total-usd"></div>
         </div>
       </div>
+      <div class="print-words" id="w-print-words"></div>
       <div class="pm-payments" style="margin-top:10px">
         <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Оплати клієнта</div>
         <div id="w-pay-list"></div>
@@ -1546,9 +1549,6 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div style="background:var(--bg2);border-radius:6px;padding:24px 28px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:Verdana,sans-serif">
     <div style="font-size:14px;font-weight:bold;color:var(--blue-dark);margin-bottom:16px">🖨 Друк ТО / Замовлення</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="so-pr-ins" style="width:16px;height:16px"> Для страхової (без закупівельних цін)
-      </label>
       <div style="font-size:11px;color:var(--tx3)">Рахунок № <input id="so-inv-modal-num" type="text" style="font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--bd);padding:3px 6px;border-radius:3px;outline:none;width:160px" placeholder="28.05.2026-001"/></div>
     </div>
     <div style="display:flex;gap:8px">
@@ -2742,8 +2742,8 @@ function wRecalc(){
     var gu=document.getElementById("gt-"+id+"-usd"), ga=document.getElementById("gt-"+id+"-uah");
     // Вирівнюємо в колонки: $ і грн — inline-block фіксованої ширини, право-вирівняні
     if(gu) gu.innerHTML = t.usd ? raw
-      +'<span style="display:inline-block;min-width:64px;text-align:right;color:var(--ac);font-weight:600">'+(Math.round(t.usd*100)/100)+' $</span>'
-      +'<span style="display:inline-block;min-width:92px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px">'+t.uah.toLocaleString("uk-UA")+' грн</span>'
+      +'<span style="display:inline-block;min-width:64px;text-align:right;color:var(--ac);font-weight:600;font-size:11px">'+(Math.round(t.usd*100)/100)+' $</span>'
+      +'<span style="display:inline-block;min-width:92px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--tx3);margin-left:8px">'+t.uah.toLocaleString("uk-UA")+' грн</span>'
       : '<span style="display:inline-block;min-width:164px;text-align:right">—</span>';
     if(ga) ga.innerHTML = "";
   }
@@ -2756,6 +2756,7 @@ function wRecalc(){
   document.getElementById("gt-all-uah").textContent=allUAH?allUAH.toLocaleString("uk-UA")+" грн":"";
   document.getElementById("gt-total-uah").textContent=totalUAH.toLocaleString("uk-UA")+" грн";
   document.getElementById("gt-total-usd").textContent=totalUSD?"≈ "+totalUSD.toFixed(0)+" USD":"";
+  var wpw=document.getElementById("w-print-words"); if(wpw) wpw.textContent = totalUAH ? numberToWords(totalUAH) : "";
   var paidEl=document.getElementById("gt-paid"); if(paidEl) paidEl.textContent = pp ? Math.round(pp).toLocaleString("uk-UA")+" грн" : "—";
   document.getElementById("gt-bal").textContent=(totalUAH-pp)?(Math.round(totalUAH-pp)).toLocaleString("uk-UA")+" грн":"—";
   var dr=document.getElementById("gt-disc-row");
@@ -3968,6 +3969,7 @@ function executePrint(){
   footerHtml += '<span style="font-size:11pt;font-weight:bold;color:#0d2b6b">ВСЬОГО ЗАПЧАСТИНИ:</span>';
   footerHtml += '<span style="font-size:13pt;font-weight:bold;color:#0d2b6b">'+grandTotal.toLocaleString("uk-UA")+" грн"+'</span>';
   footerHtml += '</div>';
+  footerHtml += '<div style="text-align:right;font-size:10pt;font-style:italic;color:#444;margin-bottom:6px">'+numberToWords(grandTotal)+'</div>';
 
   if(pmPayments.length){
     footerHtml += '<div style="margin-top:8px;border-top:1px solid #ddd;padding-top:8px">';
@@ -6948,7 +6950,7 @@ function soShowPrint(){
 }
 
 function soExecutePrint(){
-  var ins = document.getElementById("so-pr-ins").checked;
+  var ins = false;   // «для страхової» прибрано — звичайний друк ТО і так без закупівельних цін
   document.getElementById("so-print-modal").style.display="none";
 
   // Populate shared print header

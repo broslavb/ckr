@@ -137,6 +137,8 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rblock-sums{display:flex;gap:10px;align-items:center}
 .rblock-usd{font-family:Verdana,sans-serif;font-size:11px;color:#ffd080;font-weight:600}
 .rblock-uah{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5)}
+.rb-raw{text-decoration:line-through;opacity:.5;font-weight:400;margin-right:4px}
+@media print{ .rb-raw{display:none!important} }
 .rblock-body{display:none;padding:8px 14px}
 .rblock:not(.collapsed) .rblock-body{display:block}
 .rblock-disc{display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -1261,6 +1263,14 @@ body.hero-on .hero-pad{margin-right:40vw}
             <option value="done">Завершено</option>
           </select>
         </div>
+        <div class="fld"><label>Координатор ЗЧ</label>
+          <select id="pm-coord" class="pm-disc-sel" style="width:100%">
+            <option value="">— не вказано —</option>
+            <option value="anikin">Анікін</option>
+            <option value="manager">Менеджер</option>
+            <option value="broslav">Брослав</option>
+          </select>
+        </div>
         <div class="fld"><label>Знижка</label>
           <select class="pm-disc-sel" id="pm-disc" onchange="pmRecalc()" style="width:100%">
             <option value="none">— без знижки —</option>
@@ -1349,6 +1359,14 @@ body.hero-on .hero-pad{margin-right:40vw}
           <option value="preliminary">Розрахунок</option>
           <option value="in_work">В роботі</option>
           <option value="done">Завершено</option>
+        </select>
+      </div>
+      <div class="fld"><label>Координатор ЗЧ</label>
+        <select id="so-coord" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
+          <option value="">— не вказано —</option>
+          <option value="anikin">Анікін</option>
+          <option value="manager">Менеджер</option>
+          <option value="broslav">Брослав</option>
         </select>
       </div>
       <div class="fld"><label>Знижка</label>
@@ -1816,6 +1834,10 @@ body.hero-on .hero-pad{margin-right:40vw}
       <option value="salary">Зарплата (за виконане)</option>
       <option value="advance">Аванс (наперед)</option>
     </select></div>
+    <div class="fld"><label>Джерело</label><select id="pay-po-source">
+      <option value="own">З власних коштів (не чіпати касу)</option>
+      <option value="cash">З каси (створити витрату)</option>
+    </select></div>
     <div class="fld"><label>Дата</label><input type="date" id="pay-po-date"/></div>
     <div class="fld"><label>Коментар</label><input type="text" id="pay-po-note" placeholder="необовʼязково"/></div>
     <div class="pay-status" id="pay-po-info"></div>
@@ -2246,7 +2268,7 @@ function worksSnapshot(){
 }
 function partsSnapshot(){
   return JSON.stringify({
-    car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),dc:_v("pm-disc"),
+    car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),co:_v("pm-coord"),dc:_v("pm-disc"),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
       return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];});}),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
@@ -2254,7 +2276,7 @@ function partsSnapshot(){
 }
 function serviceSnapshot(){
   return JSON.stringify({
-    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),dc:_v("so-disc"),inv:_v("so-invoice-num"),
+    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),dc:_v("so-disc"),inv:_v("so-invoice-num"),
     pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price];}),
     p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
@@ -2609,8 +2631,8 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
     var itemCoeff=it.coeff||1;
     var pRaw=it.price*itemCoeff;
     if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
-    var pUSD=cur==="uah"?Math.round(pRaw/usdRate*10)/10:pRaw;
-    var pUAH=cur==="uah"?pRaw:Math.round(pRaw*usdRate);
+    var pUSD=cur==="uah"?Math.round(pRaw/usdRate*10)/10:Math.round(pRaw*100)/100;
+    var pUAH=cur==="uah"?Math.round(pRaw):Math.round(pRaw*usdRate);
     var priceMain='<div class="ritem-usd">'+pUSD+' $</div><div class="ritem-uah">'+pUAH.toLocaleString("uk-UA")+' грн</div>';
     var coeffControl='<div class="ritem-coeff-wrap" title="Коефіцієнт складності">'
        +'<span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">×</span>'
@@ -2652,17 +2674,19 @@ function setItemCoord(uid,val){ if(wsel[uid]){ wsel[uid].coord=val; wRecalc(); }
 function setItemActual(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; if(n>0) wsel[uid].actualUAH=n; else delete wsel[uid].actualUAH; wRecalc(); } }
 
 function blockTotal(items,cur,disc,malBud){
-  var sumUSD=0;
+  var rawUSD=0, budUSD=0;
   (items||[]).forEach(function(it){
-    var c=it.coeff||1;
-    var pRaw=it.price*c;
-    if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
-    var pUSD=cur==="uah"?pRaw/usdRate:pRaw;
-    sumUSD+=pUSD;
+    var c=it.coeff||1, p=it.price*c;
+    rawUSD += cur==="uah" ? p/usdRate : p;                 // до знижок (з коеф.)
+    var pB = malBud ? Math.round(p*0.85*10)/10 : p;        // після знижки маляра (bud)
+    budUSD += cur==="uah" ? pB/usdRate : pB;
   });
-  sumUSD=Math.round(sumUSD*100)/100;
-  var discAmt=Math.round(sumUSD*disc*100)/100;
-  return{usd:Math.round((sumUSD-discAmt)*100)/100,uah:Math.round((sumUSD-discAmt)*usdRate),disc:Math.round(discAmt*usdRate)};
+  rawUSD=Math.round(rawUSD*100)/100;
+  budUSD=Math.round(budUSD*100)/100;
+  var discAmt=Math.round(budUSD*disc*100)/100;
+  var netUSD=Math.round((budUSD-discAmt)*100)/100;
+  return{ usd:netUSD, uah:Math.round(netUSD*usdRate), disc:Math.round((rawUSD-netUSD)*usdRate),
+          rawUsd:rawUSD, rawUah:Math.round(rawUSD*usdRate) };
 }
 
 function wAddPayment(){
@@ -2706,9 +2730,12 @@ function wRecalc(){
   var tMal=blockTotal(malItems,"usd",0,malType==="bud");
   var tSto=blockTotal(stoItems,"uah",0,false);
   function setHead(id,t){
-    document.getElementById("rb-"+id+"-usd").textContent=t.usd?t.usd+" $":"—";
-    document.getElementById("rb-"+id+"-uah").textContent=t.uah?t.uah.toLocaleString("uk-UA")+" грн":"";
-    document.getElementById("gt-"+id+"-usd").textContent=t.usd?t.usd+" $":"—";
+    var hd = t.rawUsd && Math.abs(t.rawUsd - t.usd) > 0.01;   // є знижка → показати «було → стало»
+    document.getElementById("rb-"+id+"-usd").innerHTML = t.usd
+      ? (hd?'<span class="rb-raw">'+(Math.round(t.rawUsd*100)/100)+' $</span> ':'')+(Math.round(t.usd*100)/100)+' $' : "—";
+    document.getElementById("rb-"+id+"-uah").innerHTML = t.uah
+      ? (hd?'<span class="rb-raw">'+t.rawUah.toLocaleString("uk-UA")+'</span> ':'')+t.uah.toLocaleString("uk-UA")+' грн' : "";
+    document.getElementById("gt-"+id+"-usd").textContent=t.usd?(Math.round(t.usd*100)/100)+" $":"—";
     document.getElementById("gt-"+id+"-uah").textContent=t.uah?t.uah.toLocaleString("uk-UA")+" грн":"";
   }
   setHead("kuz",tKuz);setHead("slu",tSlu);setHead("bez",tBez);setHead("mal",tMal);setHead("sto",tSto);
@@ -4688,11 +4715,11 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   tr.appendChild(td1);
 
   // Col 2: Avail + Name (ширша для малих екранів)
-  var td2=mkTd("min-width:240px;vertical-align:middle");
+  var td2=mkTd("min-width:300px;vertical-align:middle");
   var wrap=document.createElement("div");
   wrap.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=mkSel(PM_AVAIL,item.avail||"","avail");
-  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:104px;max-width:104px;cursor:pointer";
+  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";
   var availTxt=document.createElement("span");
   availTxt.className="pr-avail-txt";
   availTxt.textContent=pmAvailLabel(item.avail);
@@ -5426,13 +5453,13 @@ function pmRender(){
     table.className = "pt";
     var thead = document.createElement("thead");
     var hrow = document.createElement("tr");
-    [["4%","\u0412\u0430\u0440"],["39%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
+    [["3%","\u0412\u0430\u0440"],["50%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
      ["4%","\u041a-\u0442\u044c"],["5%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["6%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
-     ["6%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
-     ["6%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
-     ["5%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["7%","\u0422\u0422\u041d"],["7%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
+     ["5%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
+     ["5%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
+     ["4%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["6%","\u0422\u0422\u041d"],["6%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
      ["6%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
-     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["11%","\u0421\u0442\u0430\u0442\u0443\u0441"],["6%","\u0414\u0456\u044f"]
+     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["8%","\u0421\u0442\u0430\u0442\u0443\u0441"],["5%","\u0414\u0456\u044f"]
     ].forEach(function(h){
       var th = document.createElement("th");
       th.style.width = h[0];
@@ -5686,6 +5713,7 @@ function pmClear(){
   pmInitDate();
   document.getElementById("pm-disc").value = "none";
   var pmStC=document.getElementById("pm-status"); if(pmStC) pmStC.value="preliminary";
+  var pmCoC=document.getElementById("pm-coord"); if(pmCoC) pmCoC.value="";
   pmRender();
   pmRenderPayments();
   takeSnap("parts");
@@ -5711,6 +5739,7 @@ function pmSave(){
 
   var rec = {
     type:"parts_v2", car:car, vin:vin, status:(document.getElementById("pm-status")||{value:"preliminary"}).value,
+    coord:(document.getElementById("pm-coord")||{value:""}).value,
     client:document.getElementById("pm-client").value,
     phone:document.getElementById("pm-phone").value,
     date:document.getElementById("pm-date").value,
@@ -5840,6 +5869,7 @@ function pmLoadFromRecord(r, docId){
   document.getElementById("pm-date").value = r.date||"";
   document.getElementById("pm-disc").value = r.disc||"none";
   var pmSt=document.getElementById("pm-status"); if(pmSt) pmSt.value=r.status||"preliminary";
+  var pmCo=document.getElementById("pm-coord"); if(pmCo) pmCo.value=r.coord||"";
   pmRender();
   pmRenderPayments();
   takeSnap("parts");
@@ -6191,11 +6221,11 @@ function soRenderParts(){
   table.className = "so-pt";
   var thead = document.createElement("thead");
   var hrow = document.createElement("tr");
-  [["3%","Вар"],["26%","Наявність / Назва"],["4%","К-ть"],
-   ["8%","Вартість"],["9%","Фін.вартість"],
-   ["10%","Артикул осн."],["10%","Артикул альт."],
-   ["7%","Посилання"],["7%","ТТН"],["9%","Постач.назва"],
-   ["7%","Закупка,грн"],["7%","Наценка"],["10%","Статус"],["4%",""]
+  [["3%","Вар"],["42%","Наявність / Назва"],["4%","К-ть"],
+   ["6%","Вартість"],["7%","Фін.вартість"],
+   ["7%","Артикул осн."],["7%","Артикул альт."],
+   ["5%","Посилання"],["6%","ТТН"],["7%","Постач.назва"],
+   ["6%","Закупка,грн"],["6%","Наценка"],["7%","Статус"],["4%",""]
   ].forEach(function(h){
     var th=document.createElement("th"); th.style.width=h[0]; th.textContent=h[1]; hrow.appendChild(th);
   });
@@ -6278,10 +6308,10 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   tr.appendChild(td1);
 
   // Col2: avail + name
-  var td2=mkTd("min-width:140px;vertical-align:middle");
+  var td2=mkTd("min-width:300px;vertical-align:middle");
   var wrap2=document.createElement("div"); wrap2.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=document.createElement("select");
-  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;max-width:140px;cursor:pointer";
+  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";
   PM_AVAIL.forEach(function(o){ var opt=document.createElement("option"); opt.value=o.val!==undefined?o.val:o; opt.textContent=o.label!==undefined?o.label:o; if(opt.value===(item.avail||"")) opt.selected=true; availSel.appendChild(opt); });
   (function(){ availSel.addEventListener("change",function(){ soUpdPart(item.id,"avail",this.value); }); })();
   var availTxt=document.createElement("span"); availTxt.className="pr-avail-txt"; availTxt.textContent=pmAvailLabel(item.avail);
@@ -6594,6 +6624,7 @@ function soSave(){
     type:"service_order",
     car:car, vin:vin,
     status:(document.getElementById("so-status")||{value:"preliminary"}).value,
+    coord:(document.getElementById("so-coord")||{value:""}).value,
     client:document.getElementById("so-client").value,
     phone:document.getElementById("so-phone").value,
     date:document.getElementById("so-date").value,
@@ -6631,6 +6662,7 @@ function soLoadFromRecord(r, docId){
   document.getElementById("so-disc").value=r.disc||"none";
   var soSt = document.getElementById("so-status");
   if(soSt) soSt.value = r.status || "preliminary";
+  var soCo = document.getElementById("so-coord"); if(soCo) soCo.value = r.coord || "";
   soInit();
   takeSnap("service");
   soCheckCancellations();   // попередження про скасовані замовлення
@@ -6640,6 +6672,7 @@ function soClear(){
   soCurrentDocId=null; soParts=[]; soWorks=[]; soPayments=[];
   ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   document.getElementById("so-disc").value="none";
+  var soCoC=document.getElementById("so-coord"); if(soCoC) soCoC.value="";
   var d=document.getElementById("so-date"); if(d) d.value=new Date().toISOString().split("T")[0];
   soRenderParts(); soRenderWorks(); soRenderPayments(); soUpdateSummary();
   document.getElementById("so-car-label").textContent="Авто не вказано";
@@ -7650,7 +7683,10 @@ document.addEventListener("click", function(e){
 // суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
-var PAY_COORD_SHARE = 0.2;   // 20% координатору: з праці 4 працівників і з прибутку сторонніх
+var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт і з прибутку сторонніх
+var PAY_COORD_SHARE_KUZ = 0.15;  // координатору з рихтувальних (кузовних) робіт — 15%
+function payCoordShare(srcRole){ return srcRole==="kuz" ? PAY_COORD_SHARE_KUZ : PAY_COORD_SHARE; }
+var PAY_MIGRATED_COORD = false;
 var PAY_ABSENCE_FINE = 1500; // штраф за прогул, грн
 var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [], PAY_ATTEND = [];
 var PAY_SEL_WORKER = null, PAY_AC_REC = null;
@@ -7755,6 +7791,7 @@ function payLoadAll(){
     PAY_CARS = PAY_CALCS.filter(function(r){ return r.status === "in_work"; });
     if(!PAY_WORKERS.length){ paySeedWorkers(); return; }
     if(payEnsureCoord()) return;   // якщо додали координатора — payLoadAll перезапуститься
+    payMigrateCoordShare();
     payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -7763,6 +7800,20 @@ function paySeedWorkers(){
               {name:"Стрижеус Володимир",role:"kuz"},{name:"Димура Дмитро",role:"kuz"}];
   Promise.all(seed.map(function(w){ return db.collection("workers").add({name:w.name,role:w.role,active:true}); }))
     .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
+}
+// Одноразово перерахувати координаторські бонуси з рихтувальних робіт на 15% (було 20%).
+function payMigrateCoordShare(){
+  if(PAY_MIGRATED_COORD) return;
+  PAY_MIGRATED_COORD = true;
+  PAY_ACCRUALS.forEach(function(a){
+    if(a.type==="coord_labor" && a.srcRole==="kuz" && !a.void && a.baseUSD!=null){
+      var want = Math.round(a.baseUSD*PAY_COORD_SHARE_KUZ*100)/100;
+      if(Math.abs((a.amountUSD||0)-want) > 0.01){
+        a.amountUSD = want;   // локально — щоб картки одразу показали вірно
+        db.collection("work_accruals").doc(a._id).update({amountUSD:want}).catch(function(){});
+      }
+    }
+  });
 }
 // Одноразово переконатись, що координатор (Анікін) є в системі. true = додаємо (буде reload).
 function payEnsureCoord(){
@@ -7816,7 +7867,7 @@ function payRenderLedger(){
   var rows = [];
   PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
-    if(a.type==="coord_labor"){ t="20% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
+    if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t="20% сторонні"; txt=(a.carName||"")+" · "+(a.workName||""); }
     rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur)});
   }});
@@ -8127,7 +8178,7 @@ function payDoAccrue(){
           extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:acRate,
             srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
             calcId:a.calcId, carName:a.carName, vin:a.vin, workName:a.workName,
-            baseUSD:a.amountUSD, amountUSD:Math.round(a.amountUSD*PAY_COORD_SHARE*100)/100,
+            baseUSD:a.amountUSD, amountUSD:Math.round(a.amountUSD*payCoordShare(a.role)*100)/100,
             date:a.date, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
         });
       });
@@ -8162,6 +8213,7 @@ function payDoPayout(){
   var inp = parseFloat(document.getElementById("pay-po-amount").value)||0;
   if(inp <= 0){ showToast("Вкажіть суму"); return; }
   var type = document.getElementById("pay-po-type").value;
+  var source = document.getElementById("pay-po-source").value;   // own | cash
   var date = document.getElementById("pay-po-date").value || new Date().toISOString().slice(0,10);
   var note = document.getElementById("pay-po-note").value.trim();
   var rate = usdRate||44.1, cur = payCurOf(w.role);
@@ -8171,20 +8223,21 @@ function payDoPayout(){
   db.collection("worker_payments").add({
     workerId:w._id, workerName:w.name, role:w.role,
     amountUAH:uah, rate:rate, amountUSD:usd, payCur:cur,
-    type:type, date:date, note:note,
+    type:type, source:source, date:date, note:note,
     author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
   }).then(function(pref){
-    // Виплата працівнику = витрата з каси (щоб не вести подвійний облік).
-    // Запамʼятовуємо id операції — щоб сторно виплати прибрало і її.
-    db.collection("cash_operations").add({
-      type:"-", amount:uah, desc:(type==="advance"?"Аванс — ":"Зарплата — ")+w.name,
-      car:"", vin:"", dest:"", markup:1, linked:true, date:date,
-      ts:date+"T"+new Date().toTimeString().substr(0,8),
-      author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
-    }).then(function(cref){ pref.update({cashOpId:cref.id}).catch(function(){}); })
-      .catch(function(){});
+    // Витрата в Касі — лише якщо виплата «з каси». З власних коштів — касу не чіпаємо.
+    if(source==="cash"){
+      db.collection("cash_operations").add({
+        type:"-", amount:uah, desc:(type==="advance"?"Аванс — ":"Зарплата — ")+w.name,
+        car:"", vin:"", dest:"", markup:1, linked:true, date:date,
+        ts:date+"T"+new Date().toTimeString().substr(0,8),
+        author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+      }).then(function(cref){ pref.update({cashOpId:cref.id}).catch(function(){}); })
+        .catch(function(){});
+    }
     payClose("pay-payout-modal");
-    showToast("Виплачено "+payFmt(cur==="usd"?usd:uah,cur)+" — "+w.name);
+    showToast("Виплачено "+payFmt(cur==="usd"?usd:uah,cur)+" — "+w.name+(source==="own"?" (власні)":""));
     payLoadAll();
   }).catch(function(e){ showToast("Помилка: "+e.message); });
 }

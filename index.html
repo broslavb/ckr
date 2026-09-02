@@ -144,14 +144,25 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 @media print{ .print-words{display:block!important;font-family:Arial,sans-serif;font-size:10pt;font-style:italic;color:#444;margin-top:6px;text-align:right} }
 #sum-doc{display:none}
 @media print{
-  body.print-summary #sum-doc{display:block!important;page-break-before:always;font-family:Arial,sans-serif;color:#000}
+  body.print-summary #sum-doc{display:block!important;font-family:Arial,sans-serif;color:#000}
+  /* коли є додатки — зведений на окремому першому аркуші */
+  body.print-summary:not(.print-summary-only) #sum-doc{page-break-after:always}
+  /* лише зведений — ховаємо шапку й деталізацію */
+  body.print-summary-only #print-header,
+  body.print-summary-only #tab-works,
+  body.print-summary-only #tab-parts{display:none!important}
   #sum-doc .sd-sec{display:flex;justify-content:space-between;align-items:center;background:#0d2b6b;color:#fff;padding:7px 12px;border-radius:4px;margin:14px 0 0;font-weight:bold;font-size:11pt;letter-spacing:.5px}
   #sum-doc .sd-list{padding:2px 0}
   #sum-doc .sd-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 12px;border-bottom:1px solid #e3e3e3;font-size:10.5pt}
   #sum-doc .sd-row span:first-child{color:#222}
-  #sum-doc .sd-row span:last-child{color:#0d2b6b;white-space:nowrap}
-  #sum-doc .sd-total{display:flex;justify-content:space-between;align-items:center;background:#e3edf8;padding:10px 12px;border-radius:4px;margin-top:14px;font-weight:bold;font-size:13pt;color:#0d2b6b}
-  #sum-doc .sd-words{text-align:right;font-style:italic;color:#444;font-size:10pt;margin-top:4px}
+  #sum-doc .sd-row span:last-child{white-space:nowrap}
+  #sum-doc .sd-invoice{border-top:2px solid #0d2b6b;margin-top:16px;padding-top:10px}
+  #sum-doc .sd-inv-num{font-weight:bold;color:#0d2b6b;font-size:11pt;margin-bottom:8px}
+  #sum-doc table.sd-inv{width:100%;border-collapse:collapse;font-size:10.5pt}
+  #sum-doc table.sd-inv th{background:#e3edf8;color:#0d2b6b;text-align:left;padding:6px 10px;border:1px solid #cdd8ea;font-size:9.5pt}
+  #sum-doc table.sd-inv td{padding:6px 10px;border:1px solid #e0e0e0}
+  #sum-doc table.sd-inv tr.tot td{background:#0d2b6b;color:#fff;font-weight:bold;font-size:11.5pt}
+  #sum-doc .sd-words{text-align:right;font-style:italic;color:#444;font-size:10pt;margin-top:6px}
   #sum-doc .sd-note{margin-top:16px;font-size:9.5pt;font-style:italic;color:#666;border-top:1px solid #ddd;padding-top:8px}
 }
 .rblock-body{display:none;padding:8px 14px}
@@ -3759,6 +3770,16 @@ function showPrintModal(source){
   sumWrap.appendChild(sumCb); sumWrap.appendChild(sumSp);
   opts.appendChild(sumWrap);
 
+  var soWrap = document.createElement("label");
+  soWrap.style.cssText="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--tx3);margin-left:22px";
+  var soCb = document.createElement("input");
+  soCb.type="checkbox"; soCb.id="pr-summary-only";
+  soCb.style.cssText="width:14px;height:14px;cursor:pointer";
+  var soSp = document.createElement("span");
+  soSp.textContent="↳ лише зведений (без деталізації)";
+  soWrap.appendChild(soCb); soWrap.appendChild(soSp);
+  opts.appendChild(soWrap);
+
   // #3 Лише запчастини першої черги (показуємо, якщо є хоч одна)
   var hasPrio = PM_BLOCKS.some(function(b){ return b.items.some(function(i){ return i.priority; }); });
   if(hasPrio){
@@ -4038,10 +4059,13 @@ function executePrint(){
   else if(printWorks)          document.body.classList.add("print-works-only");
   else if(printParts)          document.body.classList.add("print-parts-only");
 
-  // Зведений лист — окрема сторінка (лише коли друкуємо і роботи, і запчастини)
+  // Зведений лист — окремий аркуш (перший). «Лише зведений» — без деталізації.
   var sumEl2 = document.getElementById("pr-summary");
-  var summaryOn = sumEl2 && sumEl2.checked && printWorks && printParts;
+  var sumOnlyEl = document.getElementById("pr-summary-only");
+  var summaryOnly = sumOnlyEl && sumOnlyEl.checked;
+  var summaryOn = (sumEl2 && sumEl2.checked) || summaryOnly;
   document.body.classList.toggle("print-summary", !!summaryOn);
+  document.body.classList.toggle("print-summary-only", !!summaryOnly);
   if(summaryOn) buildPrintSummary();
 
   // Set PDF filename from car + vin
@@ -4057,7 +4081,7 @@ function executePrint(){
       // Restore tab visibility
       if(tabWorks && worksWasHidden) tabWorks.style.display = "none";
       if(tabParts && partsWasHidden) tabParts.style.display = "none";
-      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-prio-only","print-summary");
+      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-prio-only","print-summary","print-summary-only");
     }, 1000);
   }, 300);
 }
@@ -4066,14 +4090,29 @@ function executePrint(){
 function buildPrintSummary(){
   var app=document.getElementById("app-screen");
   var doc=document.getElementById("sum-doc");
-  if(!doc){ doc=document.createElement("div"); doc.id="sum-doc"; app.appendChild(doc); }
+  if(!doc){ doc=document.createElement("div"); doc.id="sum-doc"; }
+  // Зведений — завжди ПЕРШИМ аркушем (перед шапкою й вкладками)
+  if(app.firstChild!==doc) app.insertBefore(doc, app.firstChild);
   var rate=usdRate||44.1;
   var g=function(id){ var e=document.getElementById(id); return e?e.value:""; };
   var car=g("w-car")||g("pm-car")||"—", vin=g("w-vin")||g("pm-vin"), client=g("w-client")||g("pm-client"), date=g("w-date")||g("pm-date");
   var usd0=function(x){ return (Math.round(x*100)/100); };
   var uah0=function(x){ return Math.round(x).toLocaleString("uk-UA"); };
+  // Номер рахунку: дата-001 (як у ТО)
+  var invDate = date || new Date().toISOString().slice(0,10);
+  var ip=invDate.split("-"); var invNum=(ip.length===3?ip[2]+"."+ip[1]+"."+ip[0]:invDate)+"-001";
+  var usaSrc=(document.querySelector("#print-header img")||{}).src||"";
 
-  // ── Запчастини по блоках
+  // Праворуч від $/грн — фіксовані колонки (вирівнювання)
+  var pair=function(usdV,uahV){
+    return '<span style="display:inline-block;min-width:82px;text-align:right;font-weight:bold;color:#0d2b6b">'+usd0(usdV)+' $</span>'
+      +'<span style="display:inline-block;min-width:100px;text-align:right;color:#0d2b6b">'+uah0(uahV)+' грн</span>';
+  };
+  var uahCol=function(uahV,color){
+    return '<span style="display:inline-block;min-width:100px;text-align:right;color:'+(color||"#0d2b6b")+'">'+uah0(uahV)+' грн</span>';
+  };
+
+  // ── Запчастини по блоках (назви блоків = b.label)
   var disc=document.getElementById("pm-disc")?document.getElementById("pm-disc").value:"none";
   var partsGrand=0, partRows="";
   PM_BLOCKS.forEach(function(b){
@@ -4081,8 +4120,9 @@ function buildPrintSummary(){
     b.items.forEach(function(i){ bt+=pmFinalWithDisc(pmFinalPrice(i),disc); (i.variants||[]).forEach(function(v){ bt+=pmFinalWithDisc(pmFinalPrice(v),disc); }); });
     if(bt<=0.5) return;
     partsGrand+=bt;
-    partRows+='<div class="sd-row"><span>'+escH(b.name||"Блок")+'</span><span>'+uah0(bt)+' грн</span></div>';
+    partRows+='<div class="sd-row"><span>'+escH(b.label||"Блок")+'</span><span>'+uahCol(bt)+'</span></div>';
   });
+  var partsUSD=usd0(partsGrand/rate);
 
   // ── Роботи по категоріях
   var discKuz=parseFloat((document.getElementById("disc-kuz")||{}).value)||0;
@@ -4097,37 +4137,44 @@ function buildPrintSummary(){
   var worksUSD=tK.usd+tS.usd+tB.usd+tM.usd+tO.usd;
   var worksUAH=Math.round(worksUSD*rate);
   var discUAH=tK.disc+tS.disc;
-  function catRow(lbl,t){ if(!t.usd) return ""; return '<div class="sd-row"><span>'+lbl+'</span><span><b>'+usd0(t.usd)+' $</b> &nbsp; '+uah0(t.uah)+' грн</span></div>'; }
+  function catRow(lbl,t){ if(!t.usd) return ""; return '<div class="sd-row"><span>'+lbl+'</span><span>'+pair(t.usd,t.uah)+'</span></div>'; }
   var catRows=catRow("Кузовні",tK)+catRow("Слюсарні",tS)+catRow("Безпека",tB)+catRow("Малярні",tM)+catRow("Сторонні",tO);
-  if(discUAH>0) catRows+='<div class="sd-row"><span>Знижки</span><span style="color:#2e7d32;font-weight:bold">−'+uah0(discUAH)+' грн</span></div>';
+  if(discUAH>0) catRows+='<div class="sd-row"><span>Знижки</span><span>'+uahCol(-discUAH,"#2e7d32")+'</span></div>';
 
   var grandBoth=partsGrand+worksUAH;
-  var grandUSD=usd0(grandBoth/rate);
   var paid=paySumUAH(typeof wPayments!=="undefined"?wPayments:[])+paySumUAH(typeof pmPayments!=="undefined"?pmPayments:[]);
   var bal=grandBoth-paid;
 
   var shield='<svg width="46" height="46" viewBox="0 0 64 64" style="flex:0 0 auto"><path d="M32 3 L57 11 V33 C57 47 46 56 32 61 C18 56 7 47 7 33 V11 Z" fill="#0d2b6b"/><path d="M16 39 C24 27 40 27 48 39" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><path d="M20 45 C26 37 38 37 44 45" fill="none" stroke="#7fa8e6" stroke-width="2.4" stroke-linecap="round"/><circle cx="32" cy="19" r="2.6" fill="#b5322a"/></svg>';
 
   var H='';
-  H+='<div class="print-top"><div style="display:flex;align-items:center;gap:12px">'+shield
+  // Шапка — 3 колонки, як у ТО (лого CKR · «Авто з США» · реквізити)
+  H+='<div class="print-top"><div style="display:flex;align-items:center;gap:12px;flex:1">'+shield
     +'<div><div class="print-logo">CKR</div><div class="print-org">ЦЕХ КУЗОВНОГО РЕМОНТУ<br>Кропивницький, вул. Маланюка, 19А<br>Тел: 050 330 3884</div></div></div>'
-    +'<div class="print-requisites"><b>Зведений підсумок</b><br>ФОП Брослав Борис Васильович<br>IBAN: UA183052990000026000045110312<br>АТ КБ «ПРИВАТБАНК»</div></div>';
+    +(usaSrc?'<div style="flex:0 0 auto;text-align:center;padding:0 16px"><img src="'+usaSrc+'" style="height:50px"></div>':'')
+    +'<div class="print-requisites"><b>Реквізити для оплати</b><br>ФОП Брослав Борис Васильович<br>Код отримувача: 3062515837<br>IBAN: UA183052990000026000045110312<br>АТ КБ "ПРИВАТБАНК"<br><small>Призначення: за послуги ремонту авто / за автозапчастини</small></div></div>';
   H+='<div class="print-car-block"><div><div class="print-car-title">Зведена калькуляція · роботи та запчастини</div><div class="print-car-name">'+escH(car)+'</div></div>'
-    +'<div class="print-car-date">'+escH(client||"")+'<br>'+(vin?"VIN: "+escH(vin)+" · ":"")+escH(date)+'</div></div>';
+    +'<div class="print-car-date">'+escH(client||"")+'<br>'+(vin?"VIN: "+escH(vin)+" · ":"")+escH(date)+'<br>РАХУНОК № '+invNum+'</div></div>';
 
-  H+='<div class="sd-sec"><span>ВСЬОГО ЗАПЧАСТИНИ</span><span>'+uah0(partsGrand)+' грн</span></div>';
+  H+='<div class="sd-sec"><span>ВСЬОГО ЗАПЧАСТИНИ</span><span>'+uah0(partsGrand)+' грн &nbsp; ≈ '+partsUSD+' USD</span></div>';
   H+='<div class="sd-list">'+(partRows||'<div class="sd-row"><span style="color:#888">—</span><span></span></div>')+'</div>';
 
   H+='<div class="sd-sec"><span>РОБОТИ</span><span>'+uah0(worksUAH)+' грн &nbsp; ≈ '+usd0(worksUSD)+' USD</span></div>';
   H+='<div class="sd-list">'+catRows+'</div>';
 
-  H+='<div class="sd-total"><span>ПІДСУМОК</span><span>'+uah0(grandBoth)+' грн &nbsp; ≈ '+grandUSD+' USD</span></div>';
-  H+='<div class="sd-words">'+numberToWords(grandBoth)+'</div>';
-
+  // Підсумковий рахунок — як у ТО (розділова лінія + РАХУНОК № + Опис/Сума)
+  H+='<div class="sd-invoice"><div class="sd-inv-num">РАХУНОК № '+invNum+'</div>';
+  H+='<table class="sd-inv"><tr><th>Опис</th><th style="text-align:right">Сума (грн)</th></tr>';
+  H+='<tr><td>Автозапчастини та матеріали</td><td style="text-align:right">'+uah0(partsGrand)+' грн</td></tr>';
+  H+='<tr><td>Послуги з ремонту / технічного обслуговування</td><td style="text-align:right">'+uah0(worksUAH)+' грн</td></tr>';
+  H+='<tr class="tot"><td>ВСЬОГО до сплати</td><td style="text-align:right">'+uah0(grandBoth)+' грн</td></tr>';
+  H+='</table>';
+  H+='<div class="sd-words">'+numberToWords(grandBoth)+' · ≈ '+usd0(grandBoth/rate)+' USD</div>';
   if(paid>0){
-    H+='<div class="sd-row" style="margin-top:8px"><span>Сплачено</span><span style="color:#2e7d32;font-weight:bold">'+uah0(paid)+' грн</span></div>';
-    H+='<div class="sd-row"><span style="font-weight:bold">Залишок до сплати</span><span style="font-weight:bold;color:'+(bal>0?"#c0392b":"#2e7d32")+'">'+uah0(bal)+' грн</span></div>';
+    H+='<div class="sd-row" style="margin-top:8px"><span>Сплачено</span><span>'+uahCol(paid,"#2e7d32")+'</span></div>';
+    H+='<div class="sd-row"><span style="font-weight:bold">Залишок до сплати</span><span>'+uahCol(bal,bal>0?"#c0392b":"#2e7d32")+'</span></div>';
   }
+  H+='</div>';
   H+='<div class="sd-note">Детально — в додатках (роботи та запчастини).</div>';
 
   doc.innerHTML=H;

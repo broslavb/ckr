@@ -2740,8 +2740,11 @@ function wRecalc(){
       +'<span style="color:rgba(255,255,255,.6);font-family:var(--mono);font-size:10px">'+t.uah.toLocaleString("uk-UA")+' грн</span>' : "—";
     if(ha) ha.innerHTML = "";
     var gu=document.getElementById("gt-"+id+"-usd"), ga=document.getElementById("gt-"+id+"-uah");
+    // Вирівнюємо в колонки: $ і грн — inline-block фіксованої ширини, право-вирівняні
     if(gu) gu.innerHTML = t.usd ? raw
-      +(Math.round(t.usd*100)/100)+' $ <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">'+t.uah.toLocaleString("uk-UA")+' грн</span>' : "—";
+      +'<span style="display:inline-block;min-width:64px;text-align:right;color:var(--ac);font-weight:600">'+(Math.round(t.usd*100)/100)+' $</span>'
+      +'<span style="display:inline-block;min-width:92px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px">'+t.uah.toLocaleString("uk-UA")+' грн</span>'
+      : '<span style="display:inline-block;min-width:164px;text-align:right">—</span>';
     if(ga) ga.innerHTML = "";
   }
   setHead("kuz",tKuz);setHead("slu",tSlu);setHead("bez",tBez);setHead("mal",tMal);setHead("sto",tSto);
@@ -5459,13 +5462,13 @@ function pmRender(){
     table.className = "pt";
     var thead = document.createElement("thead");
     var hrow = document.createElement("tr");
-    [["3%","\u0412\u0430\u0440"],["33%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
+    [["3%","\u0412\u0430\u0440"],["31%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
      ["4%","\u041a-\u0442\u044c"],["6%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["7%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
      ["7%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
      ["7%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
-     ["3%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["7%","\u0422\u0422\u041d"],["8%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
+     ["3%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["6%","\u0422\u0422\u041d"],["11%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
      ["7%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
-     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["4%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%","\u0414\u0456\u044f"]
+     ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["3%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%","\u0414\u0456\u044f"]
     ].forEach(function(h){
       var th = document.createElement("th");
       th.style.width = h[0];
@@ -6227,11 +6230,11 @@ function soRenderParts(){
   table.className = "so-pt";
   var thead = document.createElement("thead");
   var hrow = document.createElement("tr");
-  [["3%","Вар"],["31%","Наявність / Назва"],["4%","К-ть"],
+  [["3%","Вар"],["28%","Наявність / Назва"],["4%","К-ть"],
    ["7%","Вартість"],["8%","Фін.вартість"],
    ["8%","Артикул осн."],["8%","Артикул альт."],
-   ["3%","Посилання"],["7%","ТТН"],["9%","Постач.назва"],
-   ["7%","Закупка,грн"],["6%","Наценка"],["4%","Статус"],["4%",""]
+   ["3%","Посилання"],["6%","ТТН"],["13%","Постач.назва"],
+   ["7%","Закупка,грн"],["6%","Наценка"],["3%","Статус"],["4%",""]
   ].forEach(function(h){
     var th=document.createElement("th"); th.style.width=h[0]; th.textContent=h[1]; hrow.appendChild(th);
   });

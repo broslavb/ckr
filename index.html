@@ -4444,10 +4444,18 @@ function pmUpdItem(blockId, itemId, field, value){
     // Якщо майстер змінив тип націнки — власна націнка з каси більше не діє.
     // Саме підтвердження рядка робиться статусом (див. pmUpdItemStatus).
     if(item.fromCash && field === "markupType") delete item.cashMarkup;
-    pmRender();
-    if(field==="code" && value) pmCheckDupCode(blockId, itemId, value);
+    if(field==="qty" || field==="buyPrice"){
+      // Стрілки number-input у Safari шлють change на КОЖЕН клік; повний pmRender щоразу
+      // руйнує поле (скрол стрибає — схоже на перезавантаження). Рендеримо із затримкою.
+      pmScheduleRender();
+    } else {
+      pmRender();
+      if(field==="code" && value) pmCheckDupCode(blockId, itemId, value);
+    }
   }
 }
+var _pmRenderTimer=null;
+function pmScheduleRender(){ clearTimeout(_pmRenderTimer); _pmRenderTimer=setTimeout(function(){ pmRender(); }, 400); }
 
 // Швидка зміна статусу (кнопки «П»/«З»)
 // ── ТТН / Нова Пошта ──────────────────────────────────────────────────────────
@@ -6272,10 +6280,17 @@ function soUpdPart(id, field, value){
   if(!item){ soParts.forEach(function(p){ if(p.variants){ var v=p.variants.find(function(v){return v.id===id;}); if(v) item=v; }}); }
   if(item){ item[field]=value;
     if(field==="status") item.statusDate=todayISO();   // дата зміни статусу
-    soRenderParts(); soUpdateSummary();
-    if(field==="code" && value) soCheckDupCode(id, value);
+    if(field==="qty" || field==="buyPrice"){
+      // як у ЗЧ: стрілки number-input у Safari — рендер із затримкою, підсумок оновлюємо одразу
+      soUpdateSummary(); soScheduleRender();
+    } else {
+      soRenderParts(); soUpdateSummary();
+      if(field==="code" && value) soCheckDupCode(id, value);
+    }
   }
 }
+var _soRenderTimer=null;
+function soScheduleRender(){ clearTimeout(_soRenderTimer); _soRenderTimer=setTimeout(function(){ soRenderParts(); }, 400); }
 
 // ── ТТН у ТО ──────────────────────────────────────────────────────────────────
 function soCheckCancellations(){

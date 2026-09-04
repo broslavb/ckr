@@ -1285,6 +1285,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-p" onclick="saveW()">💾 Зберегти</button>
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
       <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
+      <button class="btn btn-o" onclick="wArchiveCurrent()" title="Завершити ремонт і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
     </div>
   </div>
 </div>
@@ -3149,6 +3150,12 @@ function archiveDoc(id){
     document.getElementById("done-date").value = new Date().toISOString().slice(0,10);
     document.getElementById("done-modal").style.display="flex";
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Архівувати поточну відкриту калькуляцію робіт (кнопка «📦 В архів»)
+function wArchiveCurrent(){
+  if(typeof currentDocId==="undefined" || !currentDocId){ showToast("Спершу збережіть калькуляцію"); return; }
+  if(isTabDirty("works") && !confirm("Є незбережені зміни.\nАрхівувати збережену версію? (щойно введене не врахується — спершу «Зберегти»)")) return;
+  archiveDoc(currentDocId);
 }
 function doneConfirm(){
   if(!DONE_CTX) return;

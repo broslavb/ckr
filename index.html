@@ -1146,6 +1146,9 @@ body.hero-on .hero-pad{margin-right:40vw}
           <option value="done">Завершено</option>
         </select>
       </div>
+      <div class="fld"><label>Рихтувальник</label>
+        <select id="w-bodyman"><option value="">— не призначено —</option></select>
+      </div>
     </div>
     <div id="w-cash-pending"></div>
     <div class="tpl-bar">
@@ -2216,6 +2219,22 @@ function initApp() {
   applyDefaultSubs();
   renderSecs(DB);
   wRecalc();
+  wLoadBodymen();
+}
+// Рихтувальники (kuz) для селектора «Рихтувальник» у Роботах
+var W_BODYMEN = [];
+function wLoadBodymen(){
+  db.collection("workers").get().then(function(snap){
+    W_BODYMEN = [];
+    snap.forEach(function(d){ var w=d.data(); if(w.active!==false && w.role==="kuz") W_BODYMEN.push({id:d.id, name:w.name}); });
+    wFillBodymen();
+  }).catch(function(){});
+}
+function wFillBodymen(){
+  var sel=document.getElementById("w-bodyman"); if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">— не призначено —</option>'+W_BODYMEN.map(function(w){ return '<option value="'+w.id+'">'+escH(w.name)+'</option>'; }).join("");
+  if(cur) sel.value=cur;
 }
 
 // ── КУРС USD ─────────────────────────────────────────────────────────────────
@@ -2358,7 +2377,7 @@ function _v(id){ var e=document.getElementById(id); return e?e.value:""; }
 function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
-    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,
+    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,bm:_v("w-bodyman"),
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -2893,6 +2912,7 @@ function clearW(){
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
   wPayments=[];wRenderPayments();document.getElementById("mal-type").value="std";
   wMalCoord="";wMalActual=0;
+  var bmC=document.getElementById("w-bodyman"); if(bmC) bmC.value="";
   document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
   selectStoDefaults();renderSecs(DB);wRecalc();
   currentDocId = null;
@@ -2949,6 +2969,8 @@ function saveW(){
     masterName:currentUserName,
     rate:usdRate,discKuz:discKuz,discSlu:discSlu,malType:malType,pp:pp,
     malCoord:wMalCoord||"", malActualUAH:wMalActual||0,
+    bodyman:(document.getElementById("w-bodyman")||{value:""}).value,
+    bodymanName:(function(){var s=document.getElementById("w-bodyman");return s&&s.selectedIndex>0?s.options[s.selectedIndex].text:"";})(),
     payments:JSON.parse(JSON.stringify(wPayments)),
     totalUSD:Math.round(totalUSD*100)/100,totalUAH:totalUAH,
     count:Object.keys(wsel).length,
@@ -3540,6 +3562,7 @@ function loadRec(id){
       wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
       wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0;
+      var bmSel=document.getElementById("w-bodyman"); if(bmSel){ wFillBodymen(); bmSel.value=r.bodyman||""; }
       switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();
       takeSnap("works");
@@ -8447,7 +8470,7 @@ function payOpenAccrue(){
     .sort(function(a,b){ return rank(a.name)-rank(b.name); })
     .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
   var firstW = PAY_WORKERS.find(function(w){ return w._id===ws.value; });
-  payRenderCarOptions(firstW?firstW.role:"");   // #3 — авто з мітками кольору
+  payRenderCarOptions(firstW);   // авто з мітками кольору + фільтр по рихтувальнику
   document.getElementById("pay-ac-status").textContent = "";
   var dEl=document.getElementById("pay-ac-date"); if(dEl && !dEl.value) dEl.value=new Date().toISOString().slice(0,10);
   document.getElementById("pay-accrue-modal").style.display = "flex";
@@ -8464,21 +8487,26 @@ function payCarColor(rec, role){
   return "#e67e22";                               // є залишок — помаранчевий
 }
 // Нативний <select> не фарбує опції в Safari/Chrome — тож мітка кольору прямо в тексті (🟢/🟠)
-function payRenderCarOptions(role){
+// Рихтувальник (kuz) бачить лише СВОЇ авто (де він призначений) або ще непризначені.
+function payRenderCarOptions(worker){
   var cs=document.getElementById("pay-ac-car"); if(!cs) return;
-  var prev=cs.value;
-  cs.innerHTML = PAY_CARS.length
-    ? PAY_CARS.map(function(c){
+  var role = worker?worker.role:"", prev=cs.value;
+  var list = PAY_CARS.filter(function(c){
+    if(role==="kuz") return !c.bodyman || c.bodyman===(worker&&worker._id);
+    return true;
+  });
+  cs.innerHTML = list.length
+    ? list.map(function(c){
         var col=payCarColor(c,role);
         var mark = col==="#2e7d32" ? "🟢 " : (col==="#e67e22" ? "🟠 " : "");
         return '<option value="'+c._id+'">'+mark+escH(c.car||"")+(c.type==="service_order"?" · ТО":"")+(c.vin?" · "+escH(c.vin):"")+'</option>';
       }).join("")
-    : '<option value="">— немає авто у статусі «В роботі» —</option>';
-  if(prev) cs.value=prev;
+    : '<option value="">— немає авто для цього працівника —</option>';
+  if(prev && list.some(function(c){return c._id===prev;})) cs.value=prev;
 }
 function payAccrueCarChanged(){
   var worker = PAY_WORKERS.find(function(w){ return w._id===document.getElementById("pay-ac-worker").value; });
-  if(worker) payRenderCarOptions(worker.role);
+  if(worker) payRenderCarOptions(worker);
   var rec = PAY_CARS.find(function(c){ return c._id===document.getElementById("pay-ac-car").value; });
   PAY_AC_REC = rec;
   var fundEl = document.getElementById("pay-ac-fund"), wrap = document.getElementById("pay-ac-works");

@@ -8998,9 +8998,8 @@ function statsRender(){
     var worksTotal = r.totalUAH || Math.round((r.totalUSD||0)*rate);
     // Запчастини: прибуток модуля (ціна клієнту − закупка − 6% податок, уже враховано)
     var pc = STATS_CALCS.filter(function(x){ return x.type==="parts_v2" && (x.vin||"").toUpperCase()===vin && vin; });
-    var partsProfit=0, partsPaid=0, partsTotal=0;
+    var partsProfit=0;
     pc.forEach(function(p){
-      partsPaid += statsPaid(p); partsTotal += (p.totalUAH||0);
       (p.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(i){
         partsProfit += pmProfit(i, p.disc||"none");
         (i.variants||[]).forEach(function(v){ partsProfit += pmProfit(v, p.disc||"none"); });
@@ -9014,7 +9013,7 @@ function statsRender(){
     var worksTax = Math.round(worksPaid*taxPct/100);
     var worksProfit = worksPaid - laborUAH - mal - worksTax;
     var carProfit = partsProfit + worksProfit;
-    var under = (worksTotal+partsTotal) - (worksPaid+partsPaid);
+    var under = recordBalanceUAH(r);   // недоплата ЛИШЕ по роботах (ЗЧ рахуються від ціни клієнту, окремою калькуляцією)
     aZch+=partsProfit; aWorks+=worksProfit; if(under>1) aUnder+=under;
 
     h += '<tr><td>'+escH(r.car||"")+(under>1?' <span style="color:var(--rd);font-size:9px;white-space:nowrap">недоплата '+Math.round(under).toLocaleString("uk-UA")+'</span>':'')+'</td>'+

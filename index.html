@@ -9031,28 +9031,35 @@ function statsRender(){
   h += '</table></div>';
   document.getElementById("stats-cars").innerHTML = h;
 
-  // 2) Фактично виплачено працівникам за місяць
+  // 2) Фактично виплачено працівникам за місяць (зарплата/аванс окремо від розстрочки!)
   var pays = PAY_PAYMENTS.filter(function(p){ return (p.date||"").slice(0,7)===mo && !p.void; });
   var byW = {};
   pays.forEach(function(p){
-    if(!byW[p.workerId]) byW[p.workerId] = {name:p.workerName||"", uah:0, adv:0};
-    byW[p.workerId].uah += (p.amountUAH||0);
-    if(p.type==="advance") byW[p.workerId].adv += (p.amountUAH||0);
+    if(!byW[p.workerId]) byW[p.workerId] = {name:p.workerName||"", sal:0, adv:0, loan:0, rep:0};
+    var amt=p.amountUAH||0;
+    if(p.type==="advance"){ byW[p.workerId].sal+=amt; byW[p.workerId].adv+=amt; }
+    else if(p.type==="loan"){ byW[p.workerId].loan+=amt; }
+    else if(p.type==="loan_repay"){ byW[p.workerId].rep+=amt; }
+    else { byW[p.workerId].sal+=amt; }   // salary
   });
   var w2 = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">Виплачено працівникам за місяць</div>'+
-    '<table><tr><th>Працівник</th><th style="text-align:right">Всього, грн</th>'+
-    '<th style="text-align:right">з них аванс</th><th style="text-align:right">Баланс зараз, $</th></tr>';
-  var totPay = 0;
+    '<table><tr><th>Працівник</th><th style="text-align:right">Зарплата+аванс</th>'+
+    '<th style="text-align:right">з них аванс</th><th style="text-align:right">Розстрочка (видано)</th>'+
+    '<th style="text-align:right">Погашено</th><th style="text-align:right">Баланс зараз</th></tr>';
+  var totSal = 0, totLoan = 0;
   Object.keys(byW).forEach(function(k){
-    var b = payBalance(k); totPay += byW[k].uah;
+    var b = payBalance(k); totSal += byW[k].sal; totLoan += byW[k].loan;
     w2 += '<tr><td>'+escH(byW[k].name)+'</td>'+
-      '<td style="text-align:right">'+Math.round(byW[k].uah).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+Math.round(byW[k].sal).toLocaleString("uk-UA")+'</td>'+
       '<td style="text-align:right">'+Math.round(byW[k].adv).toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right;color:'+(b.bal>=0?"var(--gr)":"var(--rd)")+'">'+b.bal.toFixed(2)+'</td></tr>';
+      '<td style="text-align:right">'+(byW[k].loan?Math.round(byW[k].loan).toLocaleString("uk-UA"):"—")+'</td>'+
+      '<td style="text-align:right">'+(byW[k].rep?Math.round(byW[k].rep).toLocaleString("uk-UA"):"—")+'</td>'+
+      '<td style="text-align:right;color:'+(b.bal>=0?"var(--gr)":"var(--rd)")+'">'+payFmt(b.bal,b.cur)+'</td></tr>';
   });
-  if(!Object.keys(byW).length) w2 += '<tr><td colspan="4" class="pay-sub">Виплат за цей місяць немає</td></tr>';
+  if(!Object.keys(byW).length) w2 += '<tr><td colspan="6" class="pay-sub">Виплат за цей місяць немає</td></tr>';
   w2 += '</table></div>';
   document.getElementById("stats-workers").innerHTML = w2;
+  var totPay = totSal;   // «зарплати» у зведенні — без розстрочок
 
   // ── ПРИБУТОК ЗА МІСЯЦЬ (касова основа: реальні гроші, незалежно від архіву) ──
   // Надходження від клієнтів (оплати в калькуляціях за датою оплати)
@@ -9065,9 +9072,11 @@ function statsRender(){
     });
   });
   var clientIn = inWorks+inParts+inSvc;
-  // Виплати зарплат (кеш працівникам, крім погашення розстрочки)
-  var salPay=0;
-  PAY_PAYMENTS.forEach(function(p){ if(!p.void && (p.date||"").slice(0,7)===mo && p.type!=="loan_repay") salPay+=(p.amountUAH||0); });
+  // Виплати зарплат (зарплата+аванс) і окремо видані розстрочки (позики — теж кеш з каси/кишені)
+  var salPay=0, loanPay=0;
+  PAY_PAYMENTS.forEach(function(p){ if(p.void || (p.date||"").slice(0,7)!==mo) return;
+    if(p.type==="loan") loanPay+=(p.amountUAH||0);
+    else if(p.type!=="loan_repay") salPay+=(p.amountUAH||0); });
   // Витрати з каси (крім зарплатних), розкладені по категоріях
   var cShop=0, cCar=0, cCarUn=0;
   STATS_CASH.forEach(function(o){
@@ -9087,7 +9096,8 @@ function statsRender(){
   var H='<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ПРИБУТОК · '+payMonthLabel(mo)+' <span class="pay-sub">(каса, реальні гроші)</span></div>';
   H+=row("Надходження від клієнтів", f(clientIn)+" грн", {b:true, cls:"gr"});
   H+='<div class="pay-sub" style="margin:-2px 0 8px 0">Роботи '+f(inWorks)+" · Запчастини "+f(inParts)+" · ТО "+f(inSvc)+" грн</div>";
-  H+=row("Зарплати виплачені", "−"+f(salPay)+" грн", {top:true});
+  H+=row("Зарплати виплачені (без розстрочок)", "−"+f(salPay)+" грн", {top:true});
+  if(loanPay>0) H+=row("Розстрочки видані (позика, не витрата)", "−"+f(loanPay)+" грн", {cls:"ac"});
   H+=row("Закупки для СТО (каса)", "−"+f(cShop)+" грн");
   H+=row("Витрати по авто (каса)", "−"+f(cCar)+" грн");
   H+=row("Нерозписані з каси (по авто)", "−"+f(cCarUn)+" грн", cCarUn>0?{cls:"ac"}:{});

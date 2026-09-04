@@ -1810,7 +1810,9 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="pay-wrap">
     <div class="pay-bar">
       <div class="pay-h1">ЗАРПЛАТА · БАЛАНСИ</div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="month" id="pay-month" onchange="paySetMonth(this.value)" title="Місяць розрахунку"
+               style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
         <button class="btn btn-p" onclick="payOpenAccrue()">+ Нарахувати роботи</button>
         <button class="btn btn-o" onclick="payOpenAttend()">📅 Табель</button>
         <button class="btn btn-o" onclick="payOpenWorkers()">Працівники</button>
@@ -7878,6 +7880,9 @@ var PAY_MIGRATED_COORD = false;
 var PAY_ABSENCE_FINE = 1500; // штраф за прогул, грн
 var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [], PAY_ATTEND = [];
 var PAY_SEL_WORKER = null, PAY_AC_REC = null;
+var PAY_MONTH = new Date().toISOString().slice(0,7);   // #3 — розрахунок по місяцях (YYYY-MM)
+function payMonthMatch(d){ return String(d||"").slice(0,7) === PAY_MONTH; }
+function paySetMonth(v){ PAY_MONTH = v || new Date().toISOString().slice(0,7); payRenderCards(); }
 var PAY_CAL_MONTH = null, PAY_CAL_WORKER = null;   // стан календаря табеля
 var PAY_COORD_ENSURED = false;
 var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник", coord:"Координатор"};
@@ -7952,9 +7957,9 @@ function payBalance(wid){
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; });
   var cur = payCurOf(w ? w.role : "");
   var acc=0, pd=0, fine=0;
-  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===wid && !a.void) acc += payNative(a, cur); });
-  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===wid && !p.void) pd += payNative(p, cur); });
-  PAY_ATTEND.forEach(function(a){ if(a.workerId===wid && a.kind==="absence" && !a.void) fine += payNative(a, cur); });
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===wid && !a.void && payMonthMatch(a.date)) acc += payNative(a, cur); });
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===wid && !p.void && payMonthMatch(p.date)) pd += payNative(p, cur); });
+  PAY_ATTEND.forEach(function(a){ if(a.workerId===wid && a.kind==="absence" && !a.void && payMonthMatch(a.date)) fine += payNative(a, cur); });
   return {acc:acc, paid:pd, fine:fine, bal:acc-pd-fine, cur:cur};
 }
 
@@ -8017,6 +8022,7 @@ function payEnsureCoord(){
 // ── КАРТКИ ПРАЦІВНИКІВ ──
 function payRenderCards(){
   var el = document.getElementById("pay-cards"); if(!el) return;
+  var mEl=document.getElementById("pay-month"); if(mEl && mEl.value!==PAY_MONTH) mEl.value=PAY_MONTH;
   el.innerHTML = "";
   PAY_WORKERS.filter(function(w){ return w.active !== false && (w.role!=="coord" || isAdmin()); }).forEach(function(w){
     var b = payBalance(w._id);
@@ -8053,17 +8059,17 @@ function payRenderLedger(){
   if(!w){ el.innerHTML = ""; return; }
   var cur = payCurOf(w.role);
   var rows = [];
-  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id){
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id && payMonthMatch(a.date)){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
-    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur)});
+    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext")});
   }});
-  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id)
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id && payMonthMatch(p.date))
     rows.push({id:p._id, kind:"pay", vd:!!p.void, by:p.voidedBy||"", d:p.date,
       t:(p.type==="advance"?"аванс":"виплата"),
       txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-payNative(p,cur)}); });
-  PAY_ATTEND.forEach(function(a){ if(a.workerId===w._id && a.kind==="absence")
+  PAY_ATTEND.forEach(function(a){ if(a.workerId===w._id && a.kind==="absence" && payMonthMatch(a.date))
     rows.push({id:a._id, kind:"fine", vd:!!a.void, by:"", d:a.date, t:"прогул (штраф)",
       txt:(a.penaltyUAH||0).toLocaleString("uk-UA")+" грн", v:-payNative(a,cur)}); });
   rows.sort(function(a,b){ return (b.d||"").localeCompare(a.d||""); });
@@ -8073,7 +8079,10 @@ function payRenderLedger(){
   rows.forEach(function(r){
     var st = r.vd ? ' style="opacity:.45"' : '';
     var line = r.vd ? 'text-decoration:line-through;' : '';
-    h += '<tr'+st+'><td style="'+line+'">'+escH(r.d||"")+'</td>'+
+    var dcell = (r.editable && !r.vd)
+      ? '<span style="cursor:pointer;border-bottom:1px dashed var(--tx3)" title="Змінити дату нарахування" onclick="payEditAccrDate(\''+r.id+'\')">'+escH(r.d||"")+' ✎</span>'
+      : escH(r.d||"");
+    h += '<tr'+st+'><td style="'+line+'">'+dcell+'</td>'+
          '<td>'+r.t+(r.vd?' <span style="color:var(--rd);font-size:10px">СКАСОВАНО'+(r.by?" · "+escH(r.by):"")+'</span>':'')+'</td>'+
          '<td style="'+line+'">'+escH(r.txt)+'</td>'+
          '<td style="text-align:right;'+line+'" class="'+(r.v>=0?"a":"p")+'">'+(r.v>=0?"+":"−")+payFmt(Math.abs(r.v),cur)+'</td>'+
@@ -8082,6 +8091,20 @@ function payRenderLedger(){
          '</td></tr>';
   });
   el.innerHTML = h + '</table></div>';
+}
+
+// #2 — змінити дату нарахування (і синхронно — повʼязаний бонус координатора)
+function payEditAccrDate(id){
+  var a = PAY_ACCRUALS.find(function(x){ return x._id===id; });
+  if(!a) return;
+  var nd = prompt("Дата нарахування (РРРР-ММ-ДД):", a.date||new Date().toISOString().slice(0,10));
+  if(nd===null) return;
+  nd = (nd||"").trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)){ showToast("Формат дати: РРРР-ММ-ДД"); return; }
+  var ups = [ db.collection("work_accruals").doc(id).update({date:nd}) ];
+  PAY_ACCRUALS.forEach(function(x){ if(x.srcAccrualId===id && !x.void) ups.push(db.collection("work_accruals").doc(x._id).update({date:nd})); });
+  Promise.all(ups).then(function(){ showToast("Дату нарахування змінено на "+nd); payLoadAll(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
 // СТОРНО: запис лишається в історії, але не рахується в балансі та не займає фонд авто

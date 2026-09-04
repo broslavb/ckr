@@ -1985,6 +1985,9 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div id="done-msg" class="pay-status" style="margin-bottom:8px"></div>
     <div class="fld"><label>Дата завершення (нею йдуть нарахування/виплати за місяць)</label>
       <input type="date" id="done-date" style="color-scheme:light"/></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);cursor:pointer;margin:2px 0 6px">
+      <input type="checkbox" id="done-shelved"/> Архівна калькуляція (чернетка) — <b>не рахувати в статистиці</b>
+    </label>
     <div class="pay-btns">
       <button class="btn btn-p" onclick="doneConfirm()">Завершити й архівувати</button>
       <button class="btn btn-o" onclick="payClose('done-modal')">Скасувати</button>
@@ -3139,7 +3142,7 @@ function buildCard(doc, showMoveBtn) {
   var id = doc.id;
   _cardDocs[id] = doc;
   var dt = r.date || "";
-  var statusMap = {preliminary:"Розрахунок",in_work:"В роботі",final:"Фінальний",insurance:"Страхова",done:"Завершено"};
+  var statusMap = {preliminary:"Розрахунок",in_work:"В роботі",final:"Фінальний",insurance:"Страхова",done:"Завершено",shelved:"Чернетка"};
   var statusClass = {preliminary:"",final:"status-final",insurance:"status-insurance",done:"status-done"};
   var status = statusMap[r.status] || r.status || "";
 
@@ -3171,6 +3174,8 @@ function buildCard(doc, showMoveBtn) {
     + ((r.type==="parts"||r.type==="parts_v2")?'<span class="hist-tag">ЗЧ</span>':r.type==="service_order"?'<span class="hist-tag">ТО</span>':'<span class="hist-tag">Роботи</span>')
     + (r.status==="done"
         ? '<span class="hist-tag" style="background:var(--gr);color:#fff">Завершено'+(r.doneDate?' · '+fmtDMY(r.doneDate):'')+'</span>'
+        : r.status==="shelved"
+        ? '<span class="hist-tag" style="background:#9ca3af;color:#fff" title="Не рахується в статистиці">Чернетка'+(r.doneDate?' · '+fmtDMY(r.doneDate):'')+'</span>'
         : (status?'<span class="hist-tag">'+status+'</span>':''))
     + (r.masterName?'<span class="hist-tag master">'+r.masterName+'</span>':'');
 
@@ -3207,6 +3212,8 @@ function archiveDoc(id){
     if(bal > 0){ msg.className="pay-status err"; msg.innerHTML="⚠ Залишок оплати <b>"+bal.toLocaleString("uk-UA")+" грн</b> — все одно завершити?"; }
     else { msg.className="pay-status"; msg.textContent="Авто перейде в Архів."; }
     document.getElementById("done-date").value = new Date().toISOString().slice(0,10);
+    // За замовч. «чернетка», якщо авто НЕ було «В роботі» (тобто це просто прорахунок).
+    var sh=document.getElementById("done-shelved"); if(sh) sh.checked = (r.status!=="in_work");
     document.getElementById("done-modal").style.display="flex";
   }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
@@ -3232,8 +3239,17 @@ function doneConfirm(){
   if(!DONE_CTX) return;
   var id=DONE_CTX.id, r=DONE_CTX.rec;
   var dd=document.getElementById("done-date").value || new Date().toISOString().slice(0,10);
-  db.collection("calculations").doc(id).update({status:"done", doneDate:dd, updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
-    .then(function(){ wSyncCoordExt(id, Object.assign({}, r, {status:"done", doneDate:dd})); payClose("done-modal"); showToast("Завершено ("+dd+") → архів"); loadActive(); })
+  var sh=document.getElementById("done-shelved"); var shelved = sh && sh.checked;
+  var st = shelved ? "shelved" : "done";
+  db.collection("calculations").doc(id).update({status:st, doneDate:dd, updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+    .then(function(){
+      // Чернетка не породжує бонусів координатора; звичайне завершення — так.
+      if(!shelved) wSyncCoordExt(id, Object.assign({}, r, {status:"done", doneDate:dd}));
+      else wSyncCoordExt(id, Object.assign({}, r, {status:"draft"}));  // прибрати старі, якщо були
+      payClose("done-modal");
+      showToast(shelved ? ("В архів як чернетку ("+dd+") — поза статистикою") : ("Завершено ("+dd+") → архів"));
+      loadActive();
+    })
     .catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
@@ -3620,7 +3636,7 @@ function loadArchive(vin) {
   }
   query.get().then(function(snap){
     clearTimeout(_guard);
-    ARCH_DOCS = snap.docs.filter(function(d){ return d.data().status === "done"; });
+    ARCH_DOCS = snap.docs.filter(function(d){ var s=d.data().status; return s==="done" || s==="shelved"; });
     renderArchive();
   }).catch(function(e){ clearTimeout(_guard); console.error("loadArchive error:", e); list.innerHTML='<div class="arch-empty">Помилка: '+e.message+'<br><small>'+e.code+'</small></div>'; });
 }
@@ -3628,7 +3644,11 @@ function renderArchive(){
   var list = document.getElementById("arch-list"); if(!list) return;
   var docs = ARCH_DOCS.filter(function(d){
     var r=d.data();
-    if(ARCH_TYPE!=="all" && r.type!==ARCH_TYPE) return false;
+    if(ARCH_TYPE!=="all"){
+      var t=r.type||"works";
+      if(ARCH_TYPE==="parts_v2"){ if(t!=="parts" && t!=="parts_v2") return false; }
+      else if(t!==ARCH_TYPE) return false;
+    }
     if(ARCH_MONTH && statsMonthOf(r)!==ARCH_MONTH) return false;
     return true;
   });
@@ -4461,7 +4481,7 @@ function printCalc(){
   document.getElementById("ph-car").textContent = car;
   document.getElementById("ph-client").textContent = document.getElementById("w-client").value || "";
   document.getElementById("ph-date").textContent = (vin ? "VIN: "+vin+" · " : "") + document.getElementById("w-date").value;
-  var statusMap = {preliminary:"Розрахунок",in_work:"В роботі",final:"Фінальний",insurance:"Страхова",done:"Завершено"};
+  var statusMap = {preliminary:"Розрахунок",in_work:"В роботі",final:"Фінальний",insurance:"Страхова",done:"Завершено",shelved:"Чернетка"};
   document.getElementById("ph-status").textContent = statusMap[document.getElementById("w-status").value] || "";
   document.getElementById("ph-master").textContent = "Майстер: " + currentUserName;
   // Set document title = PDF filename
@@ -9022,7 +9042,8 @@ function statsInit(){
     db.collection("cash_operations").where("type","==","-").limit(1000).get(),
     db.collection("settings").doc("overheads").get()
   ]).then(function(res){
-    STATS_CALCS = []; res[0].forEach(function(d){ STATS_CALCS.push(Object.assign({_id:d.id}, d.data())); });
+    // Чернетки (status "shelved") — архівні прорахунки, у статистику НЕ входять.
+    STATS_CALCS = []; res[0].forEach(function(d){ var x=d.data(); if(x.status==="shelved") return; STATS_CALCS.push(Object.assign({_id:d.id}, x)); });
     PAY_PAYMENTS = []; res[1].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_ACCRUALS = []; res[2].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
     STATS_CASH = []; res[3].forEach(function(d){ STATS_CASH.push(Object.assign({_id:d.id}, d.data())); });

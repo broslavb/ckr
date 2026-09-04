@@ -1226,6 +1226,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           </select>
         </div>
         <div id="rlist-mal"><div class="empty"><div class="empty-tx">Не обрано</div></div></div>
+        <div id="mal-coord"></div>
       </div>
     </div>
 
@@ -2299,7 +2300,7 @@ function _v(id){ var e=document.getElementById(id); return e?e.value:""; }
 function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
-    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),
+    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -2711,6 +2712,24 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
 function setItemCoord(uid,val){ if(wsel[uid]){ wsel[uid].coord=val; wRecalc(); } }
 function setItemActual(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; if(n>0) wsel[uid].actualUAH=n; else delete wsel[uid].actualUAH; wRecalc(); } }
 
+// #7 — Малярні: координатор + одне поле «факт» на весь блок (розрахунок 15% від прибутку)
+var wMalCoord = "", wMalActual = 0;
+function setMalCoord(v){ wMalCoord = v; wRecalc(); }
+function setMalActual(v){ var n=parseFloat(v)||0; wMalActual = n>0?n:0; wRecalc(); }
+function renderMalCoord(malUAH){
+  var el = document.getElementById("mal-coord"); if(!el) return;
+  if(!isAdmin() || !malUAH){ el.innerHTML=""; return; }
+  var actual = wMalActual||0;
+  var prof = malUAH - actual;
+  var sel='<select class="rc-sel" onchange="setMalCoord(this.value)">'
+    +'<option value=""'+(!wMalCoord?" selected":"")+'>— координатор —</option>'
+    +'<option value="broslav"'+(wMalCoord==="broslav"?" selected":"")+'>Брослав</option>'
+    +'<option value="anikin"'+(wMalCoord==="anikin"?" selected":"")+'>Анікін</option></select>';
+  var act='<input class="rc-act" type="number" min="0" step="100" placeholder="факт на блок, грн" value="'+(actual||"")+'" onchange="setMalActual(this.value)"/>';
+  var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">прибуток '+Math.round(prof).toLocaleString("uk-UA")+' грн'+(wMalCoord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
+  el.innerHTML = '<div class="ritem-coord" style="padding:6px 0 2px">'+sel+act+profTxt+'</div>';
+}
+
 function blockTotal(items,cur,disc,malBud){
   var rawUSD=0, budUSD=0;
   (items||[]).forEach(function(it){
@@ -2767,6 +2786,7 @@ function wRecalc(){
   var tBez=blockTotal(bezItems,"uah",0,false);
   var tMal=blockTotal(malItems,"usd",0,malType==="bud");
   var tSto=blockTotal(stoItems,"uah",0,false);
+  renderMalCoord(tMal.uah);
   function setHead(id,t){
     var hd = t.rawUsd && Math.abs(t.rawUsd - t.usd) > 0.01;   // є знижка → «до знижки → зі знижкою»
     // Порядок подачі: спершу ціна ДО знижки (обидві валюти), потім ЗІ знижкою (обидві валюти)
@@ -2810,6 +2830,7 @@ function clearW(){
   document.getElementById("w-status").value="preliminary";
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
   wPayments=[];wRenderPayments();document.getElementById("mal-type").value="std";
+  wMalCoord="";wMalActual=0;
   document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
   selectStoDefaults();renderSecs(DB);wRecalc();
   currentDocId = null;
@@ -2865,6 +2886,7 @@ function saveW(){
     masterEmail:currentUser.email,
     masterName:currentUserName,
     rate:usdRate,discKuz:discKuz,discSlu:discSlu,malType:malType,pp:pp,
+    malCoord:wMalCoord||"", malActualUAH:wMalActual||0,
     payments:JSON.parse(JSON.stringify(wPayments)),
     totalUSD:Math.round(totalUSD*100)/100,totalUAH:totalUAH,
     count:Object.keys(wsel).length,
@@ -2876,13 +2898,13 @@ function saveW(){
   if (currentDocId) {
     col.doc(currentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
       .then(function(){ wCashMarkLinked(); wParkMarkLinked(); takeSnap("works");
-        wSyncCoordExt(currentDocId, rec.works, rec.rate, rec.status, car); showToast("Оновлено: "+car); })
+        wSyncCoordExt(currentDocId, rec); showToast("Оновлено: "+car); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   } else {
     isSaving = true;
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
       .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); wParkMarkLinked(); takeSnap("works");
-        wSyncCoordExt(currentDocId, rec.works, rec.rate, rec.status, car); showToast("Збережено: "+car); })
+        wSyncCoordExt(currentDocId, rec); showToast("Збережено: "+car); })
       .catch(function(e){ isSaving=false; showToast("Помилка збереження: "+e.message); });
   }
 }
@@ -2891,8 +2913,14 @@ function saveW(){
 // Похідні записи: при кожному збереженні знищуємо старі по авто й, якщо авто
 // «Завершено», створюємо свіжі з рядків СТОРОННІХ, де координатор = Анікін.
 // Прибуток = ціна клієнту − факт; бонус = 20% прибутку (у $ по курсу калькуляції).
-function wSyncCoordExt(calcId, works, rate, status, car){
-  if(!calcId) return;
+function malWorksTotalUAH(works, malType, rate){
+  var usd=0;
+  (works||[]).forEach(function(w){ if(w.cat!==CAT_MAL) return; var p=(w.price||0)*(w.coeff||1); if(malType==="bud") p=Math.round(p*0.85*10)/10; usd+=p; });
+  return Math.round(usd*rate);
+}
+function wSyncCoordExt(calcId, rec){
+  if(!calcId || !rec) return;
+  var works=rec.works||[], rate=rec.rate||usdRate||44.1, status=rec.status, car=rec.car||"";
   db.collection("work_accruals").where("calcId","==",calcId).get()
     .then(function(snap){ var dels=[]; snap.forEach(function(d){ if(d.data().type==="coord_ext") dels.push(d.ref.delete()); }); return Promise.all(dels); })
     .then(function(){
@@ -2900,19 +2928,27 @@ function wSyncCoordExt(calcId, works, rate, status, car){
       return db.collection("workers").where("role","==","coord").get().then(function(ws){
         var anikin=null; ws.forEach(function(d){ var w=d.data(); if(w.active!==false && !anikin) anikin={_id:d.id, name:w.name}; });
         if(!anikin) return null;
-        var r = rate||usdRate||44.1, today=new Date().toISOString().slice(0,10), batch=[];
-        (works||[]).forEach(function(w){
+        var r = rate, today=new Date().toISOString().slice(0,10), batch=[];
+        var mk=function(o){ return Object.assign({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext", rate:r,
+          calcId:calcId, carName:car, date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" }, o); };
+        // Сторонні роботи (по рядку, координатор = Анікін)
+        works.forEach(function(w){
           if(w.cat!==CAT_STO || w.coord!=="anikin") return;
           var actual=parseFloat(w.actualUAH)||0; if(actual<=0) return;
-          var clientUAH=(w.price||0)*(w.coeff||1);
-          var profit=clientUAH-actual; if(profit<=0) return;
+          var profit=(w.price||0)*(w.coeff||1)-actual; if(profit<=0) return;
           var bonusUAH=profit*PAY_COORD_SHARE_EXT;
-          batch.push({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext", rate:r,
-            calcId:calcId, carName:car||"", workName:w.name,
-            profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH),
-            amountUSD:Math.round((bonusUAH/r)*100)/100, date:today,
-            author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+          batch.push(mk({ src:"sto", workName:w.name, profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH), amountUSD:Math.round((bonusUAH/r)*100)/100 }));
         });
+        // Малярні роботи (один блок, координатор = Анікін)
+        if(rec.malCoord==="anikin"){
+          var malActual=parseFloat(rec.malActualUAH)||0;
+          var malUAH=malWorksTotalUAH(works, rec.malType, r);
+          var mprof=malUAH-malActual;
+          if(malActual>0 && mprof>0){
+            var mbonus=mprof*PAY_COORD_SHARE_EXT;
+            batch.push(mk({ src:"mal", workName:"Малярні роботи", profitUAH:Math.round(mprof), baseUAH:Math.round(mbonus), amountUSD:Math.round((mbonus/r)*100)/100 }));
+          }
+        }
         return batch.length ? Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); })) : null;
       });
     }).catch(function(){});
@@ -2996,7 +3032,7 @@ function archiveDoc(id){
     if(!confirm(msg)) return;
     var _r = doc.data();
     db.collection("calculations").doc(id).update({status:"done",updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
-      .then(function(){ wSyncCoordExt(id, _r.works, _r.rate, "done", _r.car||""); showToast("Переміщено в архів"); loadActive(); })
+      .then(function(){ wSyncCoordExt(id, Object.assign({}, _r, {status:"done"})); showToast("Переміщено в архів"); loadActive(); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
@@ -3441,6 +3477,7 @@ function loadRec(id){
         : (r.pp>0 ? [{id:"wp"+(++uidCounter),amount:r.pp,cur:"uah",rate:r.rate||usdRate,type:"cash",date:r.date||"",comment:"аванс"}] : []);
       wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
+      wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0;
       switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();
       takeSnap("works");

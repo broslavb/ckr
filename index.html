@@ -921,8 +921,8 @@ input, select, button, .btn, .pp-inp, .cinp,
 .pay-bal{font-family:Verdana,sans-serif;font-size:20px;font-weight:bold;margin:4px 0}
 .pay-bal.pos{color:var(--gr)} .pay-bal.neg{color:var(--rd)} .pay-bal.zero{color:var(--tx3)}
 .pay-sub{font-family:var(--mono);font-size:10px;color:var(--tx3)}
-.pay-cbtns{display:flex;gap:6px;margin-top:10px}
-.pay-cbtns button{flex:1;font-family:var(--mono);font-size:10px;padding:5px;border-radius:3px;border:1px solid var(--bd);background:var(--bg);color:var(--tx2);cursor:pointer}
+.pay-cbtns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.pay-cbtns button{flex:1 1 46%;font-family:var(--mono);font-size:10px;padding:5px;border-radius:3px;border:1px solid var(--bd);background:var(--bg);color:var(--tx2);cursor:pointer;white-space:nowrap}
 .pay-cbtns button:hover{border-color:var(--ac);color:var(--ac)}
 .pay-modal{display:none;position:fixed;z-index:620;inset:0;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 16px}
 .pay-box{background:var(--bg2);border-radius:8px;padding:20px 22px;width:100%;max-width:460px;box-shadow:0 10px 50px rgba(0,0,0,.3)}
@@ -2074,7 +2074,7 @@ var DB = {
   "МАЛЯРНІ РОБОТИ": {cur:"usd", items:[
     {n:"Бампер передній",p:220},{n:"Бампер задній",p:220},{n:"Капот, з однієї сторони",p:320},{n:"Капот, з двох сторін",p:400},{n:"Крило ПП",p:200},{n:"Крило ЛП",p:200},{n:"Крило ПЗ",p:220},{n:"Крило ЛЗ",p:220},{n:"Крило ПЗ купе",p:287.5},{n:"Крило ЛЗ купе",p:287.5},{n:"Двері ПП",p:220},{n:"Двері ЛП",p:220},{n:"Двері ПП з двох сторін",p:264.5},{n:"Двері ЛП з двох сторін",p:264.5},{n:"Двері ПЗ",p:220},{n:"Двері ЛЗ",p:220},{n:"Двері ПЗ з двох сторін",p:264.5},{n:"Двері ЛЗ з двох сторін",p:264.5},{n:"Поріг ПП",p:115},{n:"Поріг ЛП",p:115},{n:"Поріг ЗП",p:115},{n:"Поріг ЗЛ",p:115},{n:"Поріг боковий пластиковий правий",p:149.5},{n:"Поріг боковий пластиковий лівий",p:149.5},{n:"Стійка ЦП",p:150},{n:"Стійка ЦЛ",p:150},{n:"Стійка ПП",p:150},{n:"Стійка ПЛ",p:150},{n:"Батон ПП",p:69},{n:"Батон ЛП",p:69},{n:"Батон ЗП",p:69},{n:"Батон ЗЛ",p:69},{n:"Накладка двері ПП",p:75},{n:"Накладка двері ЛП",p:75},{n:"Накладка двері ЗП",p:75},{n:"Накладка двері ЗЛ",p:75},{n:"Кришка багажнику",p:220},{n:"Підкапотний простір частково",p:140},{n:"Підкапотний простір повністю",p:250},{n:"Внутрішня частина кузову",p:250},{n:"Панель задня",p:200},{n:"Дах",p:300},{n:"Дзеркало праве",p:55},{n:"Дзеркало ліве",p:55},{n:"Накладка бамперу нижня (губа)",p:115},{n:"Решітка бамперу центральна",p:115},{n:"Решітка бамперу нижня",p:80.5},{n:"Складові переднього бамперу",p:184},{n:"Складові заднього бамперу",p:140},{n:"Перехід на 1 елемент",p:90},{n:"Губа бамперу переднього",p:130},{n:"Губа бамперу заднього",p:120},{n:"Петля капоту ліва",p:30},{n:"Петля капоту права",p:30},{n:"Герметик капоту прокласти",p:60},{n:"Внутрішня частина кузову (невеликий обʼєм)",p:140},{n:"Ручка дверей ПП",p:30},{n:"Ручка дверей ЛП",p:30},{n:"Ручка дверей ЗП",p:30},{n:"Ручка дверей ЗЛ",p:30},{n:"Накладка бамперу верхня (окремо від бамперу)",p:100},{n:"Решітка бамперу бокова",p:60},{n:"Арка крила ПП",p:100},{n:"Арка крила ПЛ",p:100},{n:"Арка крила ЗП",p:100},{n:"Арка крила ЗЛ",p:100}]},
   "СТОРОННІ РОБОТИ": {cur:"uah", items:[
-    {n:"Діагностика авто",p:250,editable:true},{n:"Сертифікація авто",p:6000,editable:true},{n:"Демонтаж/монтаж панорами",p:8000,editable:true},{n:"Демонтаж/монтаж скла лобового",p:2600,editable:true},{n:"Демонтаж/монтаж скла заднього",p:2200,editable:true},{n:"Демонтаж/монтаж скла кутового",p:1500,editable:true,sides:true},{n:"Розвал/сходження",p:1200,editable:true},{n:"Мийка первинна",p:800,editable:true},{n:"Скидання Crash Data в SRS",p:3500,editable:true},{n:"Заправка кондиціонеру",p:2000,editable:true},{n:"Хімчистка салону седан",p:8000,editable:true},{n:"Хімчистка салону кросовер",p:10000,editable:true},{n:"Евакуатор, 1 сторона",p:1500,editable:true},{n:"Сторонній електрик / кодування",p:4200,editable:true},{n:"Ремонт фари передньої (запотівання)",p:2500,sides:true,editable:true},{n:"Коригування рівня передніх фар",p:400,editable:true},{n:"Вібростенд",p:400,editable:true}]}
+    {n:"Діагностика авто",p:250,editable:true,cs:false},{n:"Сертифікація авто",p:6000,editable:true},{n:"Демонтаж/монтаж панорами",p:8000,editable:true},{n:"Демонтаж/монтаж скла лобового",p:2600,editable:true},{n:"Демонтаж/монтаж скла заднього",p:2200,editable:true},{n:"Демонтаж/монтаж скла кутового",p:1500,editable:true,sides:true},{n:"Розвал/сходження",p:1200,editable:true},{n:"Мийка первинна",p:800,editable:true},{n:"Мийка (обдув)",p:300,editable:true},{n:"Скидання Crash Data в SRS",p:3500,editable:true},{n:"Заправка кондиціонеру",p:2000,editable:true},{n:"Хімчистка салону седан",p:8000,editable:true},{n:"Хімчистка салону кросовер",p:10000,editable:true},{n:"Евакуатор, 1 сторона",p:1500,editable:true,cs:false},{n:"Сторонній електрик / кодування",p:4200,editable:true},{n:"Ремонт фари передньої (запотівання)",p:2500,sides:true,editable:true},{n:"Коригування рівня передніх фар",p:400,editable:true},{n:"Вібростенд",p:400,editable:true}]}
 };
 
 
@@ -2082,6 +2082,16 @@ var SIDES = ["\u043b\u0456\u0432\u0438\u0439","\u043f\u0440\u0430\u0432\u0438\u0
 
 
 var STO_DEFAULTS = ["Діагностика авто","Розвал/сходження","Мийка первинна","Заправка кондиціонеру","Вібростенд"];
+
+// Сторонні, з яких координатору бонус НЕ нараховується (за замовчуванням, поки не задано прапорець у Цінах)
+var PAY_STO_NOSHARE = ["діагностика","евакуатор","topix","пальне","дозаправ","парковка"];
+// Чи ділитись прибутком сторонньої роботи з координатором (прапорець item.cs у Цінах має пріоритет)
+function stoCoordShare(name){
+  var it=(DB[CAT_STO]||{items:[]}).items.filter(function(i){return i.n===name;})[0];
+  if(it && it.cs!==undefined) return it.cs!==false;
+  var n=(name||"").toLowerCase();
+  return !PAY_STO_NOSHARE.some(function(x){ return n.indexOf(x)>=0; });
+}
 
 // ── ПІДРОЗДІЛИ РОБІТ (для зручного заповнення) ────────────────────────────────
 // Категорії, у яких увімкнено підрозділи; порядок = порядок відображення.
@@ -2314,8 +2324,8 @@ function loadPricesFromDB() {
           var newItems = [];
           cd.list.forEach(function(s){
             var it = byName[s.n];
-            if (it) { if(s.p!==undefined) it.p = s.p; if(s.sub!==undefined) it.sub = s.sub; newItems.push(it); delete byName[s.n]; }
-            else    { newItems.push({n:s.n, p:s.p||0, sub:s.sub||""}); }  // додана вручну
+            if (it) { if(s.p!==undefined) it.p = s.p; if(s.sub!==undefined) it.sub = s.sub; if(s.cs!==undefined) it.cs = s.cs; newItems.push(it); delete byName[s.n]; }
+            else    { newItems.push({n:s.n, p:s.p||0, sub:s.sub||"", cs:s.cs}); }  // додана вручну
           });
           // Позиції з коду, яких нема у збереженому списку (нові дефолти) — у кінець
           DB[cat].items.forEach(function(it){ if(byName[it.n]) newItems.push(it); });
@@ -2347,7 +2357,7 @@ function savePrices() {
   for (var cat in DB) {
     saved[cat] = { list: DB[cat].items
       .filter(function(item){ return item.n; })
-      .map(function(item){ return {n:item.n, p:item.p||0, sub:item.sub||""}; }) };
+      .map(function(item){ var o={n:item.n, p:item.p||0, sub:item.sub||""}; if(item.cs!==undefined) o.cs=item.cs; return o; }) };
   }
   db.collection("settings").doc("prices").set(saved).then(function() {
     renderSecs(DB); wRecalc(); showToast("Ціни збережено в базі");
@@ -2759,18 +2769,15 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
     if(showCoord){
       var actual=parseFloat(it.actualUAH)||0;
       var prof=pUAH-actual;
-      if(actual>0){ totProfit+=prof; if(it.coord==="anikin") anikinBonus+=prof*PAY_COORD_SHARE_EXT; }
-      var sel='<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
-        +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
-        +'<option value="broslav"'+(it.coord==="broslav"?" selected":"")+'>Брослав</option>'
-        +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Анікін</option></select>';
+      var share=stoCoordShare(it.name);   // чи ділиться прибуток із координатором
+      if(actual>0){ totProfit+=prof; if(share) anikinBonus+=prof*PAY_COORD_SHARE_EXT; }
       var priceInp='<span class="rc-lbl">клієнту грн</span><input class="rc-act" type="number" min="0" step="50" title="ціна клієнту, грн ($ перерахується сам)" value="'+pUAH+'" onchange="setItemPriceUAH(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
       var act='<span class="rc-lbl">факт грн</span><input class="rc-act" type="number" min="0" step="100" placeholder="факт" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
       var confBtn = it.cashPending
         ? '<button class="rc-chk" onclick="wCashConfirm(\''+it.uid+'\')" title="Підтвердити витрату з каси">Перевірено</button>'
         : (it.cashOpId ? '<span class="rc-ok">✓ з каси</span>' : '');
-      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(it.coord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
-      coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
+      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(share?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):" · без коорд")+'</span>' : '';
+      coordLine='<div class="ritem-coord">'+priceInp+act+confBtn+profTxt+'</div>';
     }
     return '<div class="ritem">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
@@ -3017,7 +3024,7 @@ function wSyncCoordExt(calcId, rec){
           calcId:calcId, carName:car, date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" }, o); };
         // Сторонні роботи (по рядку, координатор = Анікін)
         works.forEach(function(w){
-          if(w.cat!==CAT_STO || w.coord!=="anikin") return;
+          if(w.cat!==CAT_STO || !stoCoordShare(w.name)) return;   // лише операції, що діляться з координатором
           var actual=parseFloat(w.actualUAH)||0; if(actual<=0) return;
           var profit=(w.price||0)*(w.coeff||1)-actual; if(profit<=0) return;
           var bonusUAH=profit*PAY_COORD_SHARE_EXT;
@@ -3745,6 +3752,15 @@ function makePriceRow(cat, item, cur){
     subs.forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s; if(s===item.sub)o.selected=true; sel.appendChild(o); });
     sel.addEventListener("change",function(){ priceMoveTo(cat,item,this.value,null); });
     tdMove.appendChild(sel);
+  }
+  if(cat===CAT_STO){
+    var csLbl=document.createElement("label");
+    csLbl.style.cssText="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx2);cursor:pointer;white-space:nowrap";
+    var csCb=document.createElement("input"); csCb.type="checkbox"; csCb.checked=stoCoordShare(item.n);
+    csCb.title="Ділитись прибутком з координатором (15%)";
+    csCb.addEventListener("change",function(){ item.cs=this.checked; });
+    csLbl.appendChild(csCb); csLbl.appendChild(document.createTextNode("коорд"));
+    tdMove.appendChild(csLbl);
   }
   tr.appendChild(tdMove);
 
@@ -8188,6 +8204,11 @@ function payRenderCards(){
       card.innerHTML += '<div class="pay-sub" style="color:#c0392b;font-weight:600">Розстрочка (борг): '+payFmt(loan.remaining,loan.cur)+'</div>';
     }
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
+    if(w.role!=="coord"){
+      var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
+      (function(id){ b0.onclick = function(){ payOpenAccrue(id); }; })(w._id);
+      btns.appendChild(b0);
+    }
     var b1 = document.createElement("button"); b1.textContent = "Історія";
     (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
     var b2 = document.createElement("button"); b2.textContent = "Виплатити";
@@ -8461,14 +8482,15 @@ function payAttendCycle(date){
 }
 
 // ── НАРАХУВАННЯ ──
-function payOpenAccrue(){
+function payOpenAccrue(preWid){
   if(!PAY_WORKERS.length){ showToast("Спершу додайте працівників"); return; }
   var ws = document.getElementById("pay-ac-worker");
-  var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // #2 — фіксований порядок
+  var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // фіксований порядок
   var rank = function(nm){ for(var i=0;i<order.length;i++){ if((nm||"").indexOf(order[i])===0) return i; } return 99; };
   ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord";})
     .sort(function(a,b){ return rank(a.name)-rank(b.name); })
     .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
+  if(preWid){ ws.value = preWid; }   // передвибір з картки
   var firstW = PAY_WORKERS.find(function(w){ return w._id===ws.value; });
   payRenderCarOptions(firstW);   // авто з мітками кольору + фільтр по рихтувальнику
   document.getElementById("pay-ac-status").textContent = "";
@@ -9022,7 +9044,9 @@ function wAutoApplyCash(){
   (W_CASH_OPS||[]).forEach(function(x){
     if(existing[x.id]) return;                 // вже підтягнуто
     var amt = Math.round(x.o.amount||0);
-    var m = wFindStoWork(x.o.desc);
+    // Мийки роблять по кілька разів — не мерджимо, кожна витрата = окремий рядок (сумуються)
+    var isWash = /мийк|обдув/i.test(x.o.desc||"");
+    var m = isWash ? null : wFindStoWork(x.o.desc);
     if(m && !m.cashOpId){                       // причепити до наявного рядка без каси
       m.actualUAH = amt; m.cashOpId = x.id; m.cashPending = true; m.fromCash = true;
       if(!m.price) m.price = Math.round(amt*1.3);

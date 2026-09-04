@@ -9122,8 +9122,29 @@ function statsRender(){
   }
   h += '</table>';
   if(done.length){
-    h += '<div class="gtrow main"><span class="gtlbl">ПРИБУТОК (закриті авто)</span><span class="gtval" style="color:'+((aZch+aWorks)>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(aZch+aWorks).toLocaleString("uk-UA")+' грн</span></div>';
-    h += '<div class="pay-sub" style="margin-top:4px">Прибуток робіт рахується в самій калькуляції (праця 50% + координатор + маляри/сторонні факт − 6% податок). Податок ЗЧ уже в прибутку ЗЧ.</div>';
+    var aGross = aZch+aWorks;
+    // Постійні витрати місяця (та сама база, що й у Звіті Б; редагуються в Звіті Б)
+    var ovhA = statsOvh(mo), rentA = Math.round((ovhA.rentUSD||0)*rate);
+    var ovhTotA = rentA + (ovhA.utilUAH||0) + (ovhA.netUAH||0) + (ovhA.woodUAH||0);
+    // Закупки для СТО з каси (загальні, без прив'язки до авто)
+    var cShopA = 0;
+    STATS_CASH.forEach(function(o){
+      if((o.date||"").slice(0,7)!==mo) return;
+      if(/^(Зарплата|Аванс|Розстрочка)/.test(o.desc||"")) return;
+      if(o.vin||o.car) return;
+      cShopA += (o.amount||0);
+    });
+    var netA = aGross - ovhTotA - cShopA;
+    var fA=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
+    var col=function(v){ return v>=0?"var(--gr)":"var(--rd)"; };
+    h += '<div class="gtrow" style="border-top:1px solid var(--bd);padding-top:8px;margin-top:6px"><span class="gtlbl" style="font-weight:600">Прибуток авто (ЗЧ+роботи)</span><span class="gtval" style="color:'+col(aGross)+'">'+fA(aGross)+' грн</span></div>';
+    h += '<div class="gtrow"><span class="gtlbl">Оренда</span><span class="gtval">−'+fA(rentA)+' грн</span></div>';
+    h += '<div class="gtrow"><span class="gtlbl">Комунальні</span><span class="gtval">−'+fA(ovhA.utilUAH||0)+' грн</span></div>';
+    h += '<div class="gtrow"><span class="gtlbl">Інтернет</span><span class="gtval">−'+fA(ovhA.netUAH||0)+' грн</span></div>';
+    h += '<div class="gtrow"><span class="gtlbl">Дрова</span><span class="gtval">−'+fA(ovhA.woodUAH||0)+' грн</span></div>';
+    h += '<div class="gtrow"><span class="gtlbl">Закупки для СТО (каса)</span><span class="gtval">−'+fA(cShopA)+' грн</span></div>';
+    h += '<div class="gtrow main"><span class="gtlbl">ПРИБУТОК (закриті авто − витрати)</span><span class="gtval" style="color:'+col(netA)+'">'+fA(netA)+' грн</span></div>';
+    h += '<div class="pay-sub" style="margin-top:4px">Прибуток робіт рахується в самій калькуляції (праця 50% + координатор + маляри/сторонні факт − 6% податок). Податок ЗЧ уже в прибутку ЗЧ. Постійні витрати редагуються нижче, у Звіті Б.</div>';
     if(aUnder>1) h += '<div class="pay-sub" style="color:var(--rd);margin-top:2px">⚠ Недоплати (не в кредит): '+Math.round(aUnder).toLocaleString("uk-UA")+' грн — зменшили прибуток. Позначені «в кредит» рахуються як закриті.</div>';
   }
   h += '</div>';
@@ -9183,11 +9204,18 @@ function statsRender(){
     var amt=o.amount||0;
     if(o.vin||o.car){ if(o.linked) cCar+=amt; else cCarUn+=amt; } else cShop+=amt;
   });
-  // Закупка запчастин (замовлені / на складі) — купують повз касу, тож рахуємо окремо, за датою статусу
+  // Собівартість ПРОДАНИХ ЗЧ: для калькуляцій ЗЧ, за якими оплата ПОЧАЛАСЬ цього місяця
+  // (перша оплата в mo), віднімаємо закупку їхніх деталей. Так закупка йде слід у слід за доходом.
+  // Не рахуємо деталі, що не наші (клієнт привіз/очікується) чи скасовані/приховані.
+  var PARTS_NOBUY = {hidden:1, cancelled:1, client_delivered:1, client_wait:1};
   var partsBuyMo=0;
   STATS_CALCS.forEach(function(r){ if(r.type!=="parts_v2") return;
+    var pays=(r.payments||[]).filter(function(p){ return p.date && p.amount; });
+    if(!pays.length) return;                                   // не продано (немає оплат) — не собівартість
+    var first=pays.reduce(function(m,p){ return (!m||p.date<m)?p.date:m; }, null);
+    if((first||"").slice(0,7)!==mo) return;                    // перша оплата не цього місяця
     (r.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(i){
-      var acc=function(it){ if((it.status==="ordered"||it.status==="received") && ((it.statusDate||r.date||"").slice(0,7)===mo)) partsBuyMo += (it.buyPrice||0)*(it.qty||1); };
+      var acc=function(it){ if(!PARTS_NOBUY[it.status]) partsBuyMo += (it.buyPrice||0)*(it.qty||1); };
       acc(i); (i.variants||[]).forEach(acc);
     });});
   });
@@ -9204,7 +9232,7 @@ function statsRender(){
   H+='<div class="pay-sub" style="margin:-2px 0 8px 0">Роботи '+f(inWorks)+" · Запчастини "+f(inParts)+" · ТО "+f(inSvc)+" грн</div>";
   H+=row("Зарплати виплачені (без розстрочок)", "−"+f(salPay)+" грн", {top:true});
   if(loanPay>0) H+=row("Розстрочки видані (позика, не витрата)", "−"+f(loanPay)+" грн", {cls:"ac"});
-  H+=row("Закупка запчастин (замовлені/на складі)", "−"+f(partsBuyMo)+" грн");
+  H+=row("Собівартість проданих ЗЧ (закупка деталей)", "−"+f(partsBuyMo)+" грн");
   H+=row("Закупки для СТО (каса)", "−"+f(cShop)+" грн");
   H+=row("Витрати по авто (каса)", "−"+f(cCar)+" грн");
   H+=row("Нерозписані з каси (по авто)", "−"+f(cCarUn)+" грн", cCarUn>0?{cls:"ac"}:{});

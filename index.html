@@ -1849,8 +1849,13 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="pay-wrap">
     <div class="pay-bar">
       <div class="pay-h1">СТАТИСТИКА МІСЯЦЯ</div>
-      <input type="month" id="stats-month" onchange="statsRender()"
-             style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
+      <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:2px 4px">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);padding-left:4px">МІСЯЦЬ</span>
+        <button class="btn btn-o" style="padding:2px 8px;font-size:14px;line-height:1" onclick="statsMonthNav(-1)" title="Попередній місяць">‹</button>
+        <input type="month" id="stats-month" onchange="statsRender()"
+               style="background:var(--bg);border:none;color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 6px;outline:none;color-scheme:light"/>
+        <button class="btn btn-o" style="padding:2px 8px;font-size:14px;line-height:1" onclick="statsMonthNav(1)" title="Наступний місяць">›</button>
+      </div>
     </div>
     <div id="stats-sum" class="pay-hint"></div>
     <div id="stats-cars" style="margin-bottom:18px"></div>
@@ -9095,6 +9100,13 @@ function statsRender(){
   H+='</div>';
   document.getElementById("stats-sum").innerHTML = H;
   document.getElementById("stats-sum").className = "";
+}
+function statsMonthNav(delta){
+  var el=document.getElementById("stats-month");
+  var v=(el&&el.value)||new Date().toISOString().slice(0,7);
+  var p=v.split("-"); var d=new Date(+p[0], +p[1]-1+delta, 1);
+  el.value=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2);
+  statsRender();
 }
 function statsOvh(mo){
   var o=(STATS_OVH&&STATS_OVH[mo])||{};

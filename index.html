@@ -1815,9 +1815,14 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="pay-wrap">
     <div class="pay-bar">
       <div class="pay-h1">ЗАРПЛАТА · БАЛАНСИ</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="month" id="pay-month" onchange="paySetMonth(this.value)" title="Місяць розрахунку"
-               style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:2px 4px">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);padding-left:4px">МІСЯЦЬ</span>
+          <button class="btn btn-o" style="padding:2px 8px;font-size:14px;line-height:1" onclick="payMonthNav(-1)" title="Попередній місяць">‹</button>
+          <input type="month" id="pay-month" onchange="paySetMonth(this.value)" title="Місяць розрахунку"
+                 style="background:var(--bg);border:none;color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 6px;outline:none;color-scheme:light"/>
+          <button class="btn btn-o" style="padding:2px 8px;font-size:14px;line-height:1" onclick="payMonthNav(1)" title="Наступний місяць">›</button>
+        </div>
         <button class="btn btn-p" onclick="payOpenAccrue()">+ Нарахувати роботи</button>
         <button class="btn btn-o" onclick="payOpenAttend()">📅 Табель</button>
         <button class="btn btn-o" onclick="payOpenWorkers()">Працівники</button>
@@ -1881,12 +1886,44 @@ body.hero-on .hero-pad{margin-right:40vw}
       <option value="own">З власних коштів (не чіпати касу)</option>
       <option value="cash">З каси (створити витрату)</option>
     </select></div>
-    <div class="fld"><label>Дата</label><input type="date" id="pay-po-date"/></div>
+    <div class="fld"><label>Дата</label><input type="date" id="pay-po-date" style="color-scheme:light"/></div>
+    <div class="fld" id="pay-po-loan-fld" style="display:none"><label id="pay-po-loan-lbl">Погасити з розстрочки</label><input type="number" id="pay-po-loan" min="0" step="1" value="0"/></div>
     <div class="fld"><label>Коментар</label><input type="text" id="pay-po-note" placeholder="необовʼязково"/></div>
     <div class="pay-status" id="pay-po-info"></div>
     <div class="pay-btns">
       <button class="btn btn-p" onclick="payDoPayout()">Виплатити</button>
       <button class="btn btn-o" onclick="payClose('pay-payout-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: зміна дати запису (нарахування/виплата) -->
+<div class="pay-modal" id="pay-date-modal">
+  <div class="pay-box" style="max-width:320px">
+    <div class="pay-box-t" id="pay-date-title">Змінити дату</div>
+    <div class="fld"><label>Дата</label><input type="date" id="pay-date-input" style="color-scheme:light"/></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payDateSave()">Зберегти</button>
+      <button class="btn btn-o" onclick="payClose('pay-date-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: аванс / розстрочка -->
+<div class="pay-modal" id="pay-give-modal">
+  <div class="pay-box" style="max-width:360px">
+    <div class="pay-box-t" id="pay-give-title">Аванс</div>
+    <div class="fld"><label id="pay-give-amt-lbl">Сума (грн)</label><input type="number" id="pay-give-amount" min="0" step="1"/></div>
+    <div class="fld"><label>Дата</label><input type="date" id="pay-give-date" style="color-scheme:light"/></div>
+    <div class="fld"><label>Джерело</label><select id="pay-give-source">
+      <option value="own">З власних коштів (не чіпати касу)</option>
+      <option value="cash">З каси (створити витрату)</option>
+    </select></div>
+    <div class="fld"><label>Коментар</label><input type="text" id="pay-give-note" placeholder="необовʼязково"/></div>
+    <div class="pay-status" id="pay-give-info"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payDoGive()">Видати</button>
+      <button class="btn btn-o" onclick="payClose('pay-give-modal')">Скасувати</button>
     </div>
   </div>
 </div>
@@ -7926,8 +7963,14 @@ var PAY_ABSENCE_FINE = 1500; // штраф за прогул, грн
 var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [], PAY_ATTEND = [];
 var PAY_SEL_WORKER = null, PAY_AC_REC = null;
 var PAY_MONTH = new Date().toISOString().slice(0,7);   // #3 — розрахунок по місяцях (YYYY-MM)
+var PAY_GIVE_KIND = "advance";
 function payMonthMatch(d){ return String(d||"").slice(0,7) === PAY_MONTH; }
 function paySetMonth(v){ PAY_MONTH = v || new Date().toISOString().slice(0,7); payRenderCards(); }
+function payMonthNav(delta){
+  var p=PAY_MONTH.split("-"); var d=new Date(+p[0], +p[1]-1+delta, 1);
+  PAY_MONTH = d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2);
+  payRenderCards();
+}
 var PAY_CAL_MONTH = null, PAY_CAL_WORKER = null;   // стан календаря табеля
 var PAY_COORD_ENSURED = false;
 var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник", coord:"Координатор"};
@@ -8003,9 +8046,20 @@ function payBalance(wid){
   var cur = payCurOf(w ? w.role : "");
   var acc=0, pd=0, fine=0;
   PAY_ACCRUALS.forEach(function(a){ if(a.workerId===wid && !a.void && payMonthMatch(a.date)) acc += payNative(a, cur); });
-  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===wid && !p.void && payMonthMatch(p.date)) pd += payNative(p, cur); });
+  // Виплати місяця: аванс/зарплата/погашення розстрочки віднімаються; ВИДАЧА розстрочки (loan) — ні (це борг, гаситься окремо)
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===wid && !p.void && p.type!=="loan" && payMonthMatch(p.date)) pd += payNative(p, cur); });
   PAY_ATTEND.forEach(function(a){ if(a.workerId===wid && a.kind==="absence" && !a.void && payMonthMatch(a.date)) fine += payNative(a, cur); });
   return {acc:acc, paid:pd, fine:fine, bal:acc-pd-fine, cur:cur};
+}
+// Залишок розстрочки (борг), наскрізно по всіх місяцях
+function payLoanRemaining(wid){
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; });
+  var cur = payCurOf(w ? w.role : "");
+  var loan=0, rep=0;
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId!==wid||p.void) return;
+    if(p.type==="loan") loan += payNative(p, cur);
+    else if(p.type==="loan_repay") rep += payNative(p, cur); });
+  return {cur:cur, remaining:Math.max(0, Math.round((loan-rep)*100)/100)};
 }
 
 // ── ЗАВАНТАЖЕННЯ ──
@@ -8084,6 +8138,10 @@ function payRenderCards(){
       '<div class="pay-bal '+cls+'">'+(b.bal>0?"+":"")+payFmt(b.bal,b.cur)+'</div>'+
       '<div class="pay-sub">'+altTxt+' · нарах. '+payFmt(b.acc,b.cur)+' · випл. '+payFmt(b.paid,b.cur)+
       (b.fine>0.01?' · <span style="color:var(--rd)">штраф '+payFmt(b.fine,b.cur)+'</span>':'')+'</div>';
+    var loan = payLoanRemaining(w._id);
+    if(loan.remaining>0.01){
+      card.innerHTML += '<div class="pay-sub" style="color:#c0392b;font-weight:600">Розстрочка (борг): '+payFmt(loan.remaining,loan.cur)+'</div>';
+    }
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
     var b1 = document.createElement("button"); b1.textContent = "Історія";
     (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
@@ -8092,6 +8150,14 @@ function payRenderCards(){
     var b3 = document.createElement("button"); b3.textContent = "📅 Табель";
     (function(id){ b3.onclick = function(){ payOpenAttend(id); }; })(w._id);
     btns.appendChild(b1); btns.appendChild(b2); btns.appendChild(b3); card.appendChild(btns);
+    if(isAdmin()){
+      var btns2 = document.createElement("div"); btns2.className = "pay-cbtns"; btns2.style.marginTop="6px";
+      var ba = document.createElement("button"); ba.textContent = "Аванс";
+      (function(id){ ba.onclick = function(){ payOpenGive("advance", id); }; })(w._id);
+      var br = document.createElement("button"); br.textContent = "Розстрочка";
+      (function(id){ br.onclick = function(){ payOpenGive("loan", id); }; })(w._id);
+      btns2.appendChild(ba); btns2.appendChild(br); card.appendChild(btns2);
+    }
     el.appendChild(card);
   });
   payRenderLedger();
@@ -8108,12 +8174,13 @@ function payRenderLedger(){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
-    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext")});
+    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext"), dkind:"acc"});
   }});
-  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id && payMonthMatch(p.date))
+  PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id && payMonthMatch(p.date)){
+    var pt = p.type==="advance"?"аванс":(p.type==="loan"?"розстрочка (видача)":(p.type==="loan_repay"?"погашення розстрочки":"виплата"));
     rows.push({id:p._id, kind:"pay", vd:!!p.void, by:p.voidedBy||"", d:p.date,
-      t:(p.type==="advance"?"аванс":"виплата"),
-      txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн", v:-payNative(p,cur)}); });
+      t:pt, txt:(p.note||"")+" · "+(p.amountUAH||0).toLocaleString("uk-UA")+" грн",
+      v:(p.type==="loan"?0:-payNative(p,cur)), editable:true, dkind:"pay"}); }});
   PAY_ATTEND.forEach(function(a){ if(a.workerId===w._id && a.kind==="absence" && payMonthMatch(a.date))
     rows.push({id:a._id, kind:"fine", vd:!!a.void, by:"", d:a.date, t:"прогул (штраф)",
       txt:(a.penaltyUAH||0).toLocaleString("uk-UA")+" грн", v:-payNative(a,cur)}); });
@@ -8125,7 +8192,7 @@ function payRenderLedger(){
     var st = r.vd ? ' style="opacity:.45"' : '';
     var line = r.vd ? 'text-decoration:line-through;' : '';
     var dcell = (r.editable && !r.vd)
-      ? '<span style="cursor:pointer;border-bottom:1px dashed var(--tx3)" title="Змінити дату нарахування" onclick="payEditAccrDate(\''+r.id+'\')">'+escH(r.d||"")+' ✎</span>'
+      ? '<span style="cursor:pointer;border-bottom:1px dashed var(--tx3)" title="Змінити дату (календар)" onclick="payOpenDateEdit(\''+r.dkind+'\',\''+r.id+'\')">'+escH(r.d||"")+' ✎</span>'
       : escH(r.d||"");
     h += '<tr'+st+'><td style="'+line+'">'+dcell+'</td>'+
          '<td>'+r.t+(r.vd?' <span style="color:var(--rd);font-size:10px">СКАСОВАНО'+(r.by?" · "+escH(r.by):"")+'</span>':'')+'</td>'+
@@ -8138,17 +8205,26 @@ function payRenderLedger(){
   el.innerHTML = h + '</table></div>';
 }
 
-// #2 — змінити дату нарахування (і синхронно — повʼязаний бонус координатора)
-function payEditAccrDate(id){
-  var a = PAY_ACCRUALS.find(function(x){ return x._id===id; });
-  if(!a) return;
-  var nd = prompt("Дата нарахування (РРРР-ММ-ДД):", a.date||new Date().toISOString().slice(0,10));
-  if(nd===null) return;
-  nd = (nd||"").trim();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)){ showToast("Формат дати: РРРР-ММ-ДД"); return; }
-  var ups = [ db.collection("work_accruals").doc(id).update({date:nd}) ];
-  PAY_ACCRUALS.forEach(function(x){ if(x.srcAccrualId===id && !x.void) ups.push(db.collection("work_accruals").doc(x._id).update({date:nd})); });
-  Promise.all(ups).then(function(){ showToast("Дату нарахування змінено на "+nd); payLoadAll(); })
+// #1/#2 — змінити дату запису (нарахування або виплати) через модалку з календарем
+var PAY_DATE_EDIT = null;
+function payOpenDateEdit(kind, id){
+  var rec = kind==="acc" ? PAY_ACCRUALS.find(function(x){return x._id===id;})
+                         : PAY_PAYMENTS.find(function(x){return x._id===id;});
+  if(!rec) return;
+  PAY_DATE_EDIT = {kind:kind, id:id};
+  document.getElementById("pay-date-title").textContent = kind==="acc" ? "Дата нарахування" : "Дата виплати";
+  document.getElementById("pay-date-input").value = (rec.date||"").slice(0,10) || new Date().toISOString().slice(0,10);
+  document.getElementById("pay-date-modal").style.display="flex";
+}
+function payDateSave(){
+  if(!PAY_DATE_EDIT) return;
+  var nd = document.getElementById("pay-date-input").value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)){ showToast("Оберіть дату"); return; }
+  var kind=PAY_DATE_EDIT.kind, id=PAY_DATE_EDIT.id;
+  var col = kind==="acc" ? "work_accruals" : "worker_payments";
+  var ups = [ db.collection(col).doc(id).update({date:nd}) ];
+  if(kind==="acc") PAY_ACCRUALS.forEach(function(x){ if(x.srcAccrualId===id && !x.void) ups.push(db.collection("work_accruals").doc(x._id).update({date:nd})); });
+  Promise.all(ups).then(function(){ payClose("pay-date-modal"); showToast("Дату змінено на "+nd); payLoadAll(); })
     .catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
@@ -8450,6 +8526,51 @@ function payDoAccrue(){
     .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
 }
 
+// ── АВАНС / РОЗСТРОЧКА ──
+function payOpenGive(kind, wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  PAY_SEL_WORKER = wid; PAY_GIVE_KIND = kind;
+  var cur = payCurOf(w.role);
+  document.getElementById("pay-give-title").textContent = (kind==="loan"?"Розстрочка — ":"Аванс — ")+w.name;
+  document.getElementById("pay-give-amt-lbl").textContent = "Сума ("+(cur==="usd"?"$":"грн")+")";
+  document.getElementById("pay-give-amount").value = "";
+  document.getElementById("pay-give-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("pay-give-note").value = "";
+  document.getElementById("pay-give-info").textContent = kind==="loan"
+    ? "Розстрочка не закривається в кінці місяця — гаситься частинами при виплаті ЗП."
+    : "Аванс віднімається з балансу того місяця, у яку дату виданий.";
+  document.getElementById("pay-give-modal").style.display = "flex";
+}
+function payDoGive(){
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_SEL_WORKER; }); if(!w) return;
+  var inp = parseFloat(document.getElementById("pay-give-amount").value)||0;
+  if(inp<=0){ showToast("Вкажіть суму"); return; }
+  var date = document.getElementById("pay-give-date").value || new Date().toISOString().slice(0,10);
+  var source = document.getElementById("pay-give-source").value;
+  var note = document.getElementById("pay-give-note").value.trim();
+  var rate = usdRate||44.1, cur = payCurOf(w.role);
+  var uah = cur==="usd" ? Math.round(inp*rate) : inp;
+  var usd = cur==="usd" ? inp : Math.round((inp/rate)*100)/100;
+  var type = PAY_GIVE_KIND==="loan" ? "loan" : "advance";
+  db.collection("worker_payments").add({
+    workerId:w._id, workerName:w.name, role:w.role,
+    amountUAH:uah, rate:rate, amountUSD:usd, payCur:cur,
+    type:type, source:source, date:date, note:note,
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+  }).then(function(pref){
+    if(source==="cash"){
+      db.collection("cash_operations").add({ type:"-", amount:uah,
+        desc:(type==="loan"?"Розстрочка — ":"Аванс — ")+w.name, car:"", vin:"", dest:"", markup:1, linked:true, date:date,
+        ts:date+"T"+new Date().toTimeString().substr(0,8), author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" })
+        .then(function(cref){ pref.update({cashOpId:cref.id}).catch(function(){}); }).catch(function(){});
+    }
+    payClose("pay-give-modal");
+    showToast((type==="loan"?"Розстрочка видана: ":"Аванс виданий: ")+payFmt(cur==="usd"?usd:uah,cur)+" — "+w.name);
+    payLoadAll();
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
 // ── ВИПЛАТА ──
 function payOpenPayout(wid){
   if(!isAdmin()){ showToast("Виплату проводить власник / головний майстер"); return; }
@@ -8465,6 +8586,13 @@ function payOpenPayout(wid){
   var alt = cur==="usd" ? ("≈ "+Math.round(b.bal*rate).toLocaleString("uk-UA")+" грн") : ("≈ "+(Math.round(b.bal/rate*100)/100)+" $");
   document.getElementById("pay-po-info").textContent =
     "Баланс: "+payFmt(b.bal,cur)+" "+alt+" (курс "+rate.toFixed(2)+")";
+  // Розстрочка: показуємо поле «погасити», якщо є борг
+  var loan = payLoanRemaining(wid);
+  var lf = document.getElementById("pay-po-loan-fld"), li=document.getElementById("pay-po-loan");
+  if(loan.remaining>0.01){
+    lf.style.display=""; li.value=0; li.max=(cur==="usd"?Math.round(loan.remaining*100)/100:Math.round(loan.remaining));
+    document.getElementById("pay-po-loan-lbl").textContent="Погасити з розстрочки ("+(cur==="usd"?"$":"грн")+"), залишок "+payFmt(loan.remaining,cur);
+  } else { lf.style.display="none"; li.value=0; }
   document.getElementById("pay-payout-modal").style.display = "flex";
 }
 
@@ -8496,6 +8624,18 @@ function payDoPayout(){
         author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
       }).then(function(cref){ pref.update({cashOpId:cref.id}).catch(function(){}); })
         .catch(function(){});
+    }
+    // Погашення розстрочки (утримання із ЗП): окремий запис loan_repay тією ж датою
+    var repInp = parseFloat((document.getElementById("pay-po-loan")||{}).value)||0;
+    if(repInp>0){
+      var rUah = cur==="usd" ? Math.round(repInp*rate) : repInp;
+      var rUsd = cur==="usd" ? repInp : Math.round((repInp/rate)*100)/100;
+      db.collection("worker_payments").add({
+        workerId:w._id, workerName:w.name, role:w.role,
+        amountUAH:rUah, rate:rate, amountUSD:rUsd, payCur:cur,
+        type:"loan_repay", date:date, note:"погашення розстрочки",
+        author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+      }).catch(function(){});
     }
     payClose("pay-payout-modal");
     showToast("Виплачено "+payFmt(cur==="usd"?usd:uah,cur)+" — "+w.name+(source==="own"?" (власні)":""));

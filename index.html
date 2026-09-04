@@ -1280,6 +1280,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="w-pay-print" id="w-pay-print"></div>
       <div class="gtrow" style="margin-top:8px"><span class="gtlbl">Сплачено</span><span class="gtval gr" id="gt-paid">—</span></div>
       <div class="gtrow"><span class="gtlbl">Залишок</span><span class="gtval bl" id="gt-bal">—</span></div>
+      <div id="w-adm-profit"></div>
     </div>
     <div class="acts">
       <button class="btn btn-p" onclick="saveW()">💾 Зберегти</button>
@@ -2415,7 +2416,7 @@ function _v(id){ var e=document.getElementById(id); return e?e.value:""; }
 function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
-    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,bm:_v("w-bodyman"),
+    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -2836,6 +2837,39 @@ function setItemActual(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; if(n>0
 
 // #7 — Малярні: координатор + одне поле «факт» на весь блок (розрахунок 15% від прибутку)
 var wMalCoord = "", wMalActual = 0, wDoneDate = "";
+var wCredit = false, wWorksProfit = 0;   // прибуток на роботах (адмін) + прапорець «оплата в кредит»
+function setWCredit(v){ wCredit=!!v; wRecalc(); }
+// Прибуток на роботах = (кузов+слюс: клієнт − 50% праці − доля коорд) + (малярка: маржа − коорд) + (сторонні: маржа − коорд) − 6% податок
+function renderWorksProfit(tKuz,tSlu,tBez,tMal,cats){
+  var el=document.getElementById("w-adm-profit"); if(!el) return;
+  if(!isAdmin()){ el.innerHTML=""; return; }
+  var TAX=PAY_COORD_SHARE?0.06:0.06;  // 6%
+  var kuzC=tKuz.uah, sluC=tSlu.uah+tBez.uah, malC=tMal.uah;
+  var labor=Math.round((kuzC+sluC)*0.5);
+  var coordLabor=Math.round(kuzC*0.5*PAY_COORD_SHARE_KUZ + sluC*0.5*PAY_COORD_SHARE);
+  var malMargin=malC-(wMalActual||0);
+  var malCoordD=(wMalCoord==="anikin")?Math.round(Math.max(0,malMargin)*PAY_COORD_SHARE_EXT):0;
+  var stoMargin=0, stoCoordD=0, stoC=0;
+  (cats[CAT_STO]||[]).forEach(function(it){
+    var lineC=Math.round((it.price||0)*(it.coeff||1)); stoC+=lineC;
+    var actual=parseFloat(it.actualUAH)||0, m=lineC-actual; stoMargin+=m;
+    if(stoCoordShare(it.name) && it.coord==="anikin") stoCoordD+=Math.round(Math.max(0,m)*PAY_COORD_SHARE_EXT);
+  });
+  var tax=Math.round((kuzC+sluC+malC+stoC)*TAX);
+  var laborProfit=(kuzC+sluC)-labor-coordLabor;
+  var profit=laborProfit+(malMargin-malCoordD)+(stoMargin-stoCoordD)-tax;
+  wWorksProfit=Math.round(profit);
+  var f=function(v){return Math.round(v).toLocaleString("uk-UA");};
+  el.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px">'
+    +'<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Прибуток на роботах (лише адмін)</div>'
+    +'<div class="pay-sub" style="line-height:1.6">Праця: клієнту '+f(kuzC+sluC)+' − 50% '+f(labor)+' − коорд '+f(coordLabor)+' = <b>'+f(laborProfit)+'</b>'
+    +'<br>Малярка: маржа '+f(malMargin)+(malCoordD?' − коорд '+f(malCoordD):'')+' = <b>'+f(malMargin-malCoordD)+'</b>'
+    +'<br>Сторонні: маржа '+f(stoMargin)+(stoCoordD?' − коорд '+f(stoCoordD):'')+' = <b>'+f(stoMargin-stoCoordD)+'</b>'
+    +'<br>Податок 6%: −'+f(tax)+'</div>'
+    +'<div class="gtrow main" style="margin-top:4px"><span class="gtlbl">ПРИБУТОК НА РОБОТАХ</span><span class="gtval" style="color:'+(profit>=0?"var(--gr)":"var(--rd)")+'">'+f(profit)+' грн</span></div>'
+    +'<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--tx2);cursor:pointer"><input type="checkbox" '+(wCredit?"checked":"")+' onchange="setWCredit(this.checked)"/> Оплата в кредит (відстрочка партнеру) — авто відкрите, але прибуток рахується як закрите</label>'
+    +'</div>';
+}
 function setMalCoord(v){ wMalCoord = v; wRecalc(); }
 function setMalActual(v){ var n=parseFloat(v)||0; wMalActual = n>0?n:0; wRecalc(); }
 function renderMalCoord(malUAH){
@@ -2909,6 +2943,7 @@ function wRecalc(){
   var tMal=blockTotal(malItems,"usd",0,malType==="bud");
   var tSto=blockTotal(stoItems,"uah",0,false);
   renderMalCoord(tMal.uah);
+  renderWorksProfit(tKuz,tSlu,tBez,tMal,cats);
   function setHead(id,t){
     var hd = t.rawUsd && Math.abs(t.rawUsd - t.usd) > 0.01;   // є знижка → «до знижки → зі знижкою»
     // Порядок подачі: спершу ціна ДО знижки (обидві валюти), потім ЗІ знижкою (обидві валюти)
@@ -2952,7 +2987,7 @@ function clearW(){
   document.getElementById("w-status").value="preliminary";
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
   wPayments=[];wRenderPayments();document.getElementById("mal-type").value="std";
-  wMalCoord="";wMalActual=0;wDoneDate="";
+  wMalCoord="";wMalActual=0;wDoneDate="";wCredit=false;
   var bmC=document.getElementById("w-bodyman"); if(bmC) bmC.value="";
   document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
   selectStoDefaults();renderSecs(DB);wRecalc();
@@ -3010,6 +3045,7 @@ function saveW(){
     masterName:currentUserName,
     rate:usdRate,discKuz:discKuz,discSlu:discSlu,malType:malType,pp:pp,
     malCoord:wMalCoord||"", malActualUAH:wMalActual||0, doneDate:wDoneDate||null,
+    worksProfitUAH:wWorksProfit||0, credit:!!wCredit,
     bodyman:(document.getElementById("w-bodyman")||{value:""}).value,
     bodymanName:(function(){var s=document.getElementById("w-bodyman");return s&&s.selectedIndex>0?s.options[s.selectedIndex].text:"";})(),
     payments:JSON.parse(JSON.stringify(wPayments)),
@@ -3620,7 +3656,7 @@ function loadRec(id){
         : (r.pp>0 ? [{id:"wp"+(++uidCounter),amount:r.pp,cur:"uah",rate:r.rate||usdRate,type:"cash",date:r.date||"",comment:"аванс"}] : []);
       wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
-      wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0; wDoneDate=r.doneDate||"";
+      wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0; wDoneDate=r.doneDate||""; wCredit=!!r.credit;
       var bmSel=document.getElementById("w-bodyman"); if(bmSel){ wFillBodymen(); bmSel.value=r.bodyman||""; }
       switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();
@@ -8986,11 +9022,10 @@ function statsRender(){
   });
   var statsPaid = function(rr){ var s=0; (rr.payments||[]).forEach(function(p){ if(p.amount) s+=payAmountUAH(p); }); return s; };
   var aZch=0, aWorks=0, aUnder=0;
-  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ЗВІТ А · Закриті авто — '+done.length+' <span class="pay-sub">(ЗЧ: клієнту−закупка−податок · Роботи: сплачено−праця−маляри−податок)</span></div>'+
+  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ЗВІТ А · Закриті авто — '+done.length+' <span class="pay-sub">(ЗЧ: клієнту−закупка−податок · Роботи: рахунок із калькуляції)</span></div>'+
     '<table><tr><th>Авто</th><th>VIN</th><th style="text-align:right">Прибуток ЗЧ</th>'+
-    '<th style="text-align:right">Роботи: сплач.</th><th style="text-align:right">−Праця</th>'+
-    '<th style="text-align:right">Маляри</th><th style="text-align:right">Прибуток роботи</th><th style="text-align:right">Разом</th></tr>';
-  if(!done.length) h += '<tr><td colspan="8" class="pay-sub">За цей місяць завершених авто немає</td></tr>';
+    '<th style="text-align:right">Прибуток роботи</th><th style="text-align:right">Разом</th></tr>';
+  if(!done.length) h += '<tr><td colspan="5" class="pay-sub">За цей місяць завершених авто немає</td></tr>';
 
   done.forEach(function(r){
     var vin = (r.vin||"").toUpperCase();
@@ -9005,41 +9040,38 @@ function statsRender(){
         (i.variants||[]).forEach(function(v){ partsProfit += pmProfit(v, p.disc||"none"); });
       });});
     });
-    // Праця: слюсарі/рихтувальники (50%) + координатор по цьому авто
-    var laborUSD=0, coordUSD=0;
-    PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void) return; if(a.role==="coord") coordUSD+=(a.amountUSD||0); else laborUSD+=(a.amountUSD||0); });
-    var laborUAH=Math.round((laborUSD+coordUSD)*rate);
-    var mal = r.malPaidUAH || 0;
-    var worksTax = Math.round(worksPaid*taxPct/100);
-    var worksProfit = worksPaid - laborUAH - mal - worksTax;
+    // Прибуток на роботах — рахований у самій калькуляції (worksProfitUAH). Fallback — по нарахуваннях.
+    var worksProfit;
+    if(r.worksProfitUAH!==undefined && r.worksProfitUAH!==null){ worksProfit = r.worksProfitUAH; }
+    else {
+      var lU=0,cU=0; PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void) return; if(a.role==="coord") cU+=(a.amountUSD||0); else lU+=(a.amountUSD||0); });
+      worksProfit = Math.round(worksPaid - (lU+cU)*rate - (r.malPaidUAH||0) - worksPaid*taxPct/100);
+    }
+    var bal = recordBalanceUAH(r);              // залишок по роботах
+    var isCredit = !!r.credit;
+    if(!isCredit && bal>1){ worksProfit -= bal; aUnder+=bal; }   // недоплата (не кредит) зменшує прибуток
     var carProfit = partsProfit + worksProfit;
-    var under = recordBalanceUAH(r);   // недоплата ЛИШЕ по роботах (ЗЧ рахуються від ціни клієнту, окремою калькуляцією)
-    aZch+=partsProfit; aWorks+=worksProfit; if(under>1) aUnder+=under;
+    aZch+=partsProfit; aWorks+=worksProfit;
+    var badge = isCredit && bal>1 ? ' <span style="color:var(--bl);font-size:9px;white-space:nowrap">в кредит '+Math.round(bal).toLocaleString("uk-UA")+'</span>'
+              : (!isCredit && bal>1 ? ' <span style="color:var(--rd);font-size:9px;white-space:nowrap">недоплата '+Math.round(bal).toLocaleString("uk-UA")+'</span>' : '');
 
-    h += '<tr><td>'+escH(r.car||"")+(under>1?' <span style="color:var(--rd);font-size:9px;white-space:nowrap">недоплата '+Math.round(under).toLocaleString("uk-UA")+'</span>':'')+'</td>'+
+    h += '<tr><td>'+escH(r.car||"")+badge+'</td>'+
       '<td style="font-family:var(--mono);font-size:10px">'+escH(vin)+'</td>'+
       '<td style="text-align:right;color:'+(partsProfit>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(partsProfit).toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right">'+Math.round(worksPaid).toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right">'+Math.round(laborUAH).toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right"><input type="number" value="'+mal+'" min="0" style="width:70px;text-align:right;'+
-        'background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:11px;color:var(--tx)" '+
-        'onchange="statsSetMal(\''+r._id+'\',this.value)"/></td>'+
       '<td style="text-align:right;color:'+(worksProfit>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(worksProfit).toLocaleString("uk-UA")+'</td>'+
       '<td style="text-align:right;font-weight:bold;color:'+(carProfit>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(carProfit).toLocaleString("uk-UA")+'</td></tr>';
   });
   if(done.length){
     h += '<tr style="border-top:2px solid var(--bd)"><td colspan="2" style="font-weight:600">Разом</td>'+
       '<td style="text-align:right;font-weight:600;color:var(--gr)">'+Math.round(aZch).toLocaleString("uk-UA")+'</td>'+
-      '<td colspan="3"></td>'+
       '<td style="text-align:right;font-weight:600;color:var(--gr)">'+Math.round(aWorks).toLocaleString("uk-UA")+'</td>'+
       '<td style="text-align:right;font-weight:bold;color:'+((aZch+aWorks)>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(aZch+aWorks).toLocaleString("uk-UA")+'</td></tr>';
   }
   h += '</table>';
   if(done.length){
-    h += '<div class="gtrow" style="margin-top:6px"><span class="gtlbl">Податок (ЗЧ уже враховано в прибутку; роботи — '+
-      '<input type="number" min="0" step="0.5" value="'+taxPct+'" onchange="statsSetOvh(\'taxPct\',this.value)" style="width:48px;text-align:right;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:1px 4px;font-family:var(--mono);font-size:11px;color:var(--tx)"/> %)</span><span class="gtval"></span></div>';
     h += '<div class="gtrow main"><span class="gtlbl">ПРИБУТОК (закриті авто)</span><span class="gtval" style="color:'+((aZch+aWorks)>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(aZch+aWorks).toLocaleString("uk-UA")+' грн</span></div>';
-    if(aUnder>1) h += '<div class="pay-sub" style="color:var(--rd);margin-top:4px">⚠ Недоплати по закритих авто: '+Math.round(aUnder).toLocaleString("uk-UA")+' грн (роботи рахуються по сплаченому, тож недоплата вже зменшила прибуток)</div>';
+    h += '<div class="pay-sub" style="margin-top:4px">Прибуток робіт рахується в самій калькуляції (праця 50% + координатор + маляри/сторонні факт − 6% податок). Податок ЗЧ уже в прибутку ЗЧ.</div>';
+    if(aUnder>1) h += '<div class="pay-sub" style="color:var(--rd);margin-top:2px">⚠ Недоплати (не в кредит): '+Math.round(aUnder).toLocaleString("uk-UA")+' грн — зменшили прибуток. Позначені «в кредит» рахуються як закриті.</div>';
   }
   h += '</div>';
   document.getElementById("stats-cars").innerHTML = h;

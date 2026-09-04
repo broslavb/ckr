@@ -194,8 +194,12 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ritem-rm:hover{color:var(--rd)}
 .ritem-coord{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:4px}
 .rc-sel{background:var(--bg3);border:1px solid var(--bd);color:var(--tx2);font-size:10px;padding:2px 4px;border-radius:3px;outline:none}
-.rc-act{width:80px;background:var(--bg3);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:3px;outline:none;text-align:right}
+.rc-act{width:70px;background:var(--bg3);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:3px;outline:none;text-align:right}
 .rc-prof{font-family:var(--mono);font-size:10px}
+.rc-lbl{font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase}
+.rc-chk{background:var(--blue-dark);color:#fff;border:none;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer}
+.rc-chk:hover{background:#223d72}
+.rc-ok{font-family:var(--mono);font-size:10px;color:var(--gr)}
 .ritem-coord-sum{margin-top:8px;padding:6px 8px;background:var(--bg3);border-radius:4px;font-size:11px;color:var(--tx2);border-left:3px solid var(--blue-dark)}
 @media print{ .ritem-coord,.ritem-coord-sum{display:none!important} }
 .pp-inp{width:80px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:3px 7px;border-radius:3px;outline:none}
@@ -2687,9 +2691,13 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
         +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
         +'<option value="broslav"'+(it.coord==="broslav"?" selected":"")+'>Брослав</option>'
         +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Анікін</option></select>';
-      var act='<input class="rc-act" type="number" min="0" step="100" placeholder="факт, грн" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
+      var priceInp='<span class="rc-lbl">клієнту грн</span><input class="rc-act" type="number" min="0" step="50" title="ціна клієнту, грн ($ перерахується сам)" value="'+pUAH+'" onchange="setItemPriceUAH(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
+      var act='<span class="rc-lbl">факт грн</span><input class="rc-act" type="number" min="0" step="100" placeholder="факт" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
+      var confBtn = it.cashPending
+        ? '<button class="rc-chk" onclick="wCashConfirm(\''+it.uid+'\')" title="Підтвердити витрату з каси">Перевірено</button>'
+        : (it.cashOpId ? '<span class="rc-ok">✓ з каси</span>' : '');
       var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(it.coord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
-      coordLine='<div class="ritem-coord">'+sel+act+profTxt+'</div>';
+      coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
     }
     return '<div class="ritem">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
@@ -8689,9 +8697,55 @@ function wPullCashWorks(){
       if(dest !== "works") return;
       W_CASH_OPS.push({id:doc.id, o:o});
     });
-    wRenderCashPending();
+    wAutoApplyCash();
   }).catch(function(){});
 }
+
+// #6 — авто-підтягування витрат з каси у СТОРОННІ: сума → поле «факт, грн» рядка.
+// Якщо рядка нема — створюємо; біля кожного — кнопка «Перевірено» (в адмін-рядку координатора).
+function wAutoApplyCash(){
+  var el = document.getElementById("w-cash-pending");
+  var existing = {};   // cashOpId -> uid, щоб не дублювати
+  Object.keys(wsel).forEach(function(u){ if(wsel[u].cashOpId) existing[wsel[u].cashOpId]=u; });
+  var added=0;
+  (W_CASH_OPS||[]).forEach(function(x){
+    if(existing[x.id]) return;                 // вже підтягнуто
+    var amt = Math.round(x.o.amount||0);
+    var m = wFindStoWork(x.o.desc);
+    if(m && !m.cashOpId){                       // причепити до наявного рядка без каси
+      m.actualUAH = amt; m.cashOpId = x.id; m.cashPending = true; m.fromCash = true;
+      if(!m.price) m.price = Math.round(amt*1.3);
+    } else {                                    // створити новий рядок
+      var uid = "u"+(++uidCounter);
+      wsel[uid] = { cat:CAT_STO, name:x.o.desc, price:Math.round(amt*1.3), side:"", coeff:1, uid:uid,
+                    actualUAH:amt, cashOpId:x.id, cashPending:true, fromCash:true };
+    }
+    added++;
+  });
+  var pendCnt = Object.keys(wsel).filter(function(u){ return wsel[u].cashPending; }).length;
+  if(el){
+    el.innerHTML = pendCnt
+      ? '<div class="wcp"><div class="wcp-t">З каси підтягнуто у СТОРОННІ (факт): '+pendCnt+' — перевірте суму й натисніть «Перевірено» у рядку</div></div>'
+      : "";
+  }
+  if(added){ renderSecs(DB); }
+  wRecalc();
+  takeSnap("works");   // авто-підтягування саме по собі не вважаємо «незбереженою зміною»
+}
+
+// «Перевірено» — підтверджуємо витрату: закриваємо звірку рядка й ставимо касову операцію в чергу на linked (при збереженні калькуляції)
+function wCashConfirm(uid){
+  var w = wsel[uid]; if(!w) return;
+  w.cashPending = false; w.cashConfirmed = true;
+  if(w.cashOpId && W_CASH_TO_LINK.indexOf(w.cashOpId)<0) W_CASH_TO_LINK.push(w.cashOpId);
+  var el=document.getElementById("w-cash-pending");
+  var pendCnt = Object.keys(wsel).filter(function(u){ return wsel[u].cashPending; }).length;
+  if(el) el.innerHTML = pendCnt ? '<div class="wcp"><div class="wcp-t">З каси підтягнуто у СТОРОННІ (факт): '+pendCnt+' — перевірте суму й натисніть «Перевірено» у рядку</div></div>' : "";
+  wRecalc();
+  showToast("Перевірено — збережіть калькуляцію, щоб зафіксувати");
+}
+// Пряме редагування ціни клієнту у грн (для СТОРОННІХ): $ перераховується автоматично
+function setItemPriceUAH(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; wsel[uid].price=Math.round(n); wsel[uid].coeff=1; wRecalc(); } }
 
 // Шукає вже наявну сторонню роботу з такою ж назвою
 function wFindStoWork(desc){

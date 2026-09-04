@@ -8966,8 +8966,9 @@ function statsInit(){
   }).catch(function(e){ showToast("Статистика — помилка: "+e.message); });
 }
 
-// Місяць завершення: беремо updatedAt (коли поставили «Завершено»), інакше дату калькуляції
+// Місяць завершення: пріоритет — обрана дата завершення (doneDate), далі updatedAt, далі дата калькуляції
 function statsMonthOf(r){
+  if(r.doneDate) return String(r.doneDate).slice(0,7);
   try { if(r.updatedAt && r.updatedAt.toDate) return r.updatedAt.toDate().toISOString().slice(0,7); } catch(e){}
   return (r.date||"").slice(0,7);
 }

@@ -8935,7 +8935,7 @@ function payDoPayout(){
 // Завершені авто + брудний прибуток по кожному, і фактично виплачена зарплата
 // по кожному працівнику за календарний місяць.
 // ══════════════════════════════════════════════════════════════════════════════
-var STATS_CALCS = [], STATS_CASH = [];
+var STATS_CALCS = [], STATS_CASH = [], STATS_OVH = {};
 
 function statsInit(){
   var m = document.getElementById("stats-month");
@@ -8944,12 +8944,14 @@ function statsInit(){
     db.collection("calculations").limit(600).get(),
     db.collection("worker_payments").get(),
     db.collection("work_accruals").get(),
-    db.collection("cash_operations").where("type","==","-").limit(1000).get()
+    db.collection("cash_operations").where("type","==","-").limit(1000).get(),
+    db.collection("settings").doc("overheads").get()
   ]).then(function(res){
     STATS_CALCS = []; res[0].forEach(function(d){ STATS_CALCS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_PAYMENTS = []; res[1].forEach(function(d){ PAY_PAYMENTS.push(Object.assign({_id:d.id}, d.data())); });
     PAY_ACCRUALS = []; res[2].forEach(function(d){ PAY_ACCRUALS.push(Object.assign({_id:d.id}, d.data())); });
     STATS_CASH = []; res[3].forEach(function(d){ STATS_CASH.push(Object.assign({_id:d.id}, d.data())); });
+    STATS_OVH = res[4] && res[4].exists ? (res[4].data()||{}) : {};
     if(!PAY_WORKERS.length){
       db.collection("workers").get().then(function(s){
         PAY_WORKERS = []; s.forEach(function(d){ PAY_WORKERS.push(Object.assign({_id:d.id}, d.data())); });
@@ -9047,10 +9049,69 @@ function statsRender(){
   w2 += '</table></div>';
   document.getElementById("stats-workers").innerHTML = w2;
 
-  document.getElementById("stats-sum").innerHTML =
-    'Дохід: <b>'+totIn.toLocaleString("uk-UA")+' грн</b> · Витрати: <b>'+totOut.toLocaleString("uk-UA")+
-    ' грн</b> · Брудний прибуток: <b style="color:'+(totProfit>=0?"var(--gr)":"var(--rd)")+'">'+
-    totProfit.toLocaleString("uk-UA")+' грн</b> · Виплачено зарплати: <b>'+Math.round(totPay).toLocaleString("uk-UA")+' грн</b>';
+  // ── ПРИБУТОК ЗА МІСЯЦЬ (касова основа: реальні гроші, незалежно від архіву) ──
+  // Надходження від клієнтів (оплати в калькуляціях за датою оплати)
+  var inWorks=0, inParts=0, inSvc=0;
+  STATS_CALCS.forEach(function(r){
+    (r.payments||[]).forEach(function(p){
+      if((p.date||"").slice(0,7)!==mo || !p.amount) return;
+      var u=payAmountUAH(p);
+      if(r.type==="works") inWorks+=u; else if(r.type==="parts_v2") inParts+=u; else if(r.type==="service_order") inSvc+=u;
+    });
+  });
+  var clientIn = inWorks+inParts+inSvc;
+  // Виплати зарплат (кеш працівникам, крім погашення розстрочки)
+  var salPay=0;
+  PAY_PAYMENTS.forEach(function(p){ if(!p.void && (p.date||"").slice(0,7)===mo && p.type!=="loan_repay") salPay+=(p.amountUAH||0); });
+  // Витрати з каси (крім зарплатних), розкладені по категоріях
+  var cShop=0, cCar=0, cCarUn=0;
+  STATS_CASH.forEach(function(o){
+    if((o.date||"").slice(0,7)!==mo) return;
+    if(/^(Зарплата|Аванс|Розстрочка)/.test(o.desc||"")) return;   // це виплати — вже в зарплатах
+    var amt=o.amount||0;
+    if(o.vin||o.car){ if(o.linked) cCar+=amt; else cCarUn+=amt; } else cShop+=amt;
+  });
+  // Постійні витрати (редаговані)
+  var ovh=statsOvh(mo), rentUAH=Math.round((ovh.rentUSD||0)*rate);
+  var ovhTotal = rentUAH + (ovh.utilUAH||0) + (ovh.netUAH||0) + (ovh.woodUAH||0);
+  var expTotal = salPay + cShop + cCar + cCarUn + ovhTotal;
+  var profit = clientIn - expTotal;
+  var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
+  var ovhInp=function(id,val,cur){ return '<input type="number" min="0" value="'+(val||"")+'" onchange="statsSetOvh(\''+id+'\',this.value)" style="width:90px;text-align:right;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:2px 5px;font-family:var(--mono);font-size:11px;color:var(--tx)"/> '+cur; };
+  var row=function(lbl,val,opts){ opts=opts||{}; return '<div class="gtrow" style="'+(opts.top?"border-top:1px solid var(--bd);padding-top:8px;margin-top:4px;":"")+'"><span class="gtlbl"'+(opts.b?' style="font-weight:600;color:var(--tx)"':'')+'>'+lbl+'</span><span class="gtval'+(opts.cls?' '+opts.cls:'')+'"'+(opts.big?' style="font-size:16px;font-weight:700"':'')+'>'+val+'</span></div>'; };
+  var H='<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ПРИБУТОК · '+payMonthLabel(mo)+' <span class="pay-sub">(каса, реальні гроші)</span></div>';
+  H+=row("Надходження від клієнтів", f(clientIn)+" грн", {b:true, cls:"gr"});
+  H+='<div class="pay-sub" style="margin:-2px 0 8px 0">Роботи '+f(inWorks)+" · Запчастини "+f(inParts)+" · ТО "+f(inSvc)+" грн</div>";
+  H+=row("Зарплати виплачені", "−"+f(salPay)+" грн", {top:true});
+  H+=row("Закупки для СТО (каса)", "−"+f(cShop)+" грн");
+  H+=row("Витрати по авто (каса)", "−"+f(cCar)+" грн");
+  H+=row("Нерозписані з каси (по авто)", "−"+f(cCarUn)+" грн", cCarUn>0?{cls:"ac"}:{});
+  H+=row("Оренда", ovhInp("rentUSD",ovh.rentUSD,"$ ≈ "+f(rentUAH)+" грн"));
+  H+=row("Комунальні", ovhInp("utilUAH",ovh.utilUAH,"грн"));
+  H+=row("Інтернет", ovhInp("netUAH",ovh.netUAH,"грн"));
+  H+=row("Дрова", ovhInp("woodUAH",ovh.woodUAH,"грн"));
+  H+=row("Разом витрат", "−"+f(expTotal)+" грн", {top:true, b:true});
+  H+=row("ПРИБУТОК", '<span style="color:'+(profit>=0?"var(--gr)":"var(--rd)")+'">'+f(profit)+' грн</span>', {top:true, big:true});
+  H+='</div>';
+  document.getElementById("stats-sum").innerHTML = H;
+  document.getElementById("stats-sum").className = "";
+}
+function statsOvh(mo){
+  var o=(STATS_OVH&&STATS_OVH[mo])||{};
+  return {
+    rentUSD: o.rentUSD!==undefined?o.rentUSD:500,
+    utilUAH: o.utilUAH!==undefined?o.utilUAH:9000,
+    netUAH:  o.netUAH!==undefined?o.netUAH:450,
+    woodUAH: o.woodUAH!==undefined?o.woodUAH:0
+  };
+}
+function statsSetOvh(field,val){
+  var mo=document.getElementById("stats-month").value; if(!mo) return;
+  var v=parseFloat(val)||0;
+  if(!STATS_OVH[mo]) STATS_OVH[mo]=statsOvh(mo);
+  STATS_OVH[mo][field]=v;
+  var upd={}; upd[mo]=STATS_OVH[mo];
+  db.collection("settings").doc("overheads").set(upd,{merge:true}).then(function(){ statsRender(); }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
 // Скільки фактично сплачено малярам по авто (бачить лише власник)

@@ -1863,7 +1863,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div class="fld" style="max-width:240px;margin-bottom:6px"><label>Дата нарахування (можна заднім числом)</label>
       <input type="date" id="pay-ac-date" style="color-scheme:light"/></div>
-    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px">Список авто: <span style="color:#2e7d32;font-weight:700">зелене</span> — нараховано повністю · <span style="color:#e67e22;font-weight:700">помаранчеве</span> — є залишок · біле — ще нічого</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-bottom:6px">У списку авто: 🟢 — нараховано повністю · 🟠 — є залишок · без мітки — ще нічого</div>
     <div id="pay-ac-fund" class="pay-fund"></div>
     <div id="pay-ac-works" class="pay-works"></div>
     <div id="pay-ac-status" class="pay-status"></div>
@@ -1890,7 +1890,10 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="fld"><label>Дата</label><input type="date" id="pay-po-date" style="color-scheme:light"/></div>
     <div class="fld" id="pay-po-loan-fld" style="display:none"><label id="pay-po-loan-lbl">Погасити з розстрочки</label><input type="number" id="pay-po-loan" min="0" step="1" value="0" oninput="payPayoutSummary()"/></div>
     <div class="pay-status" id="pay-po-hand" style="display:none"></div>
-    <div class="fld"><label>Коментар</label><input type="text" id="pay-po-note" placeholder="необовʼязково"/></div>
+    <div class="fld" style="position:relative"><label>Коментар (за які авто)</label>
+      <input type="text" id="pay-po-note" placeholder="натисніть — оберіть авто зі списку" autocomplete="off" onfocus="payPoCarsDD()" onclick="payPoCarsDD()" onblur="payPoCarsHide()"/>
+      <div id="pay-po-cars-dd" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:600;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;max-height:200px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.18)"></div>
+    </div>
     <div class="pay-status" id="pay-po-info"></div>
     <div class="pay-btns">
       <button class="btn btn-p" onclick="payDoPayout()">Виплатити</button>
@@ -8438,13 +8441,13 @@ function payAttendCycle(date){
 function payOpenAccrue(){
   if(!PAY_WORKERS.length){ showToast("Спершу додайте працівників"); return; }
   var ws = document.getElementById("pay-ac-worker");
-  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord";}).map(function(w){
-    return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>';
-  }).join("");
-  var cs = document.getElementById("pay-ac-car");
-  cs.innerHTML = PAY_CARS.length
-    ? PAY_CARS.map(function(c){ return '<option value="'+c._id+'">'+escH(c.car||"")+(c.type==="service_order"?" · ТО":"")+(c.vin?" · "+escH(c.vin):"")+'</option>'; }).join("")
-    : '<option value="">— немає авто у статусі «В роботі» —</option>';
+  var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // #2 — фіксований порядок
+  var rank = function(nm){ for(var i=0;i<order.length;i++){ if((nm||"").indexOf(order[i])===0) return i; } return 99; };
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord";})
+    .sort(function(a,b){ return rank(a.name)-rank(b.name); })
+    .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
+  var firstW = PAY_WORKERS.find(function(w){ return w._id===ws.value; });
+  payRenderCarOptions(firstW?firstW.role:"");   // #3 — авто з мітками кольору
   document.getElementById("pay-ac-status").textContent = "";
   var dEl=document.getElementById("pay-ac-date"); if(dEl && !dEl.value) dEl.value=new Date().toISOString().slice(0,10);
   document.getElementById("pay-accrue-modal").style.display = "flex";
@@ -8460,20 +8463,24 @@ function payCarColor(rec, role){
   if(used >= fund-0.01) return "#2e7d32";         // повністю — зелений
   return "#e67e22";                               // є залишок — помаранчевий
 }
-function payColorCarOptions(role){
+// Нативний <select> не фарбує опції в Safari/Chrome — тож мітка кольору прямо в тексті (🟢/🟠)
+function payRenderCarOptions(role){
   var cs=document.getElementById("pay-ac-car"); if(!cs) return;
-  for(var i=0;i<cs.options.length;i++){
-    var opt=cs.options[i];
-    var rec=PAY_CARS.find(function(c){ return c._id===opt.value; });
-    var col = rec ? payCarColor(rec, role) : "";
-    opt.style.color = col; opt.style.fontWeight = col ? "700" : "";
-  }
+  var prev=cs.value;
+  cs.innerHTML = PAY_CARS.length
+    ? PAY_CARS.map(function(c){
+        var col=payCarColor(c,role);
+        var mark = col==="#2e7d32" ? "🟢 " : (col==="#e67e22" ? "🟠 " : "");
+        return '<option value="'+c._id+'">'+mark+escH(c.car||"")+(c.type==="service_order"?" · ТО":"")+(c.vin?" · "+escH(c.vin):"")+'</option>';
+      }).join("")
+    : '<option value="">— немає авто у статусі «В роботі» —</option>';
+  if(prev) cs.value=prev;
 }
 function payAccrueCarChanged(){
   var worker = PAY_WORKERS.find(function(w){ return w._id===document.getElementById("pay-ac-worker").value; });
+  if(worker) payRenderCarOptions(worker.role);
   var rec = PAY_CARS.find(function(c){ return c._id===document.getElementById("pay-ac-car").value; });
   PAY_AC_REC = rec;
-  if(worker) payColorCarOptions(worker.role);
   var fundEl = document.getElementById("pay-ac-fund"), wrap = document.getElementById("pay-ac-works");
   if(!worker || !rec){ fundEl.textContent=""; wrap.innerHTML=""; return; }
   var role = worker.role, funds = payFundFor(rec);
@@ -8666,6 +8673,23 @@ function payCopyReport(){
   if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(function(){ showToast("Скопійовано"); }).catch(function(){ if(!done) showToast("Виділено — скопіюйте вручну"); }); }
   else showToast(done?"Скопійовано":"Виділено — скопіюйте вручну");
 }
+
+// #1 — у коментарі виплати: список авто, нарахованих цьому працівнику; клік дописує через кому
+function payPoCarsDD(){
+  var dd=document.getElementById("pay-po-cars-dd"); if(!dd) return;
+  var wid=PAY_SEL_WORKER, seen={}, cars=[];
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId!==wid||a.void) return; var c=(a.carName||"").trim(); if(c && !seen[c]){ seen[c]=1; cars.push(c); } });
+  if(!cars.length){ dd.style.display="none"; return; }
+  dd.innerHTML = cars.map(function(c){ return '<div class="cash-preset-opt" onmousedown="payPoAddCar(this.getAttribute(\'data-c\'))" data-c="'+escH(c)+'">'+escH(c)+'</div>'; }).join("");
+  dd.style.display="block";
+}
+function payPoAddCar(car){
+  var inp=document.getElementById("pay-po-note"); if(!inp) return;
+  var v=(inp.value||"").trim().replace(/,\s*$/,"");
+  inp.value = v ? (v+", "+car) : car;
+  inp.focus(); payPoCarsDD();   // лишаємо список відкритим для додавання ще
+}
+function payPoCarsHide(){ setTimeout(function(){ var dd=document.getElementById("pay-po-cars-dd"); if(dd) dd.style.display="none"; }, 200); }
 
 // ── ВИПЛАТА ──
 function payOpenPayout(wid){

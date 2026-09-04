@@ -1928,6 +1928,18 @@ body.hero-on .hero-pad{margin-right:40vw}
   </div>
 </div>
 
+<!-- Модалка: звіт працівнику (для пересилання) -->
+<div class="pay-modal" id="pay-report-modal">
+  <div class="pay-box" style="max-width:460px">
+    <div class="pay-box-t" id="pay-report-title">Звіт працівнику</div>
+    <textarea id="pay-report-text" readonly style="width:100%;box-sizing:border-box;height:340px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:10px;border-radius:4px;outline:none;white-space:pre;overflow:auto"></textarea>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payCopyReport()">📋 Копіювати</button>
+      <button class="btn btn-o" onclick="payClose('pay-report-modal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
 <!-- Модалка: працівники -->
 <div class="pay-modal" id="pay-workers-modal">
   <div class="pay-box">
@@ -8149,7 +8161,9 @@ function payRenderCards(){
     (function(id){ b2.onclick = function(){ payOpenPayout(id); }; })(w._id);
     var b3 = document.createElement("button"); b3.textContent = "📅 Табель";
     (function(id){ b3.onclick = function(){ payOpenAttend(id); }; })(w._id);
-    btns.appendChild(b1); btns.appendChild(b2); btns.appendChild(b3); card.appendChild(btns);
+    var b4 = document.createElement("button"); b4.textContent = "📄 Звіт";
+    (function(id){ b4.onclick = function(){ payOpenReport(id); }; })(w._id);
+    btns.appendChild(b1); btns.appendChild(b2); btns.appendChild(b3); btns.appendChild(b4); card.appendChild(btns);
     if(isAdmin()){
       var btns2 = document.createElement("div"); btns2.className = "pay-cbtns"; btns2.style.marginTop="6px";
       var ba = document.createElement("button"); ba.textContent = "Аванс";
@@ -8569,6 +8583,61 @@ function payDoGive(){
     showToast((type==="loan"?"Розстрочка видана: ":"Аванс виданий: ")+payFmt(cur==="usd"?usd:uah,cur)+" — "+w.name);
     payLoadAll();
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
+// ── ЗВІТ ПРАЦІВНИКУ (для пересилання у месенджер) ──
+function payMonthLabel(m){
+  var p=(m||PAY_MONTH).split("-"); var names=["","січень","лютий","березень","квітень","травень","червень","липень","серпень","вересень","жовтень","листопад","грудень"];
+  return (names[+p[1]]||p[1])+" "+p[0];
+}
+function payBuildReport(wid){
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return "";
+  var cur = payCurOf(w.role), b = payBalance(wid), loan = payLoanRemaining(wid);
+  var L=[];
+  L.push("CKR · Зарплата");
+  L.push(w.name+" · "+(PAY_ROLE_LBL[w.role]||""));
+  L.push("Місяць: "+payMonthLabel(PAY_MONTH));
+  L.push("");
+  L.push("НАРАХОВАНО:");
+  var accs = PAY_ACCRUALS.filter(function(a){ return a.workerId===wid && !a.void && payMonthMatch(a.date); })
+    .sort(function(a,b){ return (a.date||"").localeCompare(b.date||""); });
+  if(!accs.length) L.push("  —");
+  accs.forEach(function(a){
+    var lbl;
+    if(a.type==="coord_labor") lbl="15/20% з праці: "+(a.srcWorkerName||"");
+    else if(a.type==="coord_ext") lbl="15% "+(a.src==="mal"?"малярні":"сторонні");
+    else lbl=(a.carName||"")+(a.workName?" · "+a.workName:"")+(a.partPct?" ("+a.partPct+"%)":"");
+    L.push("  "+fmtDMY(a.date)+"  "+lbl+" — "+payFmt(payNative(a,cur),cur));
+  });
+  L.push("  Разом нараховано: "+payFmt(b.acc,cur));
+  var advs = PAY_PAYMENTS.filter(function(p){ return p.workerId===wid && !p.void && p.type==="advance" && payMonthMatch(p.date); });
+  if(advs.length){ L.push(""); L.push("АВАНСИ:"); advs.forEach(function(p){ L.push("  "+fmtDMY(p.date)+(p.note?" · "+p.note:"")+" — "+payFmt(payNative(p,cur),cur)); }); }
+  var reps = PAY_PAYMENTS.filter(function(p){ return p.workerId===wid && !p.void && p.type==="loan_repay" && payMonthMatch(p.date); });
+  if(reps.length){ L.push(""); L.push("ПОГАШЕННЯ РОЗСТРОЧКИ:"); reps.forEach(function(p){ L.push("  "+fmtDMY(p.date)+" — "+payFmt(payNative(p,cur),cur)); }); }
+  var fines = PAY_ATTEND.filter(function(a){ return a.workerId===wid && a.kind==="absence" && !a.void && payMonthMatch(a.date); });
+  if(fines.length){ L.push(""); L.push("ПРОГУЛИ (штраф):"); fines.forEach(function(a){ L.push("  "+fmtDMY(a.date)+" — "+payFmt(payNative(a,cur),cur)); }); }
+  var sals = PAY_PAYMENTS.filter(function(p){ return p.workerId===wid && !p.void && p.type==="salary" && payMonthMatch(p.date); });
+  if(sals.length){ L.push(""); L.push("ВИПЛАЧЕНО (зарплата):"); sals.forEach(function(p){ L.push("  "+fmtDMY(p.date)+(p.note?" · "+p.note:"")+" — "+payFmt(payNative(p,cur),cur)); }); }
+  L.push("");
+  L.push("————————————");
+  L.push("БАЛАНС МІСЯЦЯ: "+payFmt(b.bal,cur));
+  if(loan.remaining>0.01) L.push("Розстрочка (борг): "+payFmt(loan.remaining,loan.cur));
+  return L.join("\n");
+}
+function payOpenReport(wid){
+  PAY_SEL_WORKER = wid;
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  document.getElementById("pay-report-title").textContent = "Звіт — "+w.name+" · "+payMonthLabel(PAY_MONTH);
+  document.getElementById("pay-report-text").value = payBuildReport(wid);
+  document.getElementById("pay-report-modal").style.display = "flex";
+}
+function payCopyReport(){
+  var ta = document.getElementById("pay-report-text");
+  ta.focus(); ta.select();
+  var done=false;
+  try{ done=document.execCommand("copy"); }catch(e){}
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(function(){ showToast("Скопійовано"); }).catch(function(){ if(!done) showToast("Виділено — скопіюйте вручну"); }); }
+  else showToast(done?"Скопійовано":"Виділено — скопіюйте вручну");
 }
 
 // ── ВИПЛАТА ──

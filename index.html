@@ -1770,6 +1770,20 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-p" onclick="searchByVin()">Знайти</button>
       <button class="btn btn-o" onclick="loadArchive()">Всі</button>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0">
+      <select id="arch-type" onchange="ARCH_TYPE=this.value;renderArchive()" style="background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:4px;outline:none">
+        <option value="all">Усі типи</option>
+        <option value="works">Роботи</option>
+        <option value="parts_v2">Запчастини</option>
+        <option value="service_order">ТО</option>
+      </select>
+      <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:2px 4px">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx3);padding-left:4px">ЗАВЕРШЕНО</span>
+        <input type="month" id="arch-month" onchange="ARCH_MONTH=this.value;renderArchive()" style="background:var(--bg);border:none;color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 6px;outline:none;color-scheme:light"/>
+        <button class="btn btn-o" style="padding:2px 8px;font-size:12px;line-height:1" onclick="document.getElementById('arch-month').value='';ARCH_MONTH='';renderArchive()" title="Скинути місяць">✕</button>
+      </div>
+      <span id="arch-filt-cnt" class="pay-sub"></span>
+    </div>
     <div id="arch-list"><div class="arch-loading">Завантаження...</div></div>
   </div>
 </div>
@@ -3592,6 +3606,7 @@ function moveToArchive(id){
 }
 
 // ── АРХІВ (тільки завершені) ──────────────────────────────────────────────────
+var ARCH_DOCS = [], ARCH_TYPE = "all", ARCH_MONTH = "";
 function loadArchive(vin) {
   var list = document.getElementById("arch-list");
   if(!list){ console.warn("arch-list not found"); return; }
@@ -3601,16 +3616,26 @@ function loadArchive(vin) {
   if (vin) {
     query = db.collection("calculations").where("vin","==",vin);
   } else {
-    query = db.collection("calculations").orderBy("createdAt","desc").limit(200);
+    query = db.collection("calculations").orderBy("createdAt","desc").limit(300);
   }
   query.get().then(function(snap){
     clearTimeout(_guard);
-    var docs = snap.docs.filter(function(d){ return d.data().status === "done"; });
-    if (vin) docs = docs.filter(function(d){ return d.data().status === "done"; });
-    if (!docs.length) { list.innerHTML='<div class="arch-empty">Архів порожній</div>'; return; }
-    list.innerHTML=""; docs.forEach(function(doc){ list.appendChild(buildCard(doc, false)); });
-    document.getElementById("arch-cnt").textContent = "("+docs.length+")";
+    ARCH_DOCS = snap.docs.filter(function(d){ return d.data().status === "done"; });
+    renderArchive();
   }).catch(function(e){ clearTimeout(_guard); console.error("loadArchive error:", e); list.innerHTML='<div class="arch-empty">Помилка: '+e.message+'<br><small>'+e.code+'</small></div>'; });
+}
+function renderArchive(){
+  var list = document.getElementById("arch-list"); if(!list) return;
+  var docs = ARCH_DOCS.filter(function(d){
+    var r=d.data();
+    if(ARCH_TYPE!=="all" && r.type!==ARCH_TYPE) return false;
+    if(ARCH_MONTH && statsMonthOf(r)!==ARCH_MONTH) return false;
+    return true;
+  });
+  var cnt=document.getElementById("arch-cnt"); if(cnt) cnt.textContent="("+ARCH_DOCS.length+")";
+  var fc=document.getElementById("arch-filt-cnt"); if(fc) fc.textContent=(ARCH_TYPE!=="all"||ARCH_MONTH)?("показано: "+docs.length):"";
+  if(!docs.length){ list.innerHTML='<div class="arch-empty">'+(ARCH_DOCS.length?"Немає за цим фільтром":"Архів порожній")+'</div>'; return; }
+  list.innerHTML=""; docs.forEach(function(doc){ list.appendChild(buildCard(doc, false)); });
 }
 
 function searchByVin(){
@@ -9137,10 +9162,18 @@ function statsRender(){
     var amt=o.amount||0;
     if(o.vin||o.car){ if(o.linked) cCar+=amt; else cCarUn+=amt; } else cShop+=amt;
   });
+  // Закупка запчастин (замовлені / на складі) — купують повз касу, тож рахуємо окремо, за датою статусу
+  var partsBuyMo=0;
+  STATS_CALCS.forEach(function(r){ if(r.type!=="parts_v2") return;
+    (r.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(i){
+      var acc=function(it){ if((it.status==="ordered"||it.status==="received") && ((it.statusDate||r.date||"").slice(0,7)===mo)) partsBuyMo += (it.buyPrice||0)*(it.qty||1); };
+      acc(i); (i.variants||[]).forEach(acc);
+    });});
+  });
   // Постійні витрати (редаговані)
   var ovh=statsOvh(mo), rentUAH=Math.round((ovh.rentUSD||0)*rate);
   var ovhTotal = rentUAH + (ovh.utilUAH||0) + (ovh.netUAH||0) + (ovh.woodUAH||0);
-  var expTotal = salPay + cShop + cCar + cCarUn + ovhTotal;
+  var expTotal = salPay + partsBuyMo + cShop + cCar + cCarUn + ovhTotal;
   var profit = clientIn - expTotal;
   var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
   var ovhInp=function(id,val,cur){ return '<input type="number" min="0" value="'+(val||"")+'" onchange="statsSetOvh(\''+id+'\',this.value)" style="width:90px;text-align:right;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:2px 5px;font-family:var(--mono);font-size:11px;color:var(--tx)"/> '+cur; };
@@ -9150,6 +9183,7 @@ function statsRender(){
   H+='<div class="pay-sub" style="margin:-2px 0 8px 0">Роботи '+f(inWorks)+" · Запчастини "+f(inParts)+" · ТО "+f(inSvc)+" грн</div>";
   H+=row("Зарплати виплачені (без розстрочок)", "−"+f(salPay)+" грн", {top:true});
   if(loanPay>0) H+=row("Розстрочки видані (позика, не витрата)", "−"+f(loanPay)+" грн", {cls:"ac"});
+  H+=row("Закупка запчастин (замовлені/на складі)", "−"+f(partsBuyMo)+" грн");
   H+=row("Закупки для СТО (каса)", "−"+f(cShop)+" грн");
   H+=row("Витрати по авто (каса)", "−"+f(cCar)+" грн");
   H+=row("Нерозписані з каси (по авто)", "−"+f(cCarUn)+" грн", cCarUn>0?{cls:"ac"}:{});

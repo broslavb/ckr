@@ -8385,6 +8385,16 @@ function payAuditFix(calcId, role, over){
   PAY_ACCRUALS.forEach(function(x){ if(x.srcAccrualId===target._id && !x.void){ var v=Math.round(newAmt*payCoordShare(x.srcRole)*100)/100; ups.push(db.collection("work_accruals").doc(x._id).update({amountUSD:v})); } });
   Promise.all(ups).then(function(){ showToast("Виправлено: −"+over.toFixed(2)+" $"); payLoadAll(); }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
+function payAuditVoid(calcId, role, workUid){
+  if(!confirm("Сторнувати залишкове нарахування?")) return;
+  var targets = PAY_ACCRUALS.filter(function(a){ return !a.void && a.calcId===calcId && a.type!=="coord_labor" && a.type!=="coord_ext" && (!role||a.role===role) && (!workUid||a.workUid===workUid); });
+  var ids={}; targets.forEach(function(t){ ids[t._id]=1; });
+  var ups=[];
+  targets.forEach(function(t){ ups.push(db.collection("work_accruals").doc(t._id).update({void:true,voidedBy:currentUserName||"",voidedAt:new Date().toISOString()})); });
+  PAY_ACCRUALS.forEach(function(a){ if(!a.void && a.srcAccrualId && ids[a.srcAccrualId]) ups.push(db.collection("work_accruals").doc(a._id).update({void:true,voidedBy:currentUserName||"",voidedAt:new Date().toISOString()})); });
+  if(!ups.length){ showToast("Нема що прибирати"); return; }
+  Promise.all(ups).then(function(){ showToast("Сторновано ("+ups.length+")"); payLoadAll(); }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
 function payRenderAudit(){
   var el = document.getElementById("pay-audit"); if(!el) return;
   var okSet = payAuditOkSet(), groups = {};
@@ -8400,15 +8410,17 @@ function payRenderAudit(){
   Object.keys(groups).forEach(function(k){
     var g = groups[k];
     var rec = PAY_CALCS.find(function(c){ return c._id === g.calcId; });
-    if(!rec){ problems.push({kind:"orphan", car:g.car, txt:"калькуляцію видалено, а нарахування лишились", over:g.sum}); return; }
+    if(!rec){ problems.push({kind:"orphan", calcId:g.calcId, role:g.role, car:g.car, txt:"калькуляцію видалено, а нарахування лишились", over:g.sum}); return; }
     var fund = payFundFor(rec)[g.role] || 0;
     if(g.sum > fund + 0.01 && okSet.indexOf(g.key)<0){
       problems.push({kind:"over", key:g.key, calcId:g.calcId, role:g.role, car:rec.car || g.car,
         txt:"нараховано "+g.sum.toFixed(2)+" $ при фонді "+fund.toFixed(2)+" $", over:g.sum - fund});
     }
-    var alive = {}; (rec.works||[]).forEach(function(w){ alive[w.uid] = true; });
+    // Ідентифікатор роботи: у Роботах — uid, у ТО — id (як у payDoAccrue). Звіряємо по обох + за назвою.
+    var alive = {}, aliveNames = {};
+    (rec.works||[]).forEach(function(w){ alive[w.uid||w.id] = true; if(w.name) aliveNames[w.name]=true; });
     Object.keys(g.works).forEach(function(u){
-      if(u && u!=="undefined" && !alive[u]) problems.push({kind:"removed", car:rec.car || g.car,
+      if(u && u!=="undefined" && !alive[u] && !aliveNames[g.works[u]]) problems.push({kind:"removed", calcId:g.calcId, role:g.role, workUid:u, car:rec.car || g.car,
         txt:"робота «"+g.works[u]+"» вилучена з калькуляції, а нарахування за неї лишилось", over:0});
     });
   });
@@ -8422,7 +8434,7 @@ function payRenderAudit(){
       act = '<button class="rc-chk" style="background:var(--blue-dark)" onclick="payAuditFix(\''+p.calcId+'\',\''+p.role+'\','+p.over+')">Виправити</button> '+
             '<button class="rc-chk" style="background:var(--gr)" onclick="payAuditAccept(\''+p.key+'\')">Дозволити</button>';
     } else {
-      act = '<span class="pay-sub">× сторно в історії</span>';
+      act = '<button class="rc-chk" style="background:var(--rd)" onclick="payAuditVoid(\''+p.calcId+'\',\''+(p.role||"")+'\',\''+(p.workUid||"")+'\')">Прибрати</button>';
     }
     h += '<tr><td style="width:210px">'+escH(p.car)+'</td><td>'+escH(p.txt)+
          (p.over>0.01?' <span style="color:var(--rd);white-space:nowrap">(зайве '+p.over.toFixed(2)+' $)</span>':'')+'</td>'+

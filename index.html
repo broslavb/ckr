@@ -3118,7 +3118,9 @@ function buildCard(doc, showMoveBtn) {
 
   var tagsHtml = (r.count ? '<span class="hist-tag w">'+r.count+' '+wf(r.count,"позиція","позиції","позицій")+'</span>' : '')
     + ((r.type==="parts"||r.type==="parts_v2")?'<span class="hist-tag">ЗЧ</span>':r.type==="service_order"?'<span class="hist-tag">ТО</span>':'<span class="hist-tag">Роботи</span>')
-    + (status?'<span class="hist-tag">'+status+'</span>':'')
+    + (r.status==="done"
+        ? '<span class="hist-tag" style="background:var(--gr);color:#fff">Завершено'+(r.doneDate?' · '+fmtDMY(r.doneDate):'')+'</span>'
+        : (status?'<span class="hist-tag">'+status+'</span>':''))
     + (r.masterName?'<span class="hist-tag master">'+r.masterName+'</span>':'');
 
   card.innerHTML = '<div class="hist-top">'

@@ -8976,59 +8976,70 @@ function statsRender(){
   var mo = document.getElementById("stats-month").value || new Date().toISOString().slice(0,7);
   var rate = usdRate||44.1;
 
-  // 1) Завершені авто (роботи) за місяць
+  // ══ ЗВІТ А — ЗАКРИТІ АВТО (оплата-основа): прибуток по авто, завершених цього місяця ══
+  var taxPct = statsOvh(mo).taxPct;
   var done = STATS_CALCS.filter(function(r){
     return r.type==="works" && r.status==="done" && statsMonthOf(r)===mo;
   });
-
-  var totIn=0, totOut=0, totProfit=0;
-  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">Завершені авто — '+done.length+'</div>'+
-    '<table><tr><th>Авто</th><th>VIN</th><th style="text-align:right">Клієнту</th>'+
-    '<th style="text-align:right">Закупка ЗЧ</th><th style="text-align:right">Зарплата</th>'+
-    '<th style="text-align:right">Витрати</th><th style="text-align:right">Маляри</th>'+
-    '<th style="text-align:right">Прибуток</th></tr>';
-
+  var statsPaid = function(rr){ var s=0; (rr.payments||[]).forEach(function(p){ if(p.amount) s+=payAmountUAH(p); }); return s; };
+  var aZch=0, aWorks=0, aUnder=0;
+  var h = '<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ЗВІТ А · Закриті авто — '+done.length+' <span class="pay-sub">(ЗЧ: клієнту−закупка−податок · Роботи: сплачено−праця−маляри−податок)</span></div>'+
+    '<table><tr><th>Авто</th><th>VIN</th><th style="text-align:right">Прибуток ЗЧ</th>'+
+    '<th style="text-align:right">Роботи: сплач.</th><th style="text-align:right">−Праця</th>'+
+    '<th style="text-align:right">Маляри</th><th style="text-align:right">Прибуток роботи</th><th style="text-align:right">Разом</th></tr>';
   if(!done.length) h += '<tr><td colspan="8" class="pay-sub">За цей місяць завершених авто немає</td></tr>';
 
   done.forEach(function(r){
     var vin = (r.vin||"").toUpperCase();
-    // Дохід: роботи + запчастини (парна калькуляція по VIN)
-    var worksUAH = r.totalUAH || Math.round((r.totalUSD||0)*rate);
+    var worksPaid = statsPaid(r);
+    var worksTotal = r.totalUAH || Math.round((r.totalUSD||0)*rate);
+    // Запчастини: прибуток модуля (ціна клієнту − закупка − 6% податок, уже враховано)
     var pc = STATS_CALCS.filter(function(x){ return x.type==="parts_v2" && (x.vin||"").toUpperCase()===vin && vin; });
-    var partsUAH = 0, partsBuy = 0;
+    var partsProfit=0, partsPaid=0, partsTotal=0;
     pc.forEach(function(p){
-      partsUAH += (p.totalUAH||0);
+      partsPaid += statsPaid(p); partsTotal += (p.totalUAH||0);
       (p.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(i){
-        partsBuy += (i.buyPrice||0)*(i.qty||1);
-        (i.variants||[]).forEach(function(v){ partsBuy += (v.buyPrice||0)*(v.qty||1); });
+        partsProfit += pmProfit(i, p.disc||"none");
+        (i.variants||[]).forEach(function(v){ partsProfit += pmProfit(v, p.disc||"none"); });
       });});
     });
-    // Зарплата по цьому авто (нарахування, USD -> грн)
-    var salUSD = PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===r._id && !a.void) ? (a.amountUSD||0) : 0); },0);
-    var salUAH = Math.round(salUSD*rate);
-    // Витрати з каси на це авто
-    var expUAH = STATS_CASH.reduce(function(s,o){
-      var m1 = vin && (o.vin||"").toUpperCase()===vin;
-      var m2 = o.car && r.car && o.car===r.car;
-      return s + ((m1||m2) ? (o.amount||0) : 0);
-    },0);
+    // Праця: слюсарі/рихтувальники (50%) + координатор по цьому авто
+    var laborUSD=0, coordUSD=0;
+    PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void) return; if(a.role==="coord") coordUSD+=(a.amountUSD||0); else laborUSD+=(a.amountUSD||0); });
+    var laborUAH=Math.round((laborUSD+coordUSD)*rate);
     var mal = r.malPaidUAH || 0;
-    var income = worksUAH + partsUAH;
-    var outgo  = partsBuy + salUAH + expUAH + mal;
-    var profit = income - outgo;
-    totIn += income; totOut += outgo; totProfit += profit;
+    var worksTax = Math.round(worksPaid*taxPct/100);
+    var worksProfit = worksPaid - laborUAH - mal - worksTax;
+    var carProfit = partsProfit + worksProfit;
+    var under = (worksTotal+partsTotal) - (worksPaid+partsPaid);
+    aZch+=partsProfit; aWorks+=worksProfit; if(under>1) aUnder+=under;
 
-    h += '<tr><td>'+escH(r.car||"")+'</td><td style="font-family:var(--mono);font-size:10px">'+escH(vin)+'</td>'+
-      '<td style="text-align:right">'+income.toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right">'+partsBuy.toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right">'+salUAH.toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right">'+expUAH.toLocaleString("uk-UA")+'</td>'+
-      '<td style="text-align:right"><input type="number" value="'+mal+'" min="0" style="width:80px;text-align:right;'+
+    h += '<tr><td>'+escH(r.car||"")+(under>1?' <span style="color:var(--rd);font-size:9px;white-space:nowrap">недоплата '+Math.round(under).toLocaleString("uk-UA")+'</span>':'')+'</td>'+
+      '<td style="font-family:var(--mono);font-size:10px">'+escH(vin)+'</td>'+
+      '<td style="text-align:right;color:'+(partsProfit>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(partsProfit).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+Math.round(worksPaid).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right">'+Math.round(laborUAH).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right"><input type="number" value="'+mal+'" min="0" style="width:70px;text-align:right;'+
         'background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:2px 4px;font-family:var(--mono);font-size:11px;color:var(--tx)" '+
         'onchange="statsSetMal(\''+r._id+'\',this.value)"/></td>'+
-      '<td style="text-align:right;font-weight:bold;color:'+(profit>=0?"var(--gr)":"var(--rd)")+'">'+profit.toLocaleString("uk-UA")+'</td></tr>';
+      '<td style="text-align:right;color:'+(worksProfit>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(worksProfit).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right;font-weight:bold;color:'+(carProfit>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(carProfit).toLocaleString("uk-UA")+'</td></tr>';
   });
-  h += '</table></div>';
+  if(done.length){
+    h += '<tr style="border-top:2px solid var(--bd)"><td colspan="2" style="font-weight:600">Разом</td>'+
+      '<td style="text-align:right;font-weight:600;color:var(--gr)">'+Math.round(aZch).toLocaleString("uk-UA")+'</td>'+
+      '<td colspan="3"></td>'+
+      '<td style="text-align:right;font-weight:600;color:var(--gr)">'+Math.round(aWorks).toLocaleString("uk-UA")+'</td>'+
+      '<td style="text-align:right;font-weight:bold;color:'+((aZch+aWorks)>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(aZch+aWorks).toLocaleString("uk-UA")+'</td></tr>';
+  }
+  h += '</table>';
+  if(done.length){
+    h += '<div class="gtrow" style="margin-top:6px"><span class="gtlbl">Податок (ЗЧ уже враховано в прибутку; роботи — '+
+      '<input type="number" min="0" step="0.5" value="'+taxPct+'" onchange="statsSetOvh(\'taxPct\',this.value)" style="width:48px;text-align:right;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:1px 4px;font-family:var(--mono);font-size:11px;color:var(--tx)"/> %)</span><span class="gtval"></span></div>';
+    h += '<div class="gtrow main"><span class="gtlbl">ПРИБУТОК (закриті авто)</span><span class="gtval" style="color:'+((aZch+aWorks)>=0?"var(--gr)":"var(--rd)")+'">'+Math.round(aZch+aWorks).toLocaleString("uk-UA")+' грн</span></div>';
+    if(aUnder>1) h += '<div class="pay-sub" style="color:var(--rd);margin-top:4px">⚠ Недоплати по закритих авто: '+Math.round(aUnder).toLocaleString("uk-UA")+' грн (роботи рахуються по сплаченому, тож недоплата вже зменшила прибуток)</div>';
+  }
+  h += '</div>';
   document.getElementById("stats-cars").innerHTML = h;
 
   // 2) Фактично виплачено працівникам за місяць (зарплата/аванс окремо від розстрочки!)
@@ -9093,7 +9104,7 @@ function statsRender(){
   var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
   var ovhInp=function(id,val,cur){ return '<input type="number" min="0" value="'+(val||"")+'" onchange="statsSetOvh(\''+id+'\',this.value)" style="width:90px;text-align:right;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:2px 5px;font-family:var(--mono);font-size:11px;color:var(--tx)"/> '+cur; };
   var row=function(lbl,val,opts){ opts=opts||{}; return '<div class="gtrow" style="'+(opts.top?"border-top:1px solid var(--bd);padding-top:8px;margin-top:4px;":"")+'"><span class="gtlbl"'+(opts.b?' style="font-weight:600;color:var(--tx)"':'')+'>'+lbl+'</span><span class="gtval'+(opts.cls?' '+opts.cls:'')+'"'+(opts.big?' style="font-size:16px;font-weight:700"':'')+'>'+val+'</span></div>'; };
-  var H='<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ПРИБУТОК · '+payMonthLabel(mo)+' <span class="pay-sub">(каса, реальні гроші)</span></div>';
+  var H='<div class="pay-led"><div class="pay-nm" style="margin-bottom:8px">ЗВІТ Б · За місяць (каса) · '+payMonthLabel(mo)+' <span class="pay-sub">(фактичні гроші)</span></div>';
   H+=row("Надходження від клієнтів", f(clientIn)+" грн", {b:true, cls:"gr"});
   H+='<div class="pay-sub" style="margin:-2px 0 8px 0">Роботи '+f(inWorks)+" · Запчастини "+f(inParts)+" · ТО "+f(inSvc)+" грн</div>";
   H+=row("Зарплати виплачені (без розстрочок)", "−"+f(salPay)+" грн", {top:true});
@@ -9124,7 +9135,8 @@ function statsOvh(mo){
     rentUSD: o.rentUSD!==undefined?o.rentUSD:500,
     utilUAH: o.utilUAH!==undefined?o.utilUAH:9000,
     netUAH:  o.netUAH!==undefined?o.netUAH:450,
-    woodUAH: o.woodUAH!==undefined?o.woodUAH:0
+    woodUAH: o.woodUAH!==undefined?o.woodUAH:0,
+    taxPct:  o.taxPct!==undefined?o.taxPct:6
   };
 }
 function statsSetOvh(field,val){

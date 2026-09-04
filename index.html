@@ -1494,6 +1494,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div style="padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-p" onclick="soSave()">💾 Зберегти</button>
         <button class="btn btn-o" onclick="soShowPrint()">🖨 Друк</button>
+        <button class="btn btn-o" onclick="soArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
         <button class="btn btn-o" onclick="soClear()">✕ Нова</button>
       </div>
     </div>
@@ -3150,6 +3151,12 @@ function archiveDoc(id){
     document.getElementById("done-date").value = new Date().toISOString().slice(0,10);
     document.getElementById("done-modal").style.display="flex";
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Архівувати поточне ТО-замовлення (кнопка «📦 В архів»)
+function soArchiveCurrent(){
+  if(typeof soCurrentDocId==="undefined" || !soCurrentDocId){ showToast("Спершу збережіть замовлення"); return; }
+  if(isTabDirty("service") && !confirm("Є незбережені зміни.\nАрхівувати збережену версію? (спершу «Зберегти»)")) return;
+  archiveDoc(soCurrentDocId);
 }
 // Архівувати поточну відкриту калькуляцію робіт (кнопка «📦 В архів»)
 function wArchiveCurrent(){

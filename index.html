@@ -926,10 +926,14 @@ input, select, button, .btn, .pp-inp, .cinp,
 .pay-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pay-fund{font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--bg3);border-radius:4px;margin:10px 0;color:var(--tx2)}
 .pay-works{max-height:46vh;overflow-y:auto;border:1px solid var(--bd);border-radius:4px}
-.pay-wrow{display:grid;grid-template-columns:1fr 90px 74px 92px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
+.pay-wrow{display:grid;grid-template-columns:1fr 90px 64px 132px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
 .pay-wrow:last-child{border-bottom:none}
 .pay-wrow.head{background:var(--bg3);font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;position:sticky;top:0}
 .pay-wrow input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:3px 6px;font-family:var(--mono);font-size:11px;color:var(--tx);text-align:right;outline:none}
+.pay-pct{display:flex;flex-direction:column;gap:3px}
+.pay-qbtns{display:flex;gap:3px}
+.pay-qbtns button{flex:1;font-family:var(--mono);font-size:9px;padding:2px 0;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);border-radius:3px;cursor:pointer}
+.pay-qbtns button:hover{border-color:var(--ac);color:var(--ac)}
 .pay-wrow .done{color:var(--gr);font-family:var(--mono);font-size:10px}
 .pay-status{font-family:var(--mono);font-size:11px;color:var(--tx2);margin:10px 0;min-height:16px}
 .pay-status.err{color:var(--rd)}
@@ -1845,6 +1849,8 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld"><label>Працівник</label><select id="pay-ac-worker" onchange="payAccrueCarChanged()"></select></div>
       <div class="fld"><label>Авто (лише «В роботі»)</label><select id="pay-ac-car" onchange="payAccrueCarChanged()"></select></div>
     </div>
+    <div class="fld" style="max-width:240px;margin-bottom:6px"><label>Дата нарахування (можна заднім числом)</label>
+      <input type="date" id="pay-ac-date"/></div>
     <div id="pay-ac-fund" class="pay-fund"></div>
     <div id="pay-ac-works" class="pay-works"></div>
     <div id="pay-ac-status" class="pay-status"></div>
@@ -2673,13 +2679,13 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
     if(showCoord){
       var actual=parseFloat(it.actualUAH)||0;
       var prof=pUAH-actual;
-      if(actual>0){ totProfit+=prof; if(it.coord==="anikin") anikinBonus+=prof*PAY_COORD_SHARE; }
+      if(actual>0){ totProfit+=prof; if(it.coord==="anikin") anikinBonus+=prof*PAY_COORD_SHARE_EXT; }
       var sel='<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
         +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
         +'<option value="broslav"'+(it.coord==="broslav"?" selected":"")+'>Брослав</option>'
         +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Анікін</option></select>';
       var act='<input class="rc-act" type="number" min="0" step="100" placeholder="факт, грн" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
-      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(it.coord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE).toLocaleString("uk-UA"):"")+'</span>' : '';
+      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(it.coord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
       coordLine='<div class="ritem-coord">'+sel+act+profTxt+'</div>';
     }
     return '<div class="ritem">'
@@ -2696,7 +2702,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
   }).join("");
   if(showCoord){
     html+='<div class="ritem-coord-sum">Прибуток сторонніх: <b>'+Math.round(totProfit).toLocaleString("uk-UA")+' грн</b>'
-      +' · Анікіну 20%: <b style="color:var(--gr)">'+Math.round(anikinBonus).toLocaleString("uk-UA")+' грн</b></div>';
+      +' · Анікіну 15%: <b style="color:var(--gr)">'+Math.round(anikinBonus).toLocaleString("uk-UA")+' грн</b></div>';
   }
   el.innerHTML=html;
 }
@@ -2898,7 +2904,7 @@ function wSyncCoordExt(calcId, works, rate, status, car){
           var actual=parseFloat(w.actualUAH)||0; if(actual<=0) return;
           var clientUAH=(w.price||0)*(w.coeff||1);
           var profit=clientUAH-actual; if(profit<=0) return;
-          var bonusUAH=profit*PAY_COORD_SHARE;
+          var bonusUAH=profit*PAY_COORD_SHARE_EXT;
           batch.push({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext", rate:r,
             calcId:calcId, carName:car||"", workName:w.name,
             profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH),
@@ -7864,8 +7870,9 @@ document.addEventListener("click", function(e){
 // суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
-var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт і з прибутку сторонніх
+var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт (праця)
 var PAY_COORD_SHARE_KUZ = 0.15;  // координатору з рихтувальних (кузовних) робіт — 15%
+var PAY_COORD_SHARE_EXT = 0.15;  // координатору з прибутку сторонніх і малярних — 15%
 function payCoordShare(srcRole){ return srcRole==="kuz" ? PAY_COORD_SHARE_KUZ : PAY_COORD_SHARE; }
 var PAY_MIGRATED_COORD = false;
 var PAY_ABSENCE_FINE = 1500; // штраф за прогул, грн
@@ -8049,7 +8056,7 @@ function payRenderLedger(){
   PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
-    else if(a.type==="coord_ext"){ t="20% сторонні"; txt=(a.carName||"")+" · "+(a.workName||""); }
+    else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
     rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur)});
   }});
   PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id)
@@ -8274,6 +8281,7 @@ function payOpenAccrue(){
     ? PAY_CARS.map(function(c){ return '<option value="'+c._id+'">'+escH(c.car||"")+(c.type==="service_order"?" · ТО":"")+(c.vin?" · "+escH(c.vin):"")+'</option>'; }).join("")
     : '<option value="">— немає авто у статусі «В роботі» —</option>';
   document.getElementById("pay-ac-status").textContent = "";
+  var dEl=document.getElementById("pay-ac-date"); if(dEl && !dEl.value) dEl.value=new Date().toISOString().slice(0,10);
   document.getElementById("pay-accrue-modal").style.display = "flex";
   payAccrueCarChanged();
 }
@@ -8311,19 +8319,23 @@ function payAccrueCarChanged(){
          '<div>'+escH(w.name)+(w.side?' <span style="color:var(--tx3)">('+escH(w.side)+')</span>':'')+'</div>'+
          '<div style="text-align:right">'+(cur==="usd"?usd.toFixed(2):Math.round(usd*rate).toLocaleString("uk-UA"))+'</div>'+
          '<div style="text-align:right" class="done">'+done.toFixed(0)+'%</div>'+
-         '<div><input type="number" min="0" max="'+lft+'" step="10" value="0" '+
-         'data-uid="'+escH(wid)+'" data-usd="'+usd+'" data-name="'+escH(w.name)+'" data-cat="'+escH(w.cat||"ТО")+'"/></div></div>';
+         '<div class="pay-pct"><input type="number" min="0" max="'+lft+'" step="5" value="0" id="pac-'+i+'" '+
+         'data-uid="'+escH(wid)+'" data-usd="'+usd+'" data-name="'+escH(w.name)+'" data-cat="'+escH(w.cat||"ТО")+'"/>'+
+         '<div class="pay-qbtns">'+[25,50,75,100].map(function(v){return '<button type="button" onclick="paySetPct('+i+','+v+')">'+v+'</button>';}).join("")+'</div>'+
+         '</div></div>';
   });
   wrap.innerHTML = h;
 }
 
+function paySetPct(i, v){ var e=document.getElementById("pac-"+i); if(!e) return; var mx=parseFloat(e.max); if(isNaN(mx))mx=100; e.value=Math.min(v,mx); }
 function payDoAccrue(){
   var worker = PAY_WORKERS.find(function(w){ return w._id===document.getElementById("pay-ac-worker").value; });
   var rec = PAY_AC_REC, st = document.getElementById("pay-ac-status");
   if(!worker || !rec){ st.className="pay-status err"; st.textContent="Оберіть працівника та авто"; return; }
   var role = worker.role, today = new Date().toISOString().slice(0,10);
+  var accDate = (document.getElementById("pay-ac-date")||{}).value || today;   // #1/#4 — дата нарахування (заднім числом)
   var acRate = rec.rate||usdRate||44.1, acCur = payCurOf(role);
-  var inputs = document.querySelectorAll("#pay-ac-works input");
+  var inputs = document.querySelectorAll("#pay-ac-works input[data-uid]");
   var batch = [], total = 0;
   for(var i=0;i<inputs.length;i++){
     var pct = parseFloat(inputs[i].value)||0;
@@ -8335,7 +8347,7 @@ function payDoAccrue(){
       calcId:rec._id, carName:rec.car||"", vin:rec.vin||"",
       workUid:inputs[i].getAttribute("data-uid"), workName:inputs[i].getAttribute("data-name"),
       cat:inputs[i].getAttribute("data-cat"), clientUSD:usd, partPct:pct,
-      amountUSD:Math.round(amt*100)/100, date:today,
+      amountUSD:Math.round(amt*100)/100, date:accDate,
       author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
   }
   if(!batch.length){ st.className="pay-status err"; st.textContent="Вкажіть % виконання хоча б по одній роботі"; return; }

@@ -1955,6 +1955,20 @@ body.hero-on .hero-pad{margin-right:40vw}
   </div>
 </div>
 
+<!-- Модалка: завершення авто (вибір дати) -->
+<div class="pay-modal" id="done-modal">
+  <div class="pay-box" style="max-width:380px">
+    <div class="pay-box-t">Завершення ремонту</div>
+    <div id="done-msg" class="pay-status" style="margin-bottom:8px"></div>
+    <div class="fld"><label>Дата завершення (нею йдуть нарахування/виплати за місяць)</label>
+      <input type="date" id="done-date" style="color-scheme:light"/></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="doneConfirm()">Завершити й архівувати</button>
+      <button class="btn btn-o" onclick="payClose('done-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <!-- Модалка: працівники -->
 <div class="pay-modal" id="pay-workers-modal">
   <div class="pay-box">
@@ -2814,7 +2828,7 @@ function setItemCoord(uid,val){ if(wsel[uid]){ wsel[uid].coord=val; wRecalc(); }
 function setItemActual(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; if(n>0) wsel[uid].actualUAH=n; else delete wsel[uid].actualUAH; wRecalc(); } }
 
 // #7 — Малярні: координатор + одне поле «факт» на весь блок (розрахунок 15% від прибутку)
-var wMalCoord = "", wMalActual = 0;
+var wMalCoord = "", wMalActual = 0, wDoneDate = "";
 function setMalCoord(v){ wMalCoord = v; wRecalc(); }
 function setMalActual(v){ var n=parseFloat(v)||0; wMalActual = n>0?n:0; wRecalc(); }
 function renderMalCoord(malUAH){
@@ -2931,7 +2945,7 @@ function clearW(){
   document.getElementById("w-status").value="preliminary";
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
   wPayments=[];wRenderPayments();document.getElementById("mal-type").value="std";
-  wMalCoord="";wMalActual=0;
+  wMalCoord="";wMalActual=0;wDoneDate="";
   var bmC=document.getElementById("w-bodyman"); if(bmC) bmC.value="";
   document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
   selectStoDefaults();renderSecs(DB);wRecalc();
@@ -2988,7 +3002,7 @@ function saveW(){
     masterEmail:currentUser.email,
     masterName:currentUserName,
     rate:usdRate,discKuz:discKuz,discSlu:discSlu,malType:malType,pp:pp,
-    malCoord:wMalCoord||"", malActualUAH:wMalActual||0,
+    malCoord:wMalCoord||"", malActualUAH:wMalActual||0, doneDate:wDoneDate||null,
     bodyman:(document.getElementById("w-bodyman")||{value:""}).value,
     bodymanName:(function(){var s=document.getElementById("w-bodyman");return s&&s.selectedIndex>0?s.options[s.selectedIndex].text:"";})(),
     payments:JSON.parse(JSON.stringify(wPayments)),
@@ -3032,7 +3046,7 @@ function wSyncCoordExt(calcId, rec){
       return db.collection("workers").where("role","==","coord").get().then(function(ws){
         var anikin=null; ws.forEach(function(d){ var w=d.data(); if(w.active!==false && !anikin) anikin={_id:d.id, name:w.name}; });
         if(!anikin) return null;
-        var r = rate, today=new Date().toISOString().slice(0,10), batch=[];
+        var r = rate, today=(rec.doneDate||new Date().toISOString().slice(0,10)), batch=[];
         var mk=function(o){ return Object.assign({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext", rate:r,
           calcId:calcId, carName:car, date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" }, o); };
         // Сторонні роботи (по рядку, координатор = Анікін)
@@ -3122,23 +3136,27 @@ function buildCard(doc, showMoveBtn) {
   return card;
 }
 
+var DONE_CTX = null;
 function archiveDoc(id){
-  // Архів лише після оплати: спершу читаємо запис і перевіряємо залишок,
-  // щоб не «забути» внести оплату клієнта.
+  // Архів лише після оплати: читаємо запис, показуємо попап із вибором дати завершення.
   db.collection("calculations").doc(id).get().then(function(doc){
     if(!doc.exists){ showToast("Запис не знайдено"); return; }
-    var bal = recordBalanceUAH(doc.data());
-    var msg = "Ремонт завершено? Авто перейде в Архів.";
-    if(bal > 0){
-      msg = "⚠ Оплату внесено не повністю — залишок " + bal.toLocaleString("uk-UA") + " грн.\n\n"
-          + "Спершу додайте оплату клієнта у калькуляції. Все одно завершити й архівувати?";
-    }
-    if(!confirm(msg)) return;
-    var _r = doc.data();
-    db.collection("calculations").doc(id).update({status:"done",updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
-      .then(function(){ wSyncCoordExt(id, Object.assign({}, _r, {status:"done"})); showToast("Переміщено в архів"); loadActive(); })
-      .catch(function(e){ showToast("Помилка: "+e.message); });
+    var r = doc.data(), bal = recordBalanceUAH(r);
+    DONE_CTX = {id:id, rec:r};
+    var msg = document.getElementById("done-msg");
+    if(bal > 0){ msg.className="pay-status err"; msg.innerHTML="⚠ Залишок оплати <b>"+bal.toLocaleString("uk-UA")+" грн</b> — все одно завершити?"; }
+    else { msg.className="pay-status"; msg.textContent="Авто перейде в Архів."; }
+    document.getElementById("done-date").value = new Date().toISOString().slice(0,10);
+    document.getElementById("done-modal").style.display="flex";
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function doneConfirm(){
+  if(!DONE_CTX) return;
+  var id=DONE_CTX.id, r=DONE_CTX.rec;
+  var dd=document.getElementById("done-date").value || new Date().toISOString().slice(0,10);
+  db.collection("calculations").doc(id).update({status:"done", doneDate:dd, updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+    .then(function(){ wSyncCoordExt(id, Object.assign({}, r, {status:"done", doneDate:dd})); payClose("done-modal"); showToast("Завершено ("+dd+") → архів"); loadActive(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
 function delDoc(id){
@@ -3581,7 +3599,7 @@ function loadRec(id){
         : (r.pp>0 ? [{id:"wp"+(++uidCounter),amount:r.pp,cur:"uah",rate:r.rate||usdRate,type:"cash",date:r.date||"",comment:"аванс"}] : []);
       wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
-      wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0;
+      wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0; wDoneDate=r.doneDate||"";
       var bmSel=document.getElementById("w-bodyman"); if(bmSel){ wFillBodymen(); bmSel.value=r.bodyman||""; }
       switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();

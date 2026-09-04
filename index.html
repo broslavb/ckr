@@ -1382,6 +1382,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <button class="btn btn-p" onclick="pmSave()">&#128190; Зберегти</button>
           <button class="btn btn-o" onclick="showPrintModal('parts')">&#128424; Друк</button>
           <button class="btn btn-o" onclick="newCalcLinked('works')" title="Створити Роботи для цього ж авто">➕ Роботи (це авто)</button>
+          <button class="btn btn-o" onclick="pmArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
           <button class="btn btn-o" onclick="pmClear()">&#10005; Нова</button>
         </div>
       </div>
@@ -3194,6 +3195,12 @@ function archiveDoc(id){
     document.getElementById("done-date").value = new Date().toISOString().slice(0,10);
     document.getElementById("done-modal").style.display="flex";
   }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Архівувати поточну калькуляцію запчастин (кнопка «📦 В архів»)
+function pmArchiveCurrent(){
+  if(typeof pmCurrentDocId==="undefined" || !pmCurrentDocId){ showToast("Спершу збережіть калькуляцію"); return; }
+  if(isTabDirty("parts") && !confirm("Є незбережені зміни.\nАрхівувати збережену версію? (спершу «Зберегти»)")) return;
+  archiveDoc(pmCurrentDocId);
 }
 // Архівувати поточне ТО-замовлення (кнопка «📦 В архів»)
 function soArchiveCurrent(){

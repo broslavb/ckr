@@ -3343,7 +3343,7 @@ function loadActive(vin) {
       var r = d.data();
       // Калькуляції = все, що ще не переведено в роботу і не завершено
       var okStatus = (ACTIVE_MODE === "calc")
-        ? (r.status !== "done" && r.status !== "in_work")
+        ? (r.status !== "done" && r.status !== "shelved" && r.status !== "in_work")
         : (r.status === "in_work");
       var okType = (ACTIVE_TYPE === "all") || (r.type === ACTIVE_TYPE);
       return okStatus && okType && (!vin || r.vin === vin);
@@ -3431,7 +3431,7 @@ function loadReceive(){
     clearTimeout(_g);
     RECEIVE_ROWS=[]; RECEIVE_DOCS={};
     snap.docs.forEach(function(d){
-      var r=d.data(); if(r.status==="done") return;
+      var r=d.data(); if(r.status==="done"||r.status==="shelved") return;
       var has=false;
       function col(it, blockId){
         if(it && (it.status==="ordered"||it.status==="cancelled") && it.name){
@@ -7884,7 +7884,7 @@ function cashLoadActiveCars(){
       var byKey = {};
       snap.forEach(function(doc){
         var r = doc.data();
-        if(r.status === "done" || !r.car) return;
+        if(r.status === "done" || r.status === "shelved" || !r.car) return;
         var vin = (r.vin || "").toUpperCase().trim();
         var key = vin || ("NAME:" + r.car);
         if(!byKey[key]) byKey[key] = {name:r.car, vin:vin, hasRepair:false, hasTO:false};

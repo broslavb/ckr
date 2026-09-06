@@ -1383,6 +1383,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <button class="btn btn-o" onclick="showPrintModal('parts')">&#128424; Друк</button>
           <button class="btn btn-o" onclick="newCalcLinked('works')" title="Створити Роботи для цього ж авто">➕ Роботи (це авто)</button>
           <button class="btn btn-o" onclick="pmArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
+          <button class="btn btn-o" onclick="openCalcLog('parts')" title="Історія змін цієї калькуляції">🕘 Історія</button>
           <button class="btn btn-o" onclick="pmClear()">&#10005; Нова</button>
         </div>
       </div>
@@ -1497,6 +1498,7 @@ body.hero-on .hero-pad{margin-right:40vw}
         <button class="btn btn-p" onclick="soSave()">💾 Зберегти</button>
         <button class="btn btn-o" onclick="soShowPrint()">🖨 Друк</button>
         <button class="btn btn-o" onclick="soArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
+        <button class="btn btn-o" onclick="openCalcLog('service')" title="Історія змін цього замовлення">🕘 Історія</button>
         <button class="btn btn-o" onclick="soClear()">✕ Нова</button>
       </div>
     </div>
@@ -1995,6 +1997,17 @@ body.hero-on .hero-pad{margin-right:40vw}
   </div>
 </div>
 
+<!-- Модалка: журнал змін калькуляції -->
+<div class="pay-modal" id="calclog-modal">
+  <div class="pay-box" style="max-width:560px">
+    <div class="pay-box-t" id="calclog-title">Історія змін</div>
+    <div id="calclog-body" style="max-height:60vh;overflow:auto;font-size:12px;line-height:1.5"></div>
+    <div class="pay-btns">
+      <button class="btn btn-o" onclick="payClose('calclog-modal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
 <!-- Модалка: працівники -->
 <div class="pay-modal" id="pay-workers-modal">
   <div class="pay-box">
@@ -2122,6 +2135,87 @@ function applyPerms(){
   show("tab-pay-btn",  can("pay"));
   show("cm-works",     can("works"));   // пункт «Роботи» у меню створення
   show("atf-works",    can("works"));   // чіп-фільтр «Роботи» у списку
+}
+
+// ── ЖУРНАЛ ЗМІН (Запчастини / ТО) ────────────────────────────────────────────
+// Знімок значущих полів калькуляції для порівняння «до/після».
+var pmLogSnap = null, soLogSnap = null;
+function calcStatusLabel(v){ for(var i=0;i<PM_STATUSES.length;i++) if(PM_STATUSES[i].val===v) return PM_STATUSES[i].label; return v||"—"; }
+function calcSnapshotForLog(rec){
+  var items=[];
+  var push=function(x, blockLabel){ if(!x) return; items.push({id:x.id, name:x.name||"", qty:x.qty||1, buy:x.buyPrice||0, status:x.status||"", block:blockLabel||""}); };
+  (rec.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(it){ push(it,b.label); (it.variants||[]).forEach(function(v){ push(v,b.label); }); }); });
+  (rec.parts||[]).forEach(function(it){ push(it,""); (it.variants||[]).forEach(function(v){ push(v,""); }); }); // ТО
+  return {
+    car:rec.car||"", vin:rec.vin||"", client:rec.client||"", phone:rec.phone||"",
+    status:rec.status||"", disc:rec.disc||"", total:Math.round(rec.totalUAH||0),
+    paySum:Math.round((rec.payments||[]).reduce(function(s,p){ return s + (p.amount?payAmountUAH(p):0); },0)),
+    payCnt:(rec.payments||[]).length,
+    items:items
+  };
+}
+function diffCalc(o, n){
+  if(!o) return ["Створено калькуляцію"];
+  var ch=[], L={car:"Авто",vin:"VIN",client:"Клієнт",phone:"Телефон",status:"Статус",disc:"Знижка",total:"Сума"};
+  ["car","vin","client","phone","status","disc","total"].forEach(function(k){
+    if(String(o[k])!==String(n[k])) ch.push(L[k]+": «"+(o[k]||"—")+"» → «"+(n[k]||"—")+"»");
+  });
+  if(o.paySum!==n.paySum || o.payCnt!==n.payCnt)
+    ch.push("Оплати: "+o.payCnt+" ("+o.paySum.toLocaleString("uk-UA")+" грн) → "+n.payCnt+" ("+n.paySum.toLocaleString("uk-UA")+" грн)");
+  var oi={}, ni={}; (o.items||[]).forEach(function(x){ oi[x.id]=x; }); (n.items||[]).forEach(function(x){ ni[x.id]=x; });
+  Object.keys(ni).forEach(function(id){
+    var b=ni[id], a=oi[id];
+    if(!a){ ch.push("➕ Додано: "+(b.name||"деталь")+(b.buy?" · закупка "+b.buy:"")); return; }
+    var p=[];
+    if((a.name||"")!==(b.name||"")) p.push("назва «"+(a.name||"—")+"»→«"+(b.name||"—")+"»");
+    if((a.qty||1)!==(b.qty||1)) p.push("к-ть "+(a.qty||1)+"→"+(b.qty||1));
+    if((a.buy||0)!==(b.buy||0)) p.push("закупка "+(a.buy||0)+"→"+(b.buy||0));
+    if((a.status||"")!==(b.status||"")) p.push("статус "+calcStatusLabel(a.status)+"→"+calcStatusLabel(b.status));
+    if(p.length) ch.push("✏ "+(b.name||a.name||"деталь")+": "+p.join(", "));
+  });
+  Object.keys(oi).forEach(function(id){ if(!ni[id]) ch.push("🗑 Видалено: "+(oi[id].name||"деталь")); });
+  return ch;
+}
+// Записати зміни (diff від збереженого в пам'яті знімка) в колекцію edit_log
+function logCalcChange(docId, rec, prevSnap, isNew){
+  try{
+    var newS = calcSnapshotForLog(rec);
+    var changes = isNew ? ["Створено калькуляцію"] : diffCalc(prevSnap, newS);
+    if(!isNew && (!changes || !changes.length)) return newS; // без змін — не пишемо
+    db.collection("edit_log").add({
+      calcId:docId||"", type:rec.type||"", car:rec.car||"", vin:rec.vin||"",
+      byEmail:currentUser?currentUser.email:"", byName:currentUserName||"",
+      at:firebase.firestore.FieldValue.serverTimestamp(),
+      isNew:!!isNew, changes:changes
+    }).catch(function(e){ console.warn("edit_log:", e.message); });
+    return newS;
+  }catch(e){ console.warn("logCalcChange:", e); return null; }
+}
+// Переглянути історію активної калькуляції
+function openCalcLog(kind){
+  var docId = kind==="parts" ? pmCurrentDocId : (kind==="service" ? soCurrentDocId : currentDocId);
+  var body=document.getElementById("calclog-body");
+  document.getElementById("calclog-title").textContent = "Історія змін" + (docId?"":" — спершу збережіть");
+  if(!docId){ body.innerHTML='<div class="pay-sub">Калькуляція ще не збережена — історії немає.</div>'; document.getElementById("calclog-modal").style.display="flex"; return; }
+  body.innerHTML='<div class="pay-sub">Завантаження…</div>';
+  document.getElementById("calclog-modal").style.display="flex";
+  db.collection("edit_log").where("calcId","==",docId).limit(200).get().then(function(snap){
+    var rows=[]; snap.forEach(function(d){ rows.push(d.data()); });
+    rows.sort(function(a,b){ var ta=a.at&&a.at.toMillis?a.at.toMillis():0, tb=b.at&&b.at.toMillis?b.at.toMillis():0; return tb-ta; });
+    if(!rows.length){ body.innerHTML='<div class="pay-sub">Змін ще не зафіксовано. Історія ведеться з цього оновлення.</div>'; return; }
+    var esc=(typeof escH==="function")?escH:function(x){return x;};
+    var h='';
+    rows.forEach(function(r){
+      var when="";
+      try{ if(r.at&&r.at.toDate){ var dt=r.at.toDate(); when=fmtDMY(dt.toISOString().slice(0,10))+" "+("0"+dt.getHours()).slice(-2)+":"+("0"+dt.getMinutes()).slice(-2); } }catch(e){}
+      h+='<div style="border-bottom:1px solid var(--bd);padding:8px 0">'+
+         '<div style="font-weight:600">'+esc(r.byName||r.byEmail||"?")+' <span class="pay-sub" style="font-weight:400">· '+when+'</span></div>'+
+         '<ul style="margin:4px 0 0 0;padding-left:18px">'+
+         (r.changes||[]).map(function(c){ return '<li>'+esc(c)+'</li>'; }).join('')+
+         '</ul></div>';
+    });
+    body.innerHTML=h;
+  }).catch(function(e){ body.innerHTML='<div class="pay-status err">Помилка: '+e.message+(e.code?'<br><small>'+e.code+' — можливо, треба правило Firestore для колекції edit_log</small>':'')+'</div>'; });
 }
 
 var CAT_KUZ = "КУЗОВНІ РОБОТИ";
@@ -6177,6 +6271,7 @@ function pmRenderPayments(){
 function pmRecalc(){ pmRender(); }
 
 function pmClear(){
+  pmLogSnap = null;
   PM_BLOCKS.forEach(function(b){
     if(!b.fixed) b.items = [];
     else {
@@ -6248,11 +6343,11 @@ function pmSave(){
   var col = db.collection("calculations");
   if(pmCurrentDocId){
     col.doc(pmCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()}, rec))
-      .then(function(){ pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); showToast("Оновлено: "+car); })
+      .then(function(){ pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); pmLogSnap=logCalcChange(pmCurrentDocId, rec, pmLogSnap, false)||pmLogSnap; showToast("Оновлено: "+car); })
       .catch(function(e){ pmIsSaving=false; showToast("Помилка: "+e.message); });
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()}, rec))
-      .then(function(docRef){ pmCurrentDocId=docRef.id; pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); showToast("Збережено: "+car); })
+      .then(function(docRef){ pmCurrentDocId=docRef.id; pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); pmLogSnap=logCalcChange(pmCurrentDocId, rec, null, true); showToast("Збережено: "+car); })
       .catch(function(e){ pmIsSaving=false; showToast("Помилка: "+e.message); });
   }
 }
@@ -6347,6 +6442,7 @@ function pmMarkCashLinked(){
 
 function pmLoadFromRecord(r, docId){
   pmCurrentDocId = docId;
+  pmLogSnap = calcSnapshotForLog(r);   // базовий знімок для журналу змін
   if(r.blocks){
     r.blocks.forEach(function(savedBlock){
       var block = PM_BLOCKS.find(function(b){return b.id===savedBlock.id;});
@@ -7139,17 +7235,18 @@ function soSave(){
   var col = db.collection("calculations");
   if(soCurrentDocId){
     col.doc(soCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){takeSnap("service");showToast("Оновлено: "+car);})
+      .then(function(){takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; showToast("Оновлено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(ref){soCurrentDocId=ref.id;takeSnap("service");showToast("Збережено: "+car);})
+      .then(function(ref){soCurrentDocId=ref.id;takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); showToast("Збережено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   }
 }
 
 function soLoadFromRecord(r, docId){
   soCurrentDocId = docId;
+  soLogSnap = calcSnapshotForLog(r);   // базовий знімок для журналу змін
   soParts = r.parts || [];
   soWorks = r.works || [];
   soPayments = r.payments || [];
@@ -7168,6 +7265,7 @@ function soLoadFromRecord(r, docId){
 }
 
 function soClear(){
+  soLogSnap = null;
   soCurrentDocId=null; soParts=[]; soWorks=[]; soPayments=[];
   ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   document.getElementById("so-disc").value="none";

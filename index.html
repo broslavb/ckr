@@ -2118,9 +2118,9 @@ function isAdmin(){ return currentUser && ADMINS.indexOf(currentUser.email) >= 0
 // cap-и: works (Роботи), parts (Запчастини/ТО), pay (вкладка Зарплата + НАРАХУВАННЯ;
 //        виплати/аванс/розстрочка все одно лише адмін), stats, prices, cash.
 var USER_PERMS = {
-  "broslav.b@gmail.com":  {admin:true},
-  "iaa.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true}, // + нарахування робіт; без виплат/статистики/цін
-  "iaa.in.ua2@gmail.com": {parts:true, cash:true}                        // Manager: без робіт, зарплати, статистики, цін
+  "broslav.b@gmail.com":    {admin:true},
+  "icars.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true}, // + нарахування робіт; без виплат/статистики/цін
+  "icars.in.ua2@gmail.com": {parts:true, cash:true}                        // Manager: без робіт, зарплати, статистики, цін
 };
 var DEFAULT_PERMS = {parts:true, cash:true}; // невідомий залогінений — мінімум прав
 function userPerms(){
@@ -2325,8 +2325,8 @@ auth.onAuthStateChanged(function(user) {
     currentUser = user;
     var nameMap = {
       "broslav.b@gmail.com": "Брослав (адмін)",
-      "iaa.in.ua@gmail.com": "Майстер",
-      "iaa.in.ua2@gmail.com": "Manager"
+      "icars.in.ua@gmail.com": "Майстер",
+      "icars.in.ua2@gmail.com": "Manager"
     };
     currentUserName = nameMap[user.email] || user.displayName || user.email.split("@")[0];
     document.getElementById("user-name").textContent = currentUserName;

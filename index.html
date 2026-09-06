@@ -1112,14 +1112,14 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="tab tab-create" id="tab-create-btn" onclick="toggleCreateMenu(event)">
     ＋ Створити калькуляцію ▾
     <div class="create-menu" id="create-menu">
-      <div onclick="event.stopPropagation();newCalc('works')">Роботи</div>
+      <div id="cm-works" onclick="event.stopPropagation();newCalc('works')">Роботи</div>
       <div onclick="event.stopPropagation();newCalc('parts')">Запчастини</div>
       <div onclick="event.stopPropagation();newCalc('service')">ТО / Замовлення</div>
     </div>
   </div>
   <div class="tab" onclick="switchTab('cash',this)">💰 Каса</div>
   <div class="tab" onclick="switchTab('parking',this)">🅿 Парковка</div>
-  <div class="tab" onclick="switchTab('pay',this)">👷 Зарплата</div>
+  <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
   <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" onclick="switchTab('receive',this)">📦 Отримання <span id="receive-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
@@ -1717,7 +1717,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div id="active-type-filter" style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap">
       <button class="atf-chip active" data-t="all"          onclick="setActiveType('all',this)">Усі</button>
-      <button class="atf-chip"        data-t="works"        onclick="setActiveType('works',this)">Роботи</button>
+      <button class="atf-chip" id="atf-works" data-t="works" onclick="setActiveType('works',this)">Роботи</button>
       <button class="atf-chip"        data-t="parts_v2"     onclick="setActiveType('parts_v2',this)">Запчастини</button>
       <button class="atf-chip"        data-t="service_order" onclick="setActiveType('service_order',this)">ТО / Замовлення</button>
     </div>
@@ -2101,6 +2101,28 @@ try { db.settings({ experimentalAutoDetectLongPolling: true }); } catch(e){ cons
 // ── ROLES ────────────────────────────────────────────────────────────────────
 var ADMINS = ["broslav.b@gmail.com"];
 function isAdmin(){ return currentUser && ADMINS.indexOf(currentUser.email) >= 0; }
+// ── ПРАВА ПО АКАУНТАХ ────────────────────────────────────────────────────────
+// cap-и: works (Роботи), parts (Запчастини/ТО), pay (вкладка Зарплата + НАРАХУВАННЯ;
+//        виплати/аванс/розстрочка все одно лише адмін), stats, prices, cash.
+var USER_PERMS = {
+  "broslav.b@gmail.com":  {admin:true},
+  "iaa.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true}, // + нарахування робіт; без виплат/статистики/цін
+  "iaa.in.ua2@gmail.com": {parts:true, cash:true}                        // Manager: без робіт, зарплати, статистики, цін
+};
+var DEFAULT_PERMS = {parts:true, cash:true}; // невідомий залогінений — мінімум прав
+function userPerms(){
+  if(!currentUser) return {};
+  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true};
+  return USER_PERMS[currentUser.email] || DEFAULT_PERMS;
+}
+function can(cap){ var p=userPerms(); return !!(p.admin || p[cap]); }
+// Показати/сховати вкладки й пункти меню відповідно до прав
+function applyPerms(){
+  var show=function(id,on){ var e=document.getElementById(id); if(e) e.style.display = on ? "" : "none"; };
+  show("tab-pay-btn",  can("pay"));
+  show("cm-works",     can("works"));   // пункт «Роботи» у меню створення
+  show("atf-works",    can("works"));   // чіп-фільтр «Роботи» у списку
+}
 
 var CAT_KUZ = "КУЗОВНІ РОБОТИ";
 var CAT_SLU = "СЛЮСАРНІ РОБОТИ";
@@ -2209,7 +2231,8 @@ auth.onAuthStateChanged(function(user) {
     currentUser = user;
     var nameMap = {
       "broslav.b@gmail.com": "Брослав (адмін)",
-      "icars.in.ua@gmail.com": "Майстер"
+      "iaa.in.ua@gmail.com": "Майстер",
+      "iaa.in.ua2@gmail.com": "Manager"
     };
     currentUserName = nameMap[user.email] || user.displayName || user.email.split("@")[0];
     document.getElementById("user-name").textContent = currentUserName;
@@ -2238,6 +2261,7 @@ auth.onAuthStateChanged(function(user) {
       var bb = document.getElementById("backup-btn");
       if(bb) bb.style.display = "inline";
     }
+    applyPerms();   // показати/сховати вкладки й пункти меню за правами акаунта
     loadNBURate();
     loadPricesFromDB();
     loadWorkTemplates();
@@ -2460,6 +2484,11 @@ function takeSnap(m){ SNAP[m]=snapOf(m); }
 function isTabDirty(m){ return ["works","parts","service"].indexOf(m)>=0 && SNAP[m]!==snapOf(m); }
 
 function switchTab(t, el) {
+  // Захист прав: без доступу — не відкривати вкладку
+  if(t==="pay" && !can("pay")){ showToast("Немає доступу до Зарплати"); return; }
+  if(t==="works" && !can("works")){ showToast("Немає доступу до Робіт"); return; }
+  if((t==="stats") && !can("stats")){ showToast("Немає доступу до Статистики"); return; }
+  if((t==="settings"||t==="svcprices"||t==="presets") && !can("prices")){ showToast("Немає доступу до цін"); return; }
   // Незбережені зміни в поточній калькуляції — попередити
   if(CURRENT_TAB && CURRENT_TAB!==t && isTabDirty(CURRENT_TAB)){
     if(!confirm("У калькуляції є НЕЗБЕРЕЖЕНІ зміни.\n\nВийти без збереження?\nСкасуйте і натисніть «Зберегти», щоб не втратити.")) return;
@@ -3270,6 +3299,7 @@ document.addEventListener("click", closeCreateMenu);
 // Нова порожня калькуляція обраного типу
 function newCalc(type){
   closeCreateMenu();
+  if(type==="works" && !can("works")){ showToast("Немає доступу до Робіт"); return; }
   if(type==="works"){ clearW(); }
   else if(type==="parts"){ pmClear(); }
   else if(type==="service"){ soClear(); }
@@ -3346,6 +3376,7 @@ function loadActive(vin) {
         ? (r.status !== "done" && r.status !== "shelved" && r.status !== "in_work")
         : (r.status === "in_work");
       var okType = (ACTIVE_TYPE === "all") || (r.type === ACTIVE_TYPE);
+      if(r.type==="works" && !can("works")) return false;   // без прав на Роботи — не показувати
       return okStatus && okType && (!vin || r.vin === vin);
     });
 
@@ -3644,6 +3675,7 @@ function renderArchive(){
   var list = document.getElementById("arch-list"); if(!list) return;
   var docs = ARCH_DOCS.filter(function(d){
     var r=d.data();
+    if(r.type==="works" && !can("works")) return false;   // без прав на Роботи — не показувати
     if(ARCH_TYPE!=="all"){
       var t=r.type||"works";
       if(ARCH_TYPE==="parts_v2"){ if(t!=="parts" && t!=="parts_v2") return false; }

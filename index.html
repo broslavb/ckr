@@ -1117,8 +1117,8 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div onclick="event.stopPropagation();newCalc('service')">ТО / Замовлення</div>
     </div>
   </div>
-  <div class="tab" onclick="switchTab('cash',this)">💰 Каса</div>
-  <div class="tab" onclick="switchTab('parking',this)">🅿 Парковка</div>
+  <div class="tab" id="tab-cash-btn" onclick="switchTab('cash',this)">💰 Каса</div>
+  <div class="tab" id="tab-parking-btn" onclick="switchTab('parking',this)">🅿 Парковка</div>
   <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
   <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
@@ -2119,13 +2119,13 @@ function isAdmin(){ return currentUser && ADMINS.indexOf(currentUser.email) >= 0
 //        виплати/аванс/розстрочка все одно лише адмін), stats, prices, cash.
 var USER_PERMS = {
   "broslav.b@gmail.com":    {admin:true},
-  "icars.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true}, // + нарахування робіт; без виплат/статистики/цін
-  "icars.in.ua2@gmail.com": {parts:true, cash:true}                        // Manager: без робіт, зарплати, статистики, цін
+  "icars.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true, parking:true}, // + нарахування робіт; без виплат/статистики/цін
+  "icars.in.ua2@gmail.com": {parts:true}                                    // Manager: лише Запчастини/ТО (без Каси, Парковки, Робіт, Зарплати, Статистики, цін)
 };
-var DEFAULT_PERMS = {parts:true, cash:true}; // невідомий залогінений — мінімум прав
+var DEFAULT_PERMS = {parts:true, cash:true, parking:true}; // невідомий залогінений — мінімум прав
 function userPerms(){
   if(!currentUser) return {};
-  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true};
+  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true, parking:true};
   return USER_PERMS[currentUser.email] || DEFAULT_PERMS;
 }
 function can(cap){ var p=userPerms(); return !!(p.admin || p[cap]); }
@@ -2135,6 +2135,8 @@ function applyPerms(){
   show("tab-pay-btn",  can("pay"));
   show("cm-works",     can("works"));   // пункт «Роботи» у меню створення
   show("atf-works",    can("works"));   // чіп-фільтр «Роботи» у списку
+  show("tab-cash-btn", can("cash"));
+  show("tab-parking-btn", can("parking"));
 }
 
 // ── ЖУРНАЛ ЗМІН (Запчастини / ТО) ────────────────────────────────────────────
@@ -2581,6 +2583,8 @@ function switchTab(t, el) {
   // Захист прав: без доступу — не відкривати вкладку
   if(t==="pay" && !can("pay")){ showToast("Немає доступу до Зарплати"); return; }
   if(t==="works" && !can("works")){ showToast("Немає доступу до Робіт"); return; }
+  if(t==="cash" && !can("cash")){ showToast("Немає доступу до Каси"); return; }
+  if(t==="parking" && !can("parking")){ showToast("Немає доступу до Парковки"); return; }
   if((t==="stats") && !can("stats")){ showToast("Немає доступу до Статистики"); return; }
   if((t==="settings"||t==="svcprices"||t==="presets") && !can("prices")){ showToast("Немає доступу до цін"); return; }
   // Незбережені зміни в поточній калькуляції — попередити

@@ -512,6 +512,14 @@ body.pm-show-hidden tr.pr-hidden td{background:rgba(120,120,120,.08)}
 .pm-hidden-btn:hover{color:var(--bl);border-color:var(--bl)}
 body.pm-show-hidden .pm-hidden-btn{color:#e65100;border-color:#e65100;border-style:solid;font-weight:bold}
 @media print{ .pm-hidden-btn{display:none!important} }
+/* Приховані РОБОТИ: типово сховані; кнопка «Показати приховані» додає body.w-show-hidden */
+body:not(.w-show-hidden) .ritem.ritem-hidden{display:none!important}
+body.w-show-hidden .ritem.ritem-hidden{opacity:.5;box-shadow:inset 3px 0 0 #9e9e9e}
+body.w-show-hidden .ritem.ritem-hidden .ritem-name{text-decoration:line-through}
+.ritem-eye{cursor:pointer;color:var(--tx3);font-size:13px;padding:0 3px;user-select:none;line-height:1}
+.ritem-eye:hover{color:var(--bl)}
+.ritem.ritem-hidden .ritem-eye{color:#e65100}
+@media print{ .ritem-eye{display:none!important} .ritem.ritem-hidden{display:none!important} }
 /* Швидкі кнопки статусу: «П» (Перевірена вартість), «З» (Замовлено) */
 .pr-qbtn{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;font-size:10px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;font-family:var(--mono);flex-shrink:0;user-select:none}
 .pr-qbtn-p:hover{color:#f9a825;border-color:#f9a825}
@@ -1287,6 +1295,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
       <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
       <button class="btn btn-o" onclick="wArchiveCurrent()" title="Завершити ремонт і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
+      <button class="btn btn-o" id="w-hidden-toggle" onclick="toggleWorksHidden()" title="Показати/сховати приховані роботи" style="display:none">👁 Показати приховані</button>
     </div>
   </div>
 </div>
@@ -2555,7 +2564,7 @@ function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
     dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
-    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0];}),
+    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -2945,7 +2954,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       var prof=pUAH-actual;
       var share=stoCoordShare(it.name);   // чи можливе нарахування координатору для цієї операції
       var isAnik = share && it.coord==="anikin";
-      if(actual>0){ totProfit+=prof; if(isAnik) anikinBonus+=prof*PAY_COORD_SHARE_EXT; }
+      if(!it.hidden && actual>0){ totProfit+=prof; if(isAnik) anikinBonus+=prof*PAY_COORD_SHARE_EXT; }
       // Вибір координатора — лише де нарахування можливе; для винятків селект не показуємо
       var sel = share ? ('<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
         +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
@@ -2959,7 +2968,8 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(isAnik?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
       coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
     }
-    return '<div class="ritem">'
+    var eye='<span class="ritem-eye" title="'+(it.hidden?'Показати (враховувати й друкувати)':'Приховати (не рахувати, не друкувати)')+'" onclick="toggleWorkHidden(\''+it.uid+'\')">'+(it.hidden?'🙈':'👁')+'</span>';
+    return '<div class="ritem'+(it.hidden?' ritem-hidden':'')+'">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
       +(it.side?'<div class="ritem-side">▸ '+it.side+'</div>':'')
       +wAccBadge(it.uid)
@@ -2968,6 +2978,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       +'<div style="display:flex;align-items:center;gap:6px">'
       +coeffControl
       +'<div class="ritem-prices">'+priceMain+'</div>'
+      +eye
       +'<span class="ritem-rm" onclick="delW(\''+it.uid+'\')">×</span>'
       +'</div></div>';
   }).join("");
@@ -2996,6 +3007,7 @@ function renderWorksProfit(tKuz,tSlu,tBez,tMal,cats){
   var malCoordD=(wMalCoord==="anikin")?Math.round(Math.max(0,malMargin)*PAY_COORD_SHARE_EXT):0;
   var stoMargin=0, stoCoordD=0, stoC=0;
   (cats[CAT_STO]||[]).forEach(function(it){
+    if(it.hidden) return;   // приховані сторонні роботи не рахуються
     var lineC=Math.round((it.price||0)*(it.coeff||1)); stoC+=lineC;
     var actual=parseFloat(it.actualUAH)||0, m=lineC-actual; stoMargin+=m;
     if(stoCoordShare(it.name) && it.coord==="anikin") stoCoordD+=Math.round(Math.max(0,m)*PAY_COORD_SHARE_EXT);
@@ -3034,6 +3046,7 @@ function renderMalCoord(malUAH){
 function blockTotal(items,cur,disc,malBud){
   var rawUSD=0, budUSD=0;
   (items||[]).forEach(function(it){
+    if(it.hidden) return;   // приховані роботи не рахуються
     var c=it.coeff||1, p=it.price*c;
     rawUSD += cur==="uah" ? p/usdRate : p;                 // до знижок (з коеф.)
     var pB = malBud ? Math.round(p*0.85*10)/10 : p;        // після знижки маляра (bud)
@@ -3122,8 +3135,30 @@ function wRecalc(){
   if(totalDisc>0){dr.style.display="flex";document.getElementById("gt-disc").textContent="−"+Math.round(totalDisc).toLocaleString("uk-UA")+" грн";}
   else dr.style.display="none";
   document.getElementById("wsum-car").textContent=document.getElementById("w-car").value||"Авто не вказано";
+  wUpdateHiddenBtn();
 }
 function delW(uid){delete wsel[uid];renderSecs(DB);wRecalc();}
+// Приховати/показати рядок роботи (аналог «Приховати варіант» у ЗЧ): не рахується і не друкується
+function toggleWorkHidden(uid){
+  if(!wsel[uid]) return;
+  wsel[uid].hidden = !wsel[uid].hidden;
+  if(wsel[uid].hidden && !document.body.classList.contains("w-show-hidden"))
+    showToast("Роботу приховано. «Показати приховані» — біля кнопки Зберегти");
+  wRecalc();
+}
+// Перемикач видимості прихованих робіт (кнопка біля Зберегти)
+var W_SHOW_HIDDEN = false;
+function toggleWorksHidden(){
+  W_SHOW_HIDDEN = !W_SHOW_HIDDEN;
+  document.body.classList.toggle("w-show-hidden", W_SHOW_HIDDEN);
+  wUpdateHiddenBtn();
+}
+function wUpdateHiddenBtn(){
+  var b=document.getElementById("w-hidden-toggle"); if(!b) return;
+  var n=Object.keys(wsel).filter(function(u){return wsel[u].hidden;}).length;
+  b.style.display = n ? "" : "none";
+  b.textContent = (W_SHOW_HIDDEN?"🙈 Сховати приховані":"👁 Показати приховані")+" ("+n+")";
+}
 
 function clearW(){
   wsel={};uidCounter=0;
@@ -3172,7 +3207,7 @@ function saveW(){
   var pp=paySumUAH(wPayments);
   var totalUSD=0;
   Object.keys(wsel).forEach(function(uid){
-    var it=wsel[uid];var cur=DB[it.cat]?DB[it.cat].cur:"usd";
+    var it=wsel[uid];if(it.hidden)return;var cur=DB[it.cat]?DB[it.cat].cur:"usd";
     var p=it.price*(it.coeff||1);
     if(it.cat===CAT_MAL&&malType==="bud")p=p*0.85;
     var disc=it.cat===CAT_KUZ?discKuz:it.cat===CAT_SLU?discSlu:0;
@@ -3195,7 +3230,7 @@ function saveW(){
     bodymanName:(function(){var s=document.getElementById("w-bodyman");return s&&s.selectedIndex>0?s.options[s.selectedIndex].text:"";})(),
     payments:JSON.parse(JSON.stringify(wPayments)),
     totalUSD:Math.round(totalUSD*100)/100,totalUAH:totalUAH,
-    count:Object.keys(wsel).length,
+    count:Object.keys(wsel).filter(function(uid){return !wsel[uid].hidden;}).length,
     works:Object.keys(wsel).map(function(uid){return JSON.parse(JSON.stringify(wsel[uid]));})
   };
   if(!confirmDoneIfUnpaid(rec.status, totalUAH, wPayments)) return;
@@ -7338,6 +7373,7 @@ function actCollectWorks(){
     var malBud=(cat===CAT_MAL && malType==="bud");
     var d=(cat===CAT_KUZ)?discKuz:(cat===CAT_SLU?discSlu:0);
     items.forEach(function(it){
+      if(it.hidden) return;   // приховані роботи не потрапляють в акт
       var c=it.coeff||1; var pRaw=it.price*c; if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
       var uah=cur==="uah"?Math.round(pRaw):Math.round(pRaw*usdRate);
       grossUAH+=uah; rows.push({name:it.name, side:it.side||"", uah:uah});

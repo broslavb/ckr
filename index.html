@@ -825,8 +825,13 @@ input, select, button, .btn, .pp-inp, .cinp,
   /* Hide empty blocks in parts print */
   .pb-body:not(:has(tr[data-item-id])) { display:none!important; }
 }
-/* Стовпець «Прибуток» і підсумок прибутку — НІКОЛИ не друкуються (лише адмін на екрані) */
-@media print{ .pt-profit, #pm-profit-row{ display:none!important; } }
+/* ⛔ ПРИБУТОК / МАРЖА / АДМІН-ДАНІ — НІКОЛИ не друкуються (лише адмін на екрані).
+   Основне правило: у ЖОДНІЙ версії для друку не показувати прибуток, маржу, закупку, координатора. */
+@media print{
+  .pt-profit, #pm-profit-row,
+  #w-adm-profit, .ritem-coord, .ritem-coord-sum,
+  .no-print, [data-admin-only]{ display:none!important; }
+}
 
 /* ── MECHANIC PRINT ── show only: Наявність/Назва, К-ть, Артикул осн., Артикул альт. */
 @media print {

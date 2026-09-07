@@ -3141,7 +3141,19 @@ function delW(uid){delete wsel[uid];renderSecs(DB);wRecalc();}
 // Приховати/показати рядок роботи (аналог «Приховати варіант» у ЗЧ): не рахується і не друкується
 function toggleWorkHidden(uid){
   if(!wsel[uid]) return;
-  wsel[uid].hidden = !wsel[uid].hidden;
+  var goingHidden = !wsel[uid].hidden;
+  // Попередження: по цій роботі ВЖЕ Є нарахування зарплати працівнику
+  if(goingHidden){
+    var a = W_ACC_MAP[uid];
+    if(a && a.pct){
+      var who = Object.keys(a.names||{}).filter(Boolean).join(", ");
+      if(!confirm("⚠ УВАГА! По цій роботі ВЖЕ НАРАХОВАНО зарплату"+(who?" ("+who+", "+Math.round(a.pct)+"%)":"")+".\n\n"
+        +"«"+wsel[uid].name+"»\n\n"
+        +"Приховування прибирає роботу з рахунку клієнта, але НЕ знімає нарахування працівнику — "
+        +"його треба сторнувати вручну у вкладці Зарплата.\n\nВсе одно приховати?")) return;
+    }
+  }
+  wsel[uid].hidden = goingHidden;
   if(wsel[uid].hidden && !document.body.classList.contains("w-show-hidden"))
     showToast("Роботу приховано. «Показати приховані» — біля кнопки Зберегти");
   wRecalc();

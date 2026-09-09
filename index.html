@@ -7485,11 +7485,14 @@ function actCollectParts(){
   var rows=[], total=0;
   (typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).forEach(function(b){
     (b.items||[]).forEach(function(it){
-      if(it.status==="hidden") return;
-      if(!it.name && !it.buyPrice) return;
-      var price=pmFinalWithDisc(pmFinalPrice(it),disc);
-      total+=price;
-      rows.push({name:it.name, avail:it.avail, status:it.status, qty:it.qty||1, uah:price});
+      // Головну позицію додаємо, лише якщо вона НЕ прихована й має що показати.
+      // ВАЖЛИВО: варіанти обробляємо ЗАВЖДИ — коли обрано «Вар2», головна «Вар1»
+      // прихована, але її активний варіант має потрапити в акт (інакше сума < калькуляції).
+      if(it.status!=="hidden" && (it.name || it.buyPrice)){
+        var price=pmFinalWithDisc(pmFinalPrice(it),disc);
+        total+=price;
+        rows.push({name:it.name, avail:it.avail, status:it.status, qty:it.qty||1, uah:price});
+      }
       (it.variants||[]).forEach(function(v){
         if(v.status==="hidden") return;
         if(!v.name && !v.buyPrice) return;

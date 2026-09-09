@@ -1370,7 +1370,8 @@ body.hero-on .hero-pad{margin-right:40vw}
           <div id="pm-hidden-row" style="display:none;padding-top:8px">
             <button type="button" id="pm-hidden-toggle" class="pm-hidden-btn" onclick="toggleHiddenVariants()">👁 Показати приховані</button>
           </div>
-          <div style="padding-top:8px">
+          <div style="padding-top:8px;display:flex;flex-direction:column;gap:6px">
+            <button type="button" class="pm-hidden-btn" onclick="pmApplyTTN()">📥 Вичитати ТТН із замовлень (avto.pro)</button>
             <button type="button" class="pm-hidden-btn" onclick="pmCheckTTNs()">🚚 Перевірити доставку (Нова Пошта)</button>
           </div>
 
@@ -1490,7 +1491,8 @@ body.hero-on .hero-pad{margin-right:40vw}
         <div id="so-hidden-row" style="display:none;padding-top:8px">
           <button type="button" id="so-hidden-toggle" class="pm-hidden-btn" onclick="toggleHiddenVariants()">👁 Показати приховані</button>
         </div>
-        <div style="padding-top:8px">
+        <div style="padding-top:8px;display:flex;flex-direction:column;gap:6px">
+          <button type="button" class="pm-hidden-btn" onclick="soApplyTTN()">📥 Вичитати ТТН із замовлень (avto.pro)</button>
           <button type="button" class="pm-hidden-btn" onclick="soCheckTTNs()">🚚 Перевірити доставку (Нова Пошта)</button>
         </div>
         <div class="pm-payments" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
@@ -5004,6 +5006,46 @@ function pmCheckTTNs(){
       .catch(function(){}).then(function(){ done++; if(done===items.length){ pmRender(); pmUpdateSummary(); showToast(rec?("✅ Отримано на складі: +"+rec):"Нових отримань нема"); } });
   });
 }
+// Вичитати ТТН із замовлень avto.pro (settings/avtopro_ttn) у поточну калькуляцію ЗЧ:
+// проставляє ТТН за номером замовлення + пропонує позначити скасовані. Далі — «Перевірити доставку».
+function pmApplyTTN(){
+  var need={}, allOrds={};
+  function scan(it){
+    var ord=avtoOrderNum(it.link); if(!ord) return; allOrds[ord]=true;
+    if(ttnDigits(it.ttn).length<10 && it.status!=="cancelled" && it.status!=="received") (need[ord]=need[ord]||[]).push(it);
+  }
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ scan(it); (it.variants||[]).forEach(scan); }); });
+  if(!Object.keys(allOrds).length){ showToast("Немає позицій з посиланням avto.pro"); return; }
+  showToast("Вичитую замовлення avto.pro…");
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data=d.exists?(d.data()||{}):{};
+    // 1) Скасування
+    var cancelItems=[];
+    function scanC(it){ var o=avtoOrderNum(it.link); if(o && data["c"+o] && it.status!=="cancelled" && it.status!=="received") cancelItems.push({it:it,ord:o,reason:(data["c"+o].reason||"")}); }
+    PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ scanC(it); (it.variants||[]).forEach(scanC); }); });
+    var cancelCnt=0;
+    if(cancelItems.length){
+      var byOrd={}; cancelItems.forEach(function(x){ (byOrd[x.ord]=byOrd[x.ord]||{reason:x.reason,n:0}).n++; });
+      var msg="🚫 Знайдено СКАСОВАНІ замовлення:\n\n"+Object.keys(byOrd).map(function(o){ return "№"+o+" ("+byOrd[o].n+" поз.)"+(byOrd[o].reason?" — "+byOrd[o].reason:""); }).join("\n")+"\n\nПозначити ці позиції «СКАСОВАНО»?";
+      if(confirm(msg)){ cancelItems.forEach(function(x){ x.it.status="cancelled"; x.it.statusDate=todayISO(); x.it.cancelReason=x.reason; cancelCnt++; }); }
+    }
+    // 2) ТТН
+    var hits=[], multi=[];
+    Object.keys(need).forEach(function(ord){
+      var rec=data["o"+ord]; if(!rec) return;
+      var list=(rec.all&&rec.all.length?rec.all:[rec.ttn]).map(ttnDigits).filter(function(t){ return t.length>=10; });
+      list=list.filter(function(t,i){ return list.indexOf(t)===i; });
+      if(list.length===1) hits.push({ord:ord, ttn:list[0]});
+      else if(list.length>1) multi.push({ord:ord, list:list});
+    });
+    if(multi.length){ alert("Замовлення з кількома ТТН — проставте вручну:\n\n"+multi.map(function(x){ return "№"+x.ord+" ("+need[x.ord].length+" поз.):\n   "+x.list.join("\n   "); }).join("\n\n")); }
+    var ttnCnt=0;
+    hits.forEach(function(h){ need[h.ord].forEach(function(it){ it.ttn=h.ttn; ttnCnt++; }); });
+    pmRender(); pmUpdateSummary(); pmCheckCancellations();
+    if(!ttnCnt && !cancelCnt){ showToast("Нічого нового з замовлень"); return; }
+    showToast("✅ ТТН: "+ttnCnt+" · 🚫 Скасовано: "+cancelCnt+" — не забудьте Зберегти");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
 // Розповсюдити «Отримано» на інші позиції з тим самим номером замовлення avto.pro
 function pmPropagateReceive(item){
   var ord=avtoOrderNum(item.link); if(!ord) return;
@@ -6804,6 +6846,43 @@ function soCheckTTNs(){
     npTrack(it.ttn).then(function(s){ it.ttnStatus=s.status; it.ttnCode=s.code; if(npIsDelivered(s.code)){ it.status="received"; it.statusDate=todayISO(); rec++; } })
       .catch(function(){}).then(function(){ done++; if(done===items.length){ soRenderParts(); soUpdateSummary(); showToast(rec?("✅ Отримано на складі: +"+rec):"Нових отримань нема"); } });
   });
+}
+// Вичитати ТТН із замовлень avto.pro у поточне ТО-замовлення (дзеркало pmApplyTTN)
+function soApplyTTN(){
+  var need={}, allOrds={};
+  function scan(it){
+    var ord=avtoOrderNum(it.link); if(!ord) return; allOrds[ord]=true;
+    if(ttnDigits(it.ttn).length<10 && it.status!=="cancelled" && it.status!=="received") (need[ord]=need[ord]||[]).push(it);
+  }
+  soParts.forEach(function(it){ scan(it); (it.variants||[]).forEach(scan); });
+  if(!Object.keys(allOrds).length){ showToast("Немає позицій з посиланням avto.pro"); return; }
+  showToast("Вичитую замовлення avto.pro…");
+  db.collection("settings").doc("avtopro_ttn").get().then(function(d){
+    var data=d.exists?(d.data()||{}):{};
+    var cancelItems=[];
+    function scanC(it){ var o=avtoOrderNum(it.link); if(o && data["c"+o] && it.status!=="cancelled" && it.status!=="received") cancelItems.push({it:it,ord:o,reason:(data["c"+o].reason||"")}); }
+    soParts.forEach(function(it){ scanC(it); (it.variants||[]).forEach(scanC); });
+    var cancelCnt=0;
+    if(cancelItems.length){
+      var byOrd={}; cancelItems.forEach(function(x){ (byOrd[x.ord]=byOrd[x.ord]||{reason:x.reason,n:0}).n++; });
+      var msg="🚫 Знайдено СКАСОВАНІ замовлення:\n\n"+Object.keys(byOrd).map(function(o){ return "№"+o+" ("+byOrd[o].n+" поз.)"+(byOrd[o].reason?" — "+byOrd[o].reason:""); }).join("\n")+"\n\nПозначити ці позиції «СКАСОВАНО»?";
+      if(confirm(msg)){ cancelItems.forEach(function(x){ x.it.status="cancelled"; x.it.statusDate=todayISO(); x.it.cancelReason=x.reason; cancelCnt++; }); }
+    }
+    var hits=[], multi=[];
+    Object.keys(need).forEach(function(ord){
+      var rec=data["o"+ord]; if(!rec) return;
+      var list=(rec.all&&rec.all.length?rec.all:[rec.ttn]).map(ttnDigits).filter(function(t){ return t.length>=10; });
+      list=list.filter(function(t,i){ return list.indexOf(t)===i; });
+      if(list.length===1) hits.push({ord:ord, ttn:list[0]});
+      else if(list.length>1) multi.push({ord:ord, list:list});
+    });
+    if(multi.length){ alert("Замовлення з кількома ТТН — проставте вручну:\n\n"+multi.map(function(x){ return "№"+x.ord+" ("+need[x.ord].length+" поз.):\n   "+x.list.join("\n   "); }).join("\n\n")); }
+    var ttnCnt=0;
+    hits.forEach(function(h){ need[h.ord].forEach(function(it){ it.ttn=h.ttn; ttnCnt++; }); });
+    soRenderParts(); soUpdateSummary(); soCheckCancellations();
+    if(!ttnCnt && !cancelCnt){ showToast("Нічого нового з замовлень"); return; }
+    showToast("✅ ТТН: "+ttnCnt+" · 🚫 Скасовано: "+cancelCnt+" — не забудьте Зберегти");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
 function soPropagateReceive(item){
   var ord=avtoOrderNum(item.link); if(!ord) return;

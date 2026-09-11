@@ -9802,15 +9802,19 @@ function wAutoApplyCash(){
   (W_CASH_OPS||[]).forEach(function(x){
     if(existing[x.id]) return;                 // вже підтягнуто
     var amt = Math.round(x.o.amount||0);
+    // Ціна клієнту — з розділу ЦІНИ (каталог сторонніх) за назвою; факт = сума з каси.
+    // Якщо в каталозі нема — запасний варіант факт×1.3, щоб ціна не була порожньою.
+    var catP = wStoCatalogPrice(x.o.desc);
+    var clientP = catP>0 ? catP : Math.round(amt*1.3);
     // Мийки роблять по кілька разів — не мерджимо, кожна витрата = окремий рядок (сумуються)
     var isWash = /мийк|обдув/i.test(x.o.desc||"");
     var m = isWash ? null : wFindStoWork(x.o.desc);
     if(m && !m.cashOpId){                       // причепити до наявного рядка без каси
       m.actualUAH = amt; m.cashOpId = x.id; m.cashPending = true; m.fromCash = true;
-      if(!m.price) m.price = Math.round(amt*1.3);
+      if(!m.price) m.price = clientP;           // ціна вже стоїть (з каталогу) — не чіпаємо
     } else {                                    // створити новий рядок
       var uid = "u"+(++uidCounter);
-      wsel[uid] = { cat:CAT_STO, name:x.o.desc, price:Math.round(amt*1.3), side:"", coeff:1, uid:uid,
+      wsel[uid] = { cat:CAT_STO, name:x.o.desc, price:clientP, side:"", coeff:1, uid:uid,
                     actualUAH:amt, cashOpId:x.id, cashPending:true, fromCash:true };
     }
     added++;
@@ -9841,6 +9845,16 @@ function wCashConfirm(uid){
 function setItemPriceUAH(uid,val){ if(wsel[uid]){ var n=parseFloat(val)||0; wsel[uid].price=Math.round(n); wsel[uid].coeff=1; wRecalc(); } }
 
 // Шукає вже наявну сторонню роботу з такою ж назвою
+// Ціна клієнту з розділу ЦІНИ (каталог СТОРОННІХ) за назвою операції. 0 — якщо нема.
+function wStoCatalogPrice(desc){
+  var items=(DB[CAT_STO]||{items:[]}).items||[];
+  var d=(desc||"").trim().toLowerCase();
+  if(!d) return 0;
+  var i;
+  for(i=0;i<items.length;i++){ if((items[i].n||"").trim().toLowerCase()===d) return items[i].p||0; }   // точний збіг
+  for(i=0;i<items.length;i++){ var n=(items[i].n||"").trim().toLowerCase(); if(n && (d.indexOf(n)>=0 || n.indexOf(d)>=0)) return items[i].p||0; }   // частковий
+  return 0;
+}
 function wFindStoWork(desc){
   var d = (desc||"").toLowerCase().trim();
   if(!d) return null;

@@ -5143,7 +5143,19 @@ function pmQuickStatus(blockId, itemId, val){
   it.status=val; it.statusDate=todayISO();
   pmRender(); pmUpdateSummary();
   showToast(val==="check"?"Перевірена вартість":val==="ordered"?"Замовлено":val==="received"?"Отримано на складі":val==="cart"?"У корзині":"Статус оновлено");
+  warnStatusNoPrice(it, val);
   if(val==="received") pmPropagateReceive(it);
+}
+
+// Попередження: позиція отримала статус Корзина/Замовлено/Отримано, але вартість (закупка) не вписана — щоб не забути
+function warnStatusNoPrice(item, statusVal){
+  if(!item) return;
+  if(statusVal!=="cart" && statusVal!=="ordered" && statusVal!=="received") return;
+  if(parseFloat(item.buyPrice)>0) return;
+  var lbl = statusVal==="cart"?"Корзина":statusVal==="ordered"?"Замовлено":"Отримано на складі";
+  setTimeout(function(){
+    alert("⚠ УВАГА — не вписана вартість!\n\nПозиція: «"+(item.name||"без назви")+"»\nСтатус: "+lbl+"\n\nВпишіть закупівельну вартість, щоб не забути.");
+  }, 60);
 }
 
 // Захист від дублів артикула (лише основні позиції; варіанти навмисне дублюються)
@@ -5268,6 +5280,12 @@ function pmUpdItemStatus(blockId, itemId, selectEl){
   if(val==="hidden" && !document.body.classList.contains("pm-show-hidden")){
     showToast("Варіант приховано. «Показати приховані» — у підсумках справа");
   }
+  // Попередження, якщо статус Корзина/Замовлено/Отримано без вписаної вартості
+  (function(){
+    var b=PM_BLOCKS.find(function(x){return x.id===blockId;}), it=null;
+    if(b){ it=b.items.find(function(i){return i.id===itemId;}); if(!it) b.items.forEach(function(i){ if(i.variants){ var v=i.variants.find(function(v){return v.id===itemId;}); if(v) it=v; } }); }
+    warnStatusNoPrice(it, val);
+  })();
   pmUpdItem(blockId, itemId, "status", val);
 }
 
@@ -6881,7 +6899,7 @@ function soUpdPart(id, field, value){
   var item = soParts.find(function(p){return p.id===id;});
   if(!item){ soParts.forEach(function(p){ if(p.variants){ var v=p.variants.find(function(v){return v.id===id;}); if(v) item=v; }}); }
   if(item){ item[field]=value;
-    if(field==="status") item.statusDate=todayISO();   // дата зміни статусу
+    if(field==="status"){ item.statusDate=todayISO(); warnStatusNoPrice(item, value); }   // дата зміни статусу + попередження про вартість
     if(field==="qty" || field==="buyPrice"){
       // як у ЗЧ: стрілки number-input у Safari — рендер із затримкою, підсумок оновлюємо одразу
       soUpdateSummary(); soScheduleRender();
@@ -7007,6 +7025,7 @@ function soQuickStatus(id, val){
   it.status=val; it.statusDate=todayISO();
   soRenderParts(); soUpdateSummary();
   showToast(val==="check"?"Перевірена вартість":val==="ordered"?"Замовлено":val==="received"?"Отримано на складі":val==="cart"?"У корзині":"Статус оновлено");
+  warnStatusNoPrice(it, val);
   if(val==="received") soPropagateReceive(it);
 }
 

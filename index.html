@@ -2085,7 +2085,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-o" onclick="payCalNav(1)">›</button>
     </div>
     <div class="cal-legend">
-      <span><i class="cal-dot abs"></i>Прогул · −<span id="pay-cal-fine">1500</span> грн</span>
+      <span><i class="cal-dot abs"></i>Прогул · пн 2000 / інші 1500 · 2-й роб. день підряд 2000</span>
       <span><i class="cal-dot off"></i>Відгул · статистика</span>
     </div>
     <div id="pay-cal-grid" class="cal-grid"></div>
@@ -9127,7 +9127,6 @@ function payOpenAttend(wid){
   else if(!PAY_CAL_WORKER || !list.some(function(w){return w._id===PAY_CAL_WORKER;})) PAY_CAL_WORKER = list[0]._id;
   ws.value = PAY_CAL_WORKER;
   if(!PAY_CAL_MONTH){ var n=new Date(); PAY_CAL_MONTH = new Date(n.getFullYear(), n.getMonth(), 1); }
-  document.getElementById("pay-cal-fine").textContent = PAY_ABSENCE_FINE.toLocaleString("uk-UA");
   document.getElementById("pay-attend-modal").style.display = "flex";
   payRenderCalendar();
 }
@@ -9155,16 +9154,43 @@ function payRenderCalendar(){
     h += '<div class="'+cls+'" onclick="payAttendCycle(\''+date+'\')" title="'+date+'">'+d+'</div>';
   }
   grid.innerHTML = h;
-  // Підсумок місяця
-  var abs=0, off=0;
+  // Підсумок місяця (штраф — сума фактичних penaltyUAH, бо ставки різні)
+  var abs=0, off=0, fine=0;
   PAY_ATTEND.forEach(function(a){
     if(a.workerId!==PAY_CAL_WORKER) return;
     if(a.date.slice(0,7)!==(y+"-"+((m+1<10?"0":"")+(m+1)))) return;
-    if(a.kind==="absence") abs++; else if(a.kind==="dayoff") off++;
+    if(a.kind==="absence"){ abs++; fine+=(a.penaltyUAH||0); } else if(a.kind==="dayoff") off++;
   });
   document.getElementById("pay-cal-sum").innerHTML =
-    'Прогулів: <b style="color:var(--rd)">'+abs+'</b> · штраф <b>'+(abs*PAY_ABSENCE_FINE).toLocaleString("uk-UA")+' грн</b>'+
+    'Прогулів: <b style="color:var(--rd)">'+abs+'</b> · штраф <b>'+fine.toLocaleString("uk-UA")+' грн</b>'+
     ' · Відгулів: <b style="color:var(--blue-mid)">'+off+'</b>';
+}
+// Попередній РОБОЧИЙ день (Сб/Нд — вихідні, пропускаємо)
+function payPrevWorkDay(dateStr){
+  var d=new Date(dateStr+"T00:00:00");
+  do { d.setDate(d.getDate()-1); } while(d.getDay()===0 || d.getDay()===6);
+  return d.toISOString().slice(0,10);
+}
+// Штраф за прогул: 2-й+ робочий день підряд = 2000; інакше пн=2000, решта=1500
+function payAbsenceFine(dateStr, prevIsAbsence){
+  if(prevIsAbsence) return 2000;
+  return (new Date(dateStr+"T00:00:00").getDay()===1) ? 2000 : 1500;   // Пн=1
+}
+// Перерахувати штрафи всіх прогулів працівника (серії залежать від сусідніх днів)
+function payRecomputeAbsenceFines(wid){
+  var absSet={};
+  PAY_ATTEND.forEach(function(a){ if(a.workerId===wid && a.kind==="absence" && !a.void) absSet[a.date]=a; });
+  var ups=[];
+  Object.keys(absSet).forEach(function(date){
+    var a=absSet[date];
+    var fine=payAbsenceFine(date, !!absSet[payPrevWorkDay(date)]);
+    if((a.penaltyUAH||0)!==fine){
+      var rate=a.rate||usdRate||44.1;
+      a.penaltyUAH=fine; a.amountUSD=Math.round((fine/rate)*100)/100;   // локально теж
+      ups.push(db.collection("attendance").doc(a._id).update({penaltyUAH:fine, amountUSD:a.amountUSD}));
+    }
+  });
+  return Promise.all(ups);
 }
 function payAttendCycle(date){
   var wid = PAY_CAL_WORKER;
@@ -9175,13 +9201,14 @@ function payAttendCycle(date){
   var done = function(){
     db.collection("attendance").get().then(function(s){
       PAY_ATTEND=[]; s.forEach(function(d){ PAY_ATTEND.push(Object.assign({_id:d.id}, d.data())); });
-      payRenderCalendar(); payRenderCards();
+      payRecomputeAbsenceFines(wid).then(function(){ payRenderCalendar(); payRenderCards(); });
     });
   };
   if(!rec){
+    var baseFine = payAbsenceFine(date, !!payAttendGet(wid, payPrevWorkDay(date)) && payAttendGet(wid, payPrevWorkDay(date)).kind==="absence");
     db.collection("attendance").add({ workerId:wid, workerName:w.name, role:w.role, date:date,
-      kind:"absence", penaltyUAH:PAY_ABSENCE_FINE, rate:rate,
-      amountUSD:Math.round((PAY_ABSENCE_FINE/rate)*100)/100,
+      kind:"absence", penaltyUAH:baseFine, rate:rate,
+      amountUSD:Math.round((baseFine/rate)*100)/100,
       author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" })
       .then(done).catch(function(e){ showToast("Помилка: "+e.message); });
   } else if(rec.kind==="absence"){

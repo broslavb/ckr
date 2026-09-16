@@ -665,6 +665,27 @@ tr.pr-cancelled td input,tr.pr-cancelled td .pr-avail-txt{color:#c62828!importan
   body.so-print #tab-works,body.so-print #tab-parts,body.so-print .hdr,body.so-print .tabs{display:none!important}
 }
 
+/* ── ТО ДРУК ДЛЯ СЛЮСАРЯ ── лише запчастини: Назва + К-ть + Артикул осн./альт., БЕЗ цін */
+@media print {
+  /* сховати Вар(1), Вартість(4), Фін.вартість(5) */
+  body.so-print-mech .so-pt th:nth-child(1),body.so-print-mech .so-pt td:nth-child(1),
+  body.so-print-mech .so-pt th:nth-child(4),body.so-print-mech .so-pt td:nth-child(4),
+  body.so-print-mech .so-pt th:nth-child(5),body.so-print-mech .so-pt td:nth-child(5){display:none!important}
+  /* показати артикули осн.(6) та альт.(7) */
+  body.so-print-mech .so-pt th:nth-child(6),body.so-print-mech .so-pt td:nth-child(6){display:table-cell!important;width:22%!important}
+  body.so-print-mech .so-pt th:nth-child(7),body.so-print-mech .so-pt td:nth-child(7){display:table-cell!important;width:22%!important}
+  /* сховати все з 8-ї колонки далі (посилання/постач./закупка/статус/дії) */
+  body.so-print-mech .so-pt th:nth-child(n+8),body.so-print-mech .so-pt td:nth-child(n+8){display:none!important}
+  body.so-print-mech .so-pt th:nth-child(2),body.so-print-mech .so-pt td:nth-child(2){width:48%!important}
+  body.so-print-mech .so-pt th:nth-child(3),body.so-print-mech .so-pt td:nth-child(3){width:8%!important;text-align:center!important}
+  /* артикули друкуємо як чистий текст */
+  body.so-print-mech .so-pt input{border:none!important;background:transparent!important;color:#0d2b6b!important;font-weight:bold!important;font-family:Verdana,sans-serif!important;font-size:10pt!important;width:100%!important;padding:0!important}
+  /* слюсарю не потрібні роботи, підсумки, оплати, рахунок */
+  body.so-print-mech #so-works-body,body.so-print-mech .so-wt,body.so-print-mech #so-works-hdr,body.so-print-mech #so-print-footer{display:none!important}
+  /* позначка у шапці */
+  body.so-print-mech #ph-status::after{content:" · ДЛЯ СЛЮСАРЯ (без цін)";color:#c0392b;font-weight:bold}
+}
+
 
 /* Global Verdana override */
 input, select, button, .btn, .pp-inp, .cinp,
@@ -1469,7 +1490,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
 
     <!-- Блок РОБОТИ -->
-    <div class="so-section-hdr" onclick="soToggleSection('so-works-body')" style="margin-top:12px">
+    <div class="so-section-hdr" id="so-works-hdr" onclick="soToggleSection('so-works-body')" style="margin-top:12px">
       <span>РОБОТИ</span>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="so-section-total" id="so-works-total"></span>
@@ -1623,6 +1644,9 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div style="font-size:14px;font-weight:bold;color:var(--blue-dark);margin-bottom:16px">🖨 Друк ТО / Замовлення</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
       <div style="font-size:11px;color:var(--tx3)">Рахунок № <input id="so-inv-modal-num" type="text" style="font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--bd);padding:3px 6px;border-radius:3px;outline:none;width:160px" placeholder="28.05.2026-001"/></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);cursor:pointer">
+        <input type="checkbox" id="so-pr-mech"/> 🔧 Для слюсаря — назви, артикули, к-ть, <b>без цін</b>
+      </label>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-p" onclick="soExecutePrint()" style="flex:1">Друкувати</button>
@@ -7792,6 +7816,7 @@ function soShowPrint(){
 
 function soExecutePrint(){
   var ins = false;   // «для страхової» прибрано — звичайний друк ТО і так без закупівельних цін
+  var mech = document.getElementById("so-pr-mech") && document.getElementById("so-pr-mech").checked;
   document.getElementById("so-print-modal").style.display="none";
 
   // Populate shared print header
@@ -7862,6 +7887,7 @@ function soExecutePrint(){
   var tabSvc=document.getElementById("tab-service");
   document.body.classList.add("so-print");
   if(ins) document.body.classList.add("so-ins-print");
+  if(mech) document.body.classList.add("so-print-mech");
 
   // Hide all other tabs
   ["tab-works","tab-parts","tab-active","tab-archive","tab-settings","tab-svcprices","tab-presets"].forEach(function(id){
@@ -7880,7 +7906,7 @@ function soExecutePrint(){
     window.print();
     setTimeout(function(){
       document.title = soOrigTitle;
-      document.body.classList.remove("so-print","so-ins-print");
+      document.body.classList.remove("so-print","so-ins-print","so-print-mech");
       document.getElementById("print-header").style.display="none";
       if(footer) footer.style.display="none";
       ["tab-works","tab-parts","tab-active","tab-archive","tab-settings","tab-svcprices","tab-presets"].forEach(function(id){

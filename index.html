@@ -1539,6 +1539,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <span class="pm-slbl">Залишок оплати</span>
           <span class="pm-sval" id="so-balance" style="color:var(--bl)">0 грн</span>
         </div>
+        <div id="so-adm-profit" class="no-print"></div>
       </div>
 
       <div style="padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
@@ -7478,7 +7479,34 @@ function soUpdateSummary(){
   var ptotEl = document.getElementById("so-paid-total"); if(ptotEl) ptotEl.textContent=paidTotal.toLocaleString("uk-UA")+" грн";
   var balEl = document.getElementById("so-balance"); if(balEl) balEl.textContent=(grandTotal-paidTotal).toLocaleString("uk-UA")+" грн";
 
+  soRenderProfit(disc, worksTotal);
   refreshHiddenToggleBtns();
+}
+
+// Прибуток на ТО — лише адмін. ЗЧ: клієнту − закупка − 6% податок; Роботи — дохід − 6% (оплата слюсаря через Зарплату)
+function soRenderProfit(disc, worksTotal){
+  var el=document.getElementById("so-adm-profit"); if(!el) return;
+  if(!isAdmin()){ el.innerHTML=""; return; }
+  var TAX=0.06;
+  var partsProfit=0;
+  var acc=function(it){
+    var client=soFinalWithDisc(soFinalPrice(it), disc.parts);
+    if(!client) return;                         // від клієнта / приховані / без ціни — 0
+    var buy=(it.buyPrice||0)*(it.qty||1);
+    partsProfit += client - buy - Math.round(client*TAX);
+  };
+  soParts.forEach(function(it){ acc(it); (it.variants||[]).forEach(acc); });
+  var worksNet = worksTotal - Math.round(worksTotal*TAX);
+  var total = partsProfit + worksNet;
+  var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
+  var col=function(v){ return v>=0?"var(--gr)":"var(--rd)"; };
+  el.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px">'
+    +'<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Прибуток на ТО (лише адмін)</div>'
+    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Прибуток ЗЧ (клієнту − закупка − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(partsProfit)+'">'+f(partsProfit)+' грн</span></div>'
+    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Роботи (дохід − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(worksNet)+'">'+f(worksNet)+' грн</span></div>'
+    +'<div class="pm-srow main" style="margin-top:4px"><span class="pm-slbl" style="font-size:12px;color:var(--tx)">ПРИБУТОК ТО</span><span class="pm-sval" style="color:'+col(total)+'">'+f(total)+' грн</span></div>'
+    +'<div class="pay-sub" style="margin-top:4px;font-size:10px">Оплата слюсаря за роботи — через Зарплату (нарахування).</div>'
+    +'</div>';
 }
 
 // ── SAVE / LOAD ──────────────────────────────────────────────────────────────

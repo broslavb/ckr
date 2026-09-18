@@ -8917,11 +8917,14 @@ function payEnsureCoord(){
 }
 
 // ── КАРТКИ ПРАЦІВНИКІВ ──
+// Акаунт координатора (Анікін) — бачить власну картку зарплати, хоч і не адмін
+function isCoordAccount(){ return currentUser && currentUser.email === "icars.in.ua@gmail.com"; }
+function payCanSeeCard(w){ return w.active!==false && (w.role!=="coord" || isAdmin() || isCoordAccount()); }
 function payRenderCards(){
   var el = document.getElementById("pay-cards"); if(!el) return;
   var mEl=document.getElementById("pay-month"); if(mEl && mEl.value!==PAY_MONTH) mEl.value=PAY_MONTH;
   el.innerHTML = "";
-  PAY_WORKERS.filter(function(w){ return w.active !== false && (w.role!=="coord" || isAdmin()); }).forEach(function(w){
+  PAY_WORKERS.filter(payCanSeeCard).forEach(function(w){
     var b = payBalance(w._id);
     var card = document.createElement("div");
     card.className = "pay-card" + (PAY_SEL_WORKER===w._id ? " sel" : "");

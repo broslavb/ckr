@@ -1391,6 +1391,7 @@ body.hero-on .hero-pad{margin-right:40vw}
             <span class="pm-slbl" style="font-size:12px;color:var(--tx)">ВСЬОГО ЗАПЧАСТИНИ</span>
             <span class="pm-sval total" id="pm-grand-total">0 грн</span>
           </div>
+          <div id="pm-vartotals"></div>
           <div class="pm-srow" id="pm-prio-row" style="display:none">
             <span class="pm-slbl" style="color:#ff8f00;font-weight:bold">Першочергові</span>
             <span class="pm-sval" id="pm-prio-total" style="color:#ff8f00;font-weight:bold">0 грн</span>
@@ -6400,6 +6401,38 @@ function pmRender(){
   pmUpdateSummary();
 }
 
+// Підсумки по комплектаціях: для кожного рівня Вар1/Вар2/… — усі позиції без варіантів
+// + обраний варіант (де такого немає — найвищий наявний), щоб клієнт бачив різницю.
+function pmVariantTotals(disc){
+  var maxVar=1;
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(i){ if(i.variants && (i.variants.length+1)>maxVar) maxVar=i.variants.length+1; }); });
+  if(maxVar<2) return null;
+  var totals=[];
+  for(var L=1; L<=maxVar; L++){
+    var t=0;
+    PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){
+      var group=[it].concat(it.variants||[]);
+      var idx=(group.length===1)?0:Math.min(L-1, group.length-1);
+      t += pmFinalWithDisc(pmFinalPrice(group[idx]), disc);
+    }); });
+    totals.push(t);
+  }
+  return totals;
+}
+function pmRenderVarTotals(disc){
+  var el=document.getElementById("pm-vartotals"); if(!el) return;
+  var totals=pmVariantTotals(disc);
+  if(!totals){ el.innerHTML=""; return; }
+  var h='<div class="pm-srow" style="margin-top:4px;padding-top:6px;border-top:1px dashed #7c3aed"><span class="pm-slbl" style="font-size:10px;color:#7c3aed;text-transform:uppercase;letter-spacing:.6px;font-weight:700">Комплектації (варіанти)</span><span></span></div>';
+  totals.forEach(function(t,i){
+    h+='<div class="pm-srow"><span class="pm-slbl" style="font-size:11px;color:#7c3aed;font-weight:600">Разом з Вар'+(i+1)+'</span><span class="pm-sval" style="font-size:12px;font-weight:bold;color:#7c3aed">'+t.toLocaleString("uk-UA")+' грн</span></div>';
+  });
+  if(totals.length>=2){
+    var save=totals[0]-totals[1];   // Вар1 (зазвичай оригінал) − Вар2 (аналог/б.в.)
+    if(save!==0) h+='<div class="pm-srow"><span class="pm-slbl" style="font-size:10px;color:var(--tx3)">'+(save>0?"Вар2 дешевше на":"Вар2 дорожче на")+'</span><span class="pm-sval" style="font-size:11px;font-weight:600;color:'+(save>0?"var(--gr)":"var(--rd)")+'">'+Math.abs(save).toLocaleString("uk-UA")+' грн</span></div>';
+  }
+  el.innerHTML=h;
+}
 function pmUpdateSummary(){
   var disc = pmDiscCode();
   var grandTotal = 0;
@@ -6419,6 +6452,8 @@ function pmUpdateSummary(){
   if(totalsEl) totalsEl.innerHTML = html;
   var gtEl = document.getElementById("pm-grand-total");
   if(gtEl) gtEl.textContent = grandTotal.toLocaleString("uk-UA") + " грн";
+
+  pmRenderVarTotals(disc);   // підсумки по комплектаціях (Вар1/Вар2/…)
 
   // #3 Сума першочергових деталей (item.priority + його варіанти)
   var prioTotal = 0;

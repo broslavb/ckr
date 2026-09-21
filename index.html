@@ -496,9 +496,15 @@ tr.pr-prio td:nth-child(2){box-shadow:inset 3px 0 0 #ff8f00}
 tr.pr-dragging td{opacity:.45}
 tr.pr-drop-before td{box-shadow:inset 0 2px 0 0 var(--bl)!important}
 tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
+/* Група варіантів (Вар1 + Вар2/Вар3) — фіолетова смуга + фон, щоб пара виділялась у роботі й друці */
+.pt tr.pr-vgroup td{background:rgba(124,58,237,.08)}
+.pt tr.pr-vgroup td:first-child{box-shadow:inset 3px 0 0 0 #7c3aed}
 @media print{
   .pr-prio-btn{display:none!important}
   .pr-drag{display:none!important}
+  .pr-move{display:none!important}
+  .pt tr.pr-vgroup td{background:rgba(124,58,237,.12)!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .pt tr.pr-vgroup td:first-child{border-left:3px solid #7c3aed!important;box-shadow:none!important}
   body.print-prio-only .pt tbody tr[data-item-id]:not(.pr-prio){display:none!important}
   body.print-prio-only .pb:not(:has(tr.pr-prio)){display:none!important}
   tr.pr-prio td{background:transparent!important;box-shadow:none!important}
@@ -5439,6 +5445,7 @@ function toggleHiddenVariants(){
 // #2 Перенос рядка запчастини в інший блок
 function pmMoveSelect(fromBlockId, itemId){
   var sel=document.createElement("select");
+  sel.className="pr-move";
   sel.title="Перенести в інший блок";
   sel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:1px 2px;width:22px;cursor:pointer;vertical-align:middle";
   var o0=document.createElement("option"); o0.value=""; o0.textContent="⇄"; sel.appendChild(o0);
@@ -5478,6 +5485,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(item.status==="error") tr.classList.add("pr-error");
   if(item.status==="cancelled") tr.classList.add("pr-cancelled");
   if(isHidden) tr.classList.add("pr-hidden");
+  if(hasVariants||isVariant) tr.classList.add("pr-vgroup");   // Вар1 (з варіантами) + Вар2/Вар3
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 

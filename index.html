@@ -5430,6 +5430,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
       var v = t==="number" ? +this.value : this.value;
       // Артикули: прибрати пробіли всередині кожного коду (до коми)
       if(f==="code"||f==="altCode"){ v=normCode(v); this.value=v; }
+      // Постачальник: прибрати пробіли перед назвою (частий випадок при вставленні)
+      if(f==="supplierName"){ v=v.replace(/^\s+/,""); this.value=v; }
       // ТТН: лише цифри
       if(f==="ttn"){ v=ttnDigits(v); this.value=v; }
       // Заповнили «Посилання» — деталь вважається замовленою
@@ -5492,6 +5494,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
       });
     })(blockId,item.id,tr);
     td1.appendChild(dragH);
+    // #2 Перенести в інший блок — одразу після перетягувача (ліва частина рядка)
+    td1.appendChild(pmMoveSelect(blockId, item.id));
   }
   if(hasVariants||isVariant){
     var sp=document.createElement("span");
@@ -5627,8 +5631,6 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     prioBtn.textContent="1"; prioBtn.title="\u0414\u0435\u0442\u0430\u043b\u044c \u043f\u0435\u0440\u0448\u043e\u0457 \u0447\u0435\u0440\u0433\u0438";
     (function(it){ prioBtn.onclick=function(){ it.priority=!it.priority; pmRender(); pmUpdateSummary(); }; })(item);
     td12.appendChild(prioBtn);
-    // #2 \u041f\u0435\u0440\u0435\u043d\u0435\u0441\u0442\u0438 \u0432 \u0456\u043d\u0448\u0438\u0439 \u0431\u043b\u043e\u043a
-    td12.appendChild(pmMoveSelect(blockId, item.id));
     var varBtn=document.createElement("span");
     varBtn.className="pr-var"; varBtn.textContent="+\u0412";
     varBtn.title="\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0430\u0440\u0456\u0430\u043d\u0442";
@@ -7144,6 +7146,8 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
       var v = t==="number" ? +this.value : this.value;
       // Артикули: прибрати пробіли всередині кожного коду (до коми)
       if(f==="code"||f==="altCode"){ v=normCode(v); this.value=v; }
+      // Постачальник: прибрати пробіли перед назвою (частий випадок при вставленні)
+      if(f==="supplierName"){ v=v.replace(/^\s+/,""); this.value=v; }
       // ТТН: лише цифри
       if(f==="ttn"){ v=ttnDigits(v); this.value=v; }
       // Заповнили «Посилання» — деталь вважається замовленою

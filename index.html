@@ -4980,6 +4980,35 @@ function pmAddVariant(blockId, itemId){
   pmRender();
 }
 
+// ── БЛОК-ВАРІАНТ (напр. Бампер в зборі / аналог) — цілий додатковий блок для порівняння ──
+var PM_BLOCK_VARIANTABLE = ["b_front","b_rear"];   // для яких блоків доступно «додати блок-варіант»
+function pmBlockBaseId(id){ var i=String(id).indexOf("__v"); return i>=0?String(id).slice(0,i):id; }
+function pmAddVariantBlock(baseId){
+  var bi=-1; PM_BLOCKS.forEach(function(b,k){ if(b.id===baseId) bi=k; });
+  if(bi<0) return;
+  var base=PM_BLOCKS[bi];
+  var root=pmBlockBaseId(baseId);
+  // порядковий номер варіанту серед уже наявних для цього кореня
+  var n=2; PM_BLOCKS.forEach(function(b){ if(b.variantOf && pmBlockBaseId(b.variantOf)===root) n++; });
+  var baseLabel=String(base.label).replace(/\s*—\s*ВАР\d+$/,"");
+  var nb={ id: root+"__v"+n+"_"+(uid()), label: baseLabel+" — ВАР"+n, variantOf: baseId,
+           items:[ {id:uid(), name:baseLabel.replace(/\s*В ЗБОРІ$/i,"")+" в зборі", qty:1, avail:"", code:"", altCode:"", supplier:"avto.pro", link:"", buyPrice:0, markupType:"auto", status:"dash", variants:[]} ] };
+  // вставити після останнього блоку цього кореня
+  var insAt=bi+1; PM_BLOCKS.forEach(function(b,k){ if((b.id===root||pmBlockBaseId(b.variantOf||"")===root) && k+1>insAt) insAt=k+1; });
+  PM_BLOCKS.splice(insAt,0,nb);
+  pmRender(); pmUpdateSummary();
+  showToast("Додано блок-варіант: "+nb.label);
+}
+function pmRemoveBlock(blockId){
+  var b=PM_BLOCKS.find(function(x){return x.id===blockId;});
+  if(!b || !b.variantOf) return;   // прибирати можна лише додані блоки-варіанти
+  var has=(b.items||[]).some(function(i){return i.name||i.buyPrice;});
+  if(has && !confirm("Видалити блок «"+b.label+"» разом із позиціями?")) return;
+  PM_BLOCKS = PM_BLOCKS.filter(function(x){return x.id!==blockId;});
+  pmRender(); pmUpdateSummary();
+}
+function pmRemoveVariantBlocks(){ PM_BLOCKS = PM_BLOCKS.filter(function(b){ return !b.variantOf; }); }
+
 function pmDelItem(blockId, itemId, isVariant){
   var block = PM_BLOCKS.find(function(b){return b.id===blockId;});
   if(!block) return;
@@ -6260,6 +6289,14 @@ function pmRender(){
     chev.className = "pb-chev";
     chev.innerHTML = "&#9660;";
     sumWrap.appendChild(sumEl);
+    // Видалити доданий блок-варіант
+    if(block.variantOf){
+      var delB=document.createElement("span");
+      delB.textContent="✕"; delB.title="Видалити цей блок-варіант";
+      delB.style.cssText="cursor:pointer;color:rgba(255,255,255,.75);font-size:13px;padding:0 4px";
+      (function(bid){ delB.onclick=function(e){ e.stopPropagation(); pmRemoveBlock(bid); }; })(block.id);
+      sumWrap.appendChild(delB);
+    }
     sumWrap.appendChild(chev);
     hdr.appendChild(lbl);
     hdr.appendChild(sumWrap);
@@ -6335,6 +6372,16 @@ function pmRender(){
         pmBuildPresetPopup(bid, el);
       }; })(block.id, presetBtn);
       addRow.appendChild(presetBtn);
+    }
+    // #4 Додати блок-варіант (бампер в зборі / аналог) — для бамперних блоків
+    if(PM_BLOCK_VARIANTABLE.indexOf(pmBlockBaseId(block.id))>=0){
+      var varBlockBtn=document.createElement("span");
+      varBlockBtn.className="pt-add-btn";
+      varBlockBtn.style.cssText="color:var(--blue-dark);border-color:var(--blue-dark)";
+      varBlockBtn.textContent="⧉ Блок-варіант (в зборі / аналог)";
+      varBlockBtn.title="Додати окремий блок ВАР2 — напр. бампер в зборі або аналог (Китай/Тайвань), для порівняння";
+      (function(bid){ varBlockBtn.onclick=function(e){ e.stopPropagation(); pmAddVariantBlock(bid); }; })(block.id);
+      addRow.appendChild(varBlockBtn);
     }
     body.appendChild(addRow);
 
@@ -6515,6 +6562,7 @@ function pmRecalc(){ pmRender(); }
 
 function pmClear(){
   pmLogSnap = null;
+  pmRemoveVariantBlocks();   // прибрати додані блоки-варіанти (бампери ВАР2 тощо)
   PM_BLOCKS.forEach(function(b){
     if(!b.fixed) b.items = [];
     else {
@@ -6577,7 +6625,7 @@ function pmSave(){
     totalUAH:grandTotal,
     masterEmail:currentUser?currentUser.email:"",
     masterName:currentUserName||"",
-    blocks:PM_BLOCKS.map(function(b){return {id:b.id, label:b.label, items:JSON.parse(JSON.stringify(b.items))};}),
+    blocks:PM_BLOCKS.map(function(b){return {id:b.id, label:b.label, variantOf:b.variantOf||null, items:JSON.parse(JSON.stringify(b.items))};}),
     payments:JSON.parse(JSON.stringify(pmPayments))
   };
 
@@ -6686,10 +6734,19 @@ function pmMarkCashLinked(){
 function pmLoadFromRecord(r, docId){
   pmCurrentDocId = docId;
   pmLogSnap = calcSnapshotForLog(r);   // базовий знімок для журналу змін
+  pmRemoveVariantBlocks();             // почати з базового набору блоків
   if(r.blocks){
     r.blocks.forEach(function(savedBlock){
-      var block = PM_BLOCKS.find(function(b){return b.id===savedBlock.id;});
-      if(block) block.items = savedBlock.items || [];
+      if(savedBlock.variantOf){        // збережений блок-варіант — відтворити після базового
+        if(!PM_BLOCKS.some(function(b){return b.id===savedBlock.id;})){
+          var nb={id:savedBlock.id, label:savedBlock.label, variantOf:savedBlock.variantOf, items:savedBlock.items||[]};
+          var bi=-1; PM_BLOCKS.forEach(function(b,k){ if(b.id===savedBlock.variantOf) bi=k; });
+          if(bi>=0) PM_BLOCKS.splice(bi+1,0,nb); else PM_BLOCKS.push(nb);
+        }
+      } else {
+        var block = PM_BLOCKS.find(function(b){return b.id===savedBlock.id;});
+        if(block) block.items = savedBlock.items || [];
+      }
     });
   }
   pmPayments = r.payments || [];

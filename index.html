@@ -4289,6 +4289,25 @@ function showPrintModal(source){
   mechWrap.appendChild(mechCb); mechWrap.appendChild(mechSp);
   opts.appendChild(mechWrap);
 
+  // #3 Друк за варіантом (щоб дати клієнту окремі калькуляції Вар1 / Вар2 / …)
+  var maxVar = 1;
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(i){ if(i.variants && (i.variants.length+1)>maxVar) maxVar=i.variants.length+1; }); });
+  if(maxVar>1){
+    var vWrap=document.createElement("label");
+    vWrap.style.cssText="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--blue-dark);font-weight:600";
+    var vLbl=document.createElement("span"); vLbl.textContent="Комплектація (варіант):";
+    var vSel=document.createElement("select"); vSel.id="pr-variant";
+    vSel.style.cssText="font-size:11px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:3px 6px;cursor:pointer;color:var(--tx)";
+    var o0=document.createElement("option"); o0.value=""; o0.textContent="усі варіанти (як є)"; vSel.appendChild(o0);
+    for(var lv=1; lv<=maxVar; lv++){ var o=document.createElement("option"); o.value=String(lv); o.textContent="лише Вар"+lv+(lv===1?" (основні)":""); vSel.appendChild(o); }
+    vWrap.appendChild(vLbl); vWrap.appendChild(vSel);
+    opts.appendChild(vWrap);
+    var vHint=document.createElement("div");
+    vHint.style.cssText="font-size:10px;color:var(--tx3);margin-left:2px";
+    vHint.textContent="Друкує позиції без варіантів + обраний варіант. Де такого варіанту немає — береться найвищий наявний.";
+    opts.appendChild(vHint);
+  }
+
   // Зведений лист (підсумок) — має сенс, коли друкуємо і Роботи, і Запчастини
   var sumWrap = document.createElement("label");
   sumWrap.style.cssText="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--blue-dark);font-weight:600";
@@ -4438,6 +4457,18 @@ function executePrint(){
   var withCodes = document.getElementById("pr-with-codes") && document.getElementById("pr-with-codes").checked;
   var mechanic  = document.getElementById("pr-mechanic")   && document.getElementById("pr-mechanic").checked;
   var prioOnly  = document.getElementById("pr-prio-only")  && document.getElementById("pr-prio-only").checked;
+  // #3 Друк за варіантом: інші варіанти тимчасово ховаємо (status hidden) — підсумки перерахуються самі
+  var varSelEl = document.getElementById("pr-variant");
+  var varLevel = (varSelEl && varSelEl.value) ? parseInt(varSelEl.value,10) : 0;
+  var _varBackup = [];
+  if(varLevel){
+    PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){
+      var vs=it.variants||[]; if(!vs.length) return;               // без варіантів — друкуємо завжди
+      var group=[it].concat(vs);
+      var idx=Math.min(varLevel-1, group.length-1);                // немає такого варіанту → найвищий наявний
+      group.forEach(function(m,k){ if(k!==idx && m.status!=="hidden"){ _varBackup.push({m:m, st:m.status}); m.status="hidden"; } });
+    });});
+  }
   document.body.classList.toggle("print-with-codes", !!withCodes);
   document.body.classList.toggle("print-mechanic",   !!mechanic);
   document.body.classList.toggle("print-prio-only",  !!prioOnly);
@@ -4458,7 +4489,7 @@ function executePrint(){
   document.getElementById("ph-date").textContent   = (vinVal ? "VIN: "+vinVal+" \xb7 " : "") + dateVal;
   var statusMap = {preliminary:"\u0420\u043e\u0437\u0440\u0430\u0445\u0443\u043d\u043e\u043a",in_work:"\u0412 \u0440\u043e\u0431\u043e\u0442\u0456",final:"\u0424\u0456\u043d\u0430\u043b\u044c\u043d\u0438\u0439",insurance:"\u0421\u0442\u0440\u0430\u0445\u043e\u0432\u0430",done:"\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e"};
   var statusEl = srcMode==="works" ? document.getElementById("w-status") : null;
-  document.getElementById("ph-status").textContent = statusEl ? (statusMap[statusEl.value]||"") : "";
+  document.getElementById("ph-status").textContent = varLevel ? ("Комплектація: Вар "+varLevel) : (statusEl ? (statusMap[statusEl.value]||"") : "");
   document.getElementById("ph-master").textContent = "\u041c\u0430\u0439\u0441\u0442\u0435\u0440: " + currentUserName;
 
   // Temporarily make BOTH tabs visible so browser renders their DOM
@@ -4613,6 +4644,8 @@ function executePrint(){
       if(tabWorks) tabWorks.style.display = worksDisp;
       if(tabParts) tabParts.style.display = partsDisp;
       document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-prio-only","print-summary","print-summary-only");
+      // #3 Повернути тимчасово приховані варіанти
+      if(_varBackup.length){ _varBackup.forEach(function(x){ x.m.status=x.st; }); pmRender(); pmUpdateSummary(); }
     }, 1000);
   }, 300);
 }

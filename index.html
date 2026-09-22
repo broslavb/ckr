@@ -3032,7 +3032,13 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
     if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
     var pUSD=cur==="uah"?Math.round(pRaw/usdRate*10)/10:Math.round(pRaw*100)/100;
     var pUAH=cur==="uah"?Math.round(pRaw):Math.round(pRaw*usdRate);
-    var priceMain='<div class="ritem-usd">'+pUSD+' $</div><div class="ritem-uah">'+pUAH.toLocaleString("uk-UA")+' грн</div>';
+    // Ціна зі знижкою по кожній операції (не лише в підсумку блоку)
+    var dr=disc>0?disc:0;
+    var pUSDd=dr?Math.round(pUSD*(1-dr)*100)/100:pUSD;
+    var pUAHd=dr?Math.round(pUAH*(1-dr)):pUAH;
+    var priceMain= dr
+      ? '<div class="ritem-usd">'+pUSDd+' $</div><div class="ritem-uah"><span style="text-decoration:line-through;color:var(--tx3);font-size:9px;margin-right:4px">'+pUAH.toLocaleString("uk-UA")+'</span>'+pUAHd.toLocaleString("uk-UA")+' грн</div>'
+      : '<div class="ritem-usd">'+pUSD+' $</div><div class="ritem-uah">'+pUAH.toLocaleString("uk-UA")+' грн</div>';
     var coeffControl='<div class="ritem-coeff-wrap" title="Коефіцієнт складності">'
        +'<span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">×</span>'
        +'<input class="ritem-coeff-inp" type="number" value="'+itemCoeff+'" min="0.1" max="10" step="0.1"'

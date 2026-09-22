@@ -1254,6 +1254,14 @@ body.hero-on .hero-pad{margin-right:40vw}
         <div class="rblock-sums"><span class="rblock-usd" id="rb-bez-usd">—</span><span class="rblock-uah" id="rb-bez-uah"></span><span class="sec-chev" style="color:rgba(255,255,255,.4)">▼</span></div>
       </div>
       <div class="rblock-body">
+        <div class="rblock-disc">
+          <label>Знижка</label>
+          <select id="disc-bez" onchange="wRecalc();updDiscLabel('disc-bez','disc-bez-lbl')">
+            <option value="0">без знижки</option><option value="0.09">Пост.клієнт (9%)</option>
+            <option value="0.1">На обсязі (10%)</option><option value="0.15">Партнерська (15%)</option><option value="0.05">Інша (5%)</option>
+          </select>
+          <span class="disc-print-label" id="disc-bez-lbl"></span>
+        </div>
         <div id="rlist-bez"><div class="empty"><div class="empty-tx">Не обрано</div></div></div>
       </div>
     </div>
@@ -2631,7 +2639,7 @@ function _v(id){ var e=document.getElementById(id); return e?e.value:""; }
 function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
-    dk:_v("disc-kuz"),ds:_v("disc-slu"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
+    dk:_v("disc-kuz"),ds:_v("disc-slu"),db:_v("disc-bez"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -3153,6 +3161,7 @@ function wRenderPayments(){
 function wRecalc(){
   var discKuz=parseFloat(document.getElementById("disc-kuz").value)||0;
   var discSlu=parseFloat(document.getElementById("disc-slu").value)||0;
+  var discBez=parseFloat(document.getElementById("disc-bez").value)||0;
   var malType=document.getElementById("mal-type").value;
   var pp=paySumUAH(wPayments);
   var cats={};
@@ -3160,12 +3169,12 @@ function wRecalc(){
   var kuzItems=cats[CAT_KUZ]||[],sluItems=cats[CAT_SLU]||[],bezItems=cats[CAT_BEZ]||[],malItems=cats[CAT_MAL]||[],stoItems=cats[CAT_STO]||[];
   renderRList("rlist-kuz",kuzItems,"usd",discKuz,false);
   renderRList("rlist-slu",sluItems,"uah",discSlu,false);
-  renderRList("rlist-bez",bezItems,"uah",0,false);
+  renderRList("rlist-bez",bezItems,"uah",discBez,false);
   renderRList("rlist-mal",malItems,"usd",0,malType==="bud");
   renderRList("rlist-sto",stoItems,"uah",0,false,true);
   var tKuz=blockTotal(kuzItems,"usd",discKuz,false);
   var tSlu=blockTotal(sluItems,"uah",discSlu,false);
-  var tBez=blockTotal(bezItems,"uah",0,false);
+  var tBez=blockTotal(bezItems,"uah",discBez,false);
   var tMal=blockTotal(malItems,"usd",0,malType==="bud");
   var tSto=blockTotal(stoItems,"uah",0,false);
   renderMalCoord(tMal.uah);
@@ -3246,6 +3255,7 @@ function clearW(){
   document.getElementById("w-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("w-status").value="preliminary";
   document.getElementById("disc-kuz").value="0";document.getElementById("disc-slu").value="0";
+  document.getElementById("disc-bez").value="0";
   wPayments=[];wRenderPayments();document.getElementById("mal-type").value="std";
   wMalCoord="";wMalActual=0;wDoneDate="";wCredit=false;
   var bmC=document.getElementById("w-bodyman"); if(bmC) bmC.value="";
@@ -3283,6 +3293,7 @@ function saveW(){
   if(!requireVin(vin, "w-vin")) return;
   var discKuz=parseFloat(document.getElementById("disc-kuz").value)||0;
   var discSlu=parseFloat(document.getElementById("disc-slu").value)||0;
+  var discBez=parseFloat(document.getElementById("disc-bez").value)||0;
   var malType=document.getElementById("mal-type").value;
   var pp=paySumUAH(wPayments);
   var totalUSD=0;
@@ -3290,7 +3301,7 @@ function saveW(){
     var it=wsel[uid];if(it.hidden)return;var cur=DB[it.cat]?DB[it.cat].cur:"usd";
     var p=it.price*(it.coeff||1);
     if(it.cat===CAT_MAL&&malType==="bud")p=p*0.85;
-    var disc=it.cat===CAT_KUZ?discKuz:it.cat===CAT_SLU?discSlu:0;
+    var disc=it.cat===CAT_KUZ?discKuz:it.cat===CAT_SLU?discSlu:it.cat===CAT_BEZ?discBez:0;
     var pUSD=cur==="uah"?p/usdRate:p;
     totalUSD+=pUSD*(1-disc);
   });
@@ -3303,7 +3314,7 @@ function saveW(){
     status:document.getElementById("w-status").value,
     masterEmail:currentUser.email,
     masterName:currentUserName,
-    rate:usdRate,discKuz:discKuz,discSlu:discSlu,malType:malType,pp:pp,
+    rate:usdRate,discKuz:discKuz,discSlu:discSlu,discBez:discBez,malType:malType,pp:pp,
     malCoord:wMalCoord||"", malActualUAH:wMalActual||0, doneDate:wDoneDate||null,
     worksProfitUAH:wWorksProfit||0, credit:!!wCredit,
     bodyman:(document.getElementById("w-bodyman")||{value:""}).value,
@@ -3949,6 +3960,7 @@ function loadRec(id){
       document.getElementById("w-status").value=r.status||"preliminary";
       document.getElementById("disc-kuz").value=r.discKuz||0;
       document.getElementById("disc-slu").value=r.discSlu||0;
+      document.getElementById("disc-bez").value=r.discBez||0;
       wPayments = Array.isArray(r.payments) ? r.payments
         : (r.pp>0 ? [{id:"wp"+(++uidCounter),amount:r.pp,cur:"uah",rate:r.rate||usdRate,type:"cash",date:r.date||"",comment:"аванс"}] : []);
       wRenderPayments();
@@ -4699,16 +4711,17 @@ function buildPrintSummary(){
   // ── Роботи по категоріях
   var discKuz=parseFloat((document.getElementById("disc-kuz")||{}).value)||0;
   var discSlu=parseFloat((document.getElementById("disc-slu")||{}).value)||0;
+  var discBez=parseFloat((document.getElementById("disc-bez")||{}).value)||0;
   var malType=(document.getElementById("mal-type")||{}).value;
   var cats={}; Object.keys(wsel).forEach(function(u){var it=wsel[u]; (cats[it.cat]=cats[it.cat]||[]).push(it);});
   var tK=blockTotal(cats[CAT_KUZ]||[],"usd",discKuz,false);
   var tS=blockTotal(cats[CAT_SLU]||[],"uah",discSlu,false);
-  var tB=blockTotal(cats[CAT_BEZ]||[],"uah",0,false);
+  var tB=blockTotal(cats[CAT_BEZ]||[],"uah",discBez,false);
   var tM=blockTotal(cats[CAT_MAL]||[],"usd",0,malType==="bud");
   var tO=blockTotal(cats[CAT_STO]||[],"uah",0,false);
   var worksUSD=tK.usd+tS.usd+tB.usd+tM.usd+tO.usd;
   var worksUAH=Math.round(worksUSD*rate);
-  var discUAH=tK.disc+tS.disc;
+  var discUAH=tK.disc+tS.disc+tB.disc;
   function catRow(lbl,t){ if(!t.usd) return ""; return '<div class="sd-row"><span>'+lbl+'</span><span>'+pair(t.usd,t.uah)+'</span></div>'; }
   var catRows=catRow("Кузовні",tK)+catRow("Слюсарні",tS)+catRow("Безпека",tB)+catRow("Малярні",tM)+catRow("Сторонні",tO);
   if(discUAH>0) catRows+='<div class="sd-row"><span>Знижки</span><span>'+uahCol(-discUAH,"#2e7d32")+'</span></div>';
@@ -4791,6 +4804,7 @@ function updDiscLabel(selId, lblId){
 function updAllDiscLabels(){
   updDiscLabel("disc-kuz","disc-kuz-lbl");
   updDiscLabel("disc-slu","disc-slu-lbl");
+  updDiscLabel("disc-bez","disc-bez-lbl");
 }
 
 function showToast(msg){var e=document.getElementById("toast");e.textContent=msg;e.classList.add("show");setTimeout(function(){e.classList.remove("show");},3000);}
@@ -7763,6 +7777,7 @@ function actField(a,b){ var ea=document.getElementById(a),eb=document.getElement
 function actCollectWorks(){
   var discKuz=parseFloat((document.getElementById("disc-kuz")||{}).value)||0;
   var discSlu=parseFloat((document.getElementById("disc-slu")||{}).value)||0;
+  var discBez=parseFloat((document.getElementById("disc-bez")||{}).value)||0;
   var malType=(document.getElementById("mal-type")||{value:"std"}).value;
   var byCat={};
   Object.keys(wsel).forEach(function(u){var it=wsel[u]; if(!byCat[it.cat])byCat[it.cat]=[]; byCat[it.cat].push(it);});
@@ -7772,7 +7787,7 @@ function actCollectWorks(){
     var items=byCat[cat]||[]; if(!items.length) return;
     var cur=DB[cat]?DB[cat].cur:"usd";
     var malBud=(cat===CAT_MAL && malType==="bud");
-    var d=(cat===CAT_KUZ)?discKuz:(cat===CAT_SLU?discSlu:0);
+    var d=(cat===CAT_KUZ)?discKuz:(cat===CAT_SLU?discSlu:(cat===CAT_BEZ?discBez:0));
     items.forEach(function(it){
       if(it.hidden) return;   // приховані роботи не потрапляють в акт
       var c=it.coeff||1; var pRaw=it.price*c; if(malBud)pRaw=Math.round(pRaw*0.85*10)/10;
@@ -8935,7 +8950,9 @@ function payWorkUSD(w, rec){
   var cur = (typeof DB !== "undefined" && DB[w.cat]) ? DB[w.cat].cur : "usd";
   var p = (w.price||0) * (w.coeff||1);
   if(w.cat === CAT_MAL && rec.malType === "bud") p = p * 0.85;
-  var disc = (w.cat === CAT_KUZ) ? (rec.discKuz||0) : ((w.cat === CAT_SLU) ? (rec.discSlu||0) : 0);
+  var disc = (w.cat === CAT_KUZ) ? (rec.discKuz||0)
+           : (w.cat === CAT_SLU) ? (rec.discSlu||0)
+           : (w.cat === CAT_BEZ) ? (rec.discBez||0) : 0;
   var rate = rec.rate || usdRate || 44.1;
   var pUSD = (cur === "uah") ? (p / rate) : p;
   return pUSD * (1 - disc);

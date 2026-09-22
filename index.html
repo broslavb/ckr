@@ -483,6 +483,9 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .pr-var:hover{color:var(--bl);border-color:var(--bl)}
 /* Тип деталі (аналог/ориг./б.в.) — тільки для друку, на екрані є селект */
 .pr-avail-txt{display:none}
+/* Текст назви/артикулів для друку: input не вміє переносити рядки й обрізає
+   довгі назви, тому у друці показуємо цей span замість поля вводу */
+.pr-print-txt{display:none}
 /* #3 Деталі першої черги — виділення рядка + кнопка «1» */
 .pr-prio-btn{display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;font-size:10px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;margin-right:3px;font-family:var(--mono)}
 .pr-prio-btn.on{background:#ffb300;border-color:#ff8f00;color:#fff}
@@ -682,10 +685,21 @@ tr.pr-cancelled td input,tr.pr-cancelled td .pr-avail-txt{color:#c62828!importan
   body.so-print-mech .so-pt th:nth-child(7),body.so-print-mech .so-pt td:nth-child(7){display:table-cell!important;width:22%!important}
   /* сховати все з 8-ї колонки далі (посилання/постач./закупка/статус/дії) */
   body.so-print-mech .so-pt th:nth-child(n+8),body.so-print-mech .so-pt td:nth-child(n+8){display:none!important}
-  body.so-print-mech .so-pt th:nth-child(2),body.so-print-mech .so-pt td:nth-child(2){width:48%!important}
-  body.so-print-mech .so-pt th:nth-child(3),body.so-print-mech .so-pt td:nth-child(3){width:8%!important;text-align:center!important}
-  /* артикули друкуємо як чистий текст */
-  body.so-print-mech .so-pt input{border:none!important;background:transparent!important;color:#0d2b6b!important;font-weight:bold!important;font-family:Verdana,sans-serif!important;font-size:10pt!important;width:100%!important;padding:0!important}
+  body.so-print-mech .so-pt th:nth-child(2),body.so-print-mech .so-pt td:nth-child(2){width:50%!important}
+  body.so-print-mech .so-pt th:nth-child(3),body.so-print-mech .so-pt td:nth-child(3){width:6%!important;text-align:center!important}
+  /* щільність як у друці Запчастин */
+  body.so-print-mech .so-pt{font-size:9pt!important;table-layout:fixed!important;width:100%!important}
+  body.so-print-mech .so-pt th{font-size:8pt!important;background:#e3edf8!important;color:#0d2b6b!important}
+  body.so-print-mech .so-pt td{padding:2px 4px!important;vertical-align:top!important}
+  body.so-print-mech .so-pt input{border:none!important;background:transparent!important;color:#0d2b6b!important;font-weight:bold!important;font-family:Verdana,sans-serif!important;font-size:9pt!important;width:100%!important;padding:0!important}
+  /* назва й артикули — текстом замість поля вводу, щоб довге не обрізалось,
+     а переносилось на наступний рядок */
+  body.so-print-mech .so-pt td:nth-child(2) input,
+  body.so-print-mech .so-pt td:nth-child(6) input,
+  body.so-print-mech .so-pt td:nth-child(7) input{display:none!important}
+  body.so-print-mech .so-pt td .pr-print-txt{display:block!important;font-family:Verdana,sans-serif!important;font-size:9pt!important;font-weight:bold!important;color:#0d2b6b!important;white-space:normal!important;word-break:break-word!important;line-height:1.3!important}
+  body.so-print-mech .so-pt td:nth-child(2)>div{flex-wrap:wrap!important;align-items:flex-start!important;gap:0 4px!important}
+  body.so-print-mech .so-pt td:nth-child(2) .pr-print-txt{flex:1 1 100%!important}
   /* слюсарю не потрібні роботи, підсумки, оплати, рахунок */
   body.so-print-mech #so-works-body,body.so-print-mech .so-wt,body.so-print-mech #so-works-hdr,body.so-print-mech #so-print-footer{display:none!important}
   /* позначка у шапці */
@@ -7265,6 +7279,15 @@ function soRenderParts(){
   wrap.appendChild(table);
 }
 
+// Текстовий двійник поля вводу для друку: input завжди в один рядок і
+// обрізає довгі назви/артикули, а цей span переноситься.
+function soPrintTxt(val){
+  var sp=document.createElement("span");
+  sp.className="pr-print-txt";
+  sp.textContent=val||"";
+  return sp;
+}
+
 function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var isClient = item.status==="client_wait"||item.status==="client_delivered";
   var isHidden = item.status==="hidden";
@@ -7339,6 +7362,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var availTxt=document.createElement("span"); availTxt.className="pr-avail-txt"; availTxt.textContent=pmAvailLabel(item.avail);
   var nameInp=mkInp(item.name,"Назва...","name","text"); nameInp.style.flex="1";
   wrap2.appendChild(availSel); wrap2.appendChild(availTxt); wrap2.appendChild(nameInp);
+  wrap2.appendChild(soPrintTxt(item.name));
   td2.appendChild(wrap2); tr.appendChild(td2);
 
   // Col3: qty
@@ -7357,11 +7381,13 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
 
   // Col6: main code
   var td5=mkTd("width:10%;vertical-align:middle");
-  td5.appendChild(mkInp(item.code,"OEM/арт.","code","text")); tr.appendChild(td5);
+  td5.appendChild(mkInp(item.code,"OEM/арт.","code","text"));
+  td5.appendChild(soPrintTxt(item.code)); tr.appendChild(td5);
 
   // Col7: alt code
   var td6=mkTd("width:10%;vertical-align:middle");
-  td6.appendChild(mkInp(item.altCode,"альт. арт.","altCode","text")); tr.appendChild(td6);
+  td6.appendChild(mkInp(item.altCode,"альт. арт.","altCode","text"));
+  td6.appendChild(soPrintTxt(item.altCode)); tr.appendChild(td6);
 
   // Col8: link
   var td8=mkTd("width:7%;vertical-align:middle");

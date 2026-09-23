@@ -907,6 +907,9 @@ input, select, button, .btn, .pp-inp, .cinp,
   body.print-mechanic .pb-sum { display:none!important; }
   /* Mechanic header note */
   body.print-mechanic #ph-status::after { content:" · ДЛЯ СЛЮСАРЯ"; color:#c0392b; font-weight:bold; }
+  /* Запит для розборок: ховаємо Витратні матеріали і ЗЧ для ТО, свій підпис у шапці */
+  body.print-salvage #pb-consumables, body.print-salvage #pb-service { display:none!important; }
+  body.print-salvage #ph-status::after { content:" · ЗАПИТ ДЛЯ РОЗБОРОК"; color:#6a1b9a; font-weight:bold; }
 }
 
 @media print {
@@ -4344,6 +4347,19 @@ function showPrintModal(source){
   mechWrap.appendChild(mechCb); mechWrap.appendChild(mechSp);
   opts.appendChild(mechWrap);
 
+  // Запит для розборок — перелік з кодами, без цін, без «Витратних» і «ЗЧ для ТО»
+  if(hasParts){
+    var salWrap = document.createElement("label");
+    salWrap.style.cssText="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:#6a1b9a;font-weight:600";
+    var salCb = document.createElement("input");
+    salCb.type="checkbox"; salCb.id="pr-salvage";
+    salCb.style.cssText="width:14px;height:14px;cursor:pointer";
+    var salSp = document.createElement("span");
+    salSp.textContent="🔧 Запит для розборок (коди, без цін; без «Витратних» і «ЗЧ для ТО»)";
+    salWrap.appendChild(salCb); salWrap.appendChild(salSp);
+    opts.appendChild(salWrap);
+  }
+
   // #3 Друк за варіантом (щоб дати клієнту окремі калькуляції Вар1 / Вар2 / …)
   var maxVar = 1;
   PM_BLOCKS.forEach(function(b){ b.items.forEach(function(i){ if(i.variants && (i.variants.length+1)>maxVar) maxVar=i.variants.length+1; }); });
@@ -4511,6 +4527,8 @@ function executePrint(){
   var printParts = document.getElementById("pr-parts") && document.getElementById("pr-parts").checked;
   var withCodes = document.getElementById("pr-with-codes") && document.getElementById("pr-with-codes").checked;
   var mechanic  = document.getElementById("pr-mechanic")   && document.getElementById("pr-mechanic").checked;
+  var salvage   = document.getElementById("pr-salvage")    && document.getElementById("pr-salvage").checked;
+  if(salvage) mechanic = true;   // розборочний запит = як для слюсаря (коди, без цін) + ховаємо витратні/ТО
   var prioOnly  = document.getElementById("pr-prio-only")  && document.getElementById("pr-prio-only").checked;
   // #3 Друк за варіантом: інші варіанти тимчасово ховаємо (status hidden) — підсумки перерахуються самі
   var varSelEl = document.getElementById("pr-variant");
@@ -4526,6 +4544,7 @@ function executePrint(){
   }
   document.body.classList.toggle("print-with-codes", !!withCodes);
   document.body.classList.toggle("print-mechanic",   !!mechanic);
+  document.body.classList.toggle("print-salvage",    !!salvage);
   document.body.classList.toggle("print-prio-only",  !!prioOnly);
   closePrintModal();
 
@@ -4698,7 +4717,7 @@ function executePrint(){
       // Restore tab visibility
       if(tabWorks) tabWorks.style.display = worksDisp;
       if(tabParts) tabParts.style.display = partsDisp;
-      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-prio-only","print-summary","print-summary-only");
+      document.body.classList.remove("print-works-only","print-parts-only","print-both","print-mechanic","print-salvage","print-prio-only","print-summary","print-summary-only");
       // #3 Повернути тимчасово приховані варіанти
       if(_varBackup.length){ _varBackup.forEach(function(x){ x.m.status=x.st; }); pmRender(); pmUpdateSummary(); }
     }, 1000);

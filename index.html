@@ -186,6 +186,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ritem-note-ic{color:var(--tx3);font-size:10px;flex-shrink:0}
 .ritem-note-inp{border:none;background:transparent;font-family:var(--mono);font-size:10px;color:var(--bl);outline:none;width:100%;max-width:320px;font-style:italic;padding:0}
 .ritem-note-inp::placeholder{color:var(--tx3);font-style:normal}
+.ritem-note-txt{display:none}
 .ritem-acc.full{color:#0b6b33;font-weight:bold}
 @media print{ .ritem-acc{display:none!important} }
 .ritem-prices{text-align:right;flex-shrink:0}
@@ -415,9 +416,9 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
   .ritem-usd{color:#1565C0!important;font-weight:bold!important;font-size:10pt!important}
   .ritem-uah{color:#555!important;font-size:9pt!important}
   .ritem-rm,.ritem-coeff-wrap,.wadd-btn,.sec-chev,.ritem-eye{display:none!important}
-  /* Коментар до роботи — у друці як текст (курсив), порожній не друкуємо */
-  .ritem-note-ic{display:none!important}
-  .ritem-note-inp{border:none!important;background:transparent!important;color:#7a3a00!important;font-size:9pt!important;font-style:italic!important;width:auto!important}
+  /* Коментар до роботи — у друці повний текст (курсив), поле вводу ховаємо; порожній не друкуємо */
+  .ritem-note-ic,.ritem-note-inp{display:none!important}
+  .ritem-note-txt{display:inline!important;color:#7a3a00!important;font-size:9pt!important;font-style:italic!important;white-space:normal!important;word-break:break-word!important}
   .ritem-note-wrap:has(.ritem-note-inp:placeholder-shown){display:none!important}
   .grand-tot{background:#fff!important;border-top:2px solid #0d2b6b!important}
   .gtrow.main{background:#e3edf8!important;padding:6px 4px!important;border-radius:3px}
@@ -3075,8 +3076,10 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
     }
     var eye='<span class="ritem-eye" title="'+(it.hidden?'Показати (враховувати й друкувати)':'Приховати (не рахувати, не друкувати)')+'" onclick="toggleWorkHidden(\''+it.uid+'\')">'+(it.hidden?'🙈':'👁')+'</span>';
     var cval=(it.comment||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+    var ctext=(it.comment||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     var noteEl='<div class="ritem-note-wrap"><span class="ritem-note-ic">✎</span>'
-      +'<input class="ritem-note-inp" value="'+cval+'" placeholder="коментар до роботи…" onchange="setItemComment(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/></div>';
+      +'<input class="ritem-note-inp" value="'+cval+'" placeholder="коментар до роботи…" onchange="setItemComment(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>'
+      +'<span class="ritem-note-txt">'+ctext+'</span></div>';
     return '<div class="ritem'+(it.hidden?' ritem-hidden':'')+'">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
       +(it.side?'<div class="ritem-side">▸ '+it.side+'</div>':'')

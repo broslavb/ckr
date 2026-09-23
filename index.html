@@ -910,6 +910,8 @@ input, select, button, .btn, .pp-inp, .cinp,
   /* Запит для розборок: ховаємо Витратні матеріали і ЗЧ для ТО, свій підпис у шапці */
   body.print-salvage #pb-consumables, body.print-salvage #pb-service { display:none!important; }
   body.print-salvage #ph-status::after { content:" · ЗАПИТ ДЛЯ РОЗБОРОК"; color:#6a1b9a; font-weight:bold; }
+  /* Ховаємо конфіденційну шапку (клієнт/телефон/статус/координатор) — лишається лише авто+VIN у банері */
+  body.print-salvage .pm-header, body.print-salvage .car-info { display:none!important; }
 }
 
 @media print {

@@ -3235,7 +3235,7 @@ function wRecalc(){
   setHead("kuz",tKuz);setHead("slu",tSlu);setHead("bez",tBez);setHead("mal",tMal);setHead("sto",tSto);
   var totalUSD=tKuz.usd+tSlu.usd+tBez.usd+tMal.usd+tSto.usd;
   var totalUAH=Math.round(totalUSD*usdRate);
-  var totalDisc=tKuz.disc+tSlu.disc;
+  var totalDisc=tKuz.disc+tSlu.disc+tBez.disc;
   var allUSD=totalUSD,allUAH=Math.round(allUSD*usdRate);
   document.getElementById("gt-all-usd").textContent=allUSD?allUSD.toFixed(0)+" $":"—";
   document.getElementById("gt-all-uah").textContent=allUAH?allUAH.toLocaleString("uk-UA")+" грн":"";

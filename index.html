@@ -9317,7 +9317,10 @@ function payRenderAudit(){
     var rec = PAY_CALCS.find(function(c){ return c._id === g.calcId; });
     if(!rec){ problems.push({kind:"orphan", calcId:g.calcId, role:g.role, car:g.car, txt:"калькуляцію видалено, а нарахування лишились", over:g.sum}); return; }
     var fund = payFundFor(rec)[g.role] || 0;
-    if(g.sum > fund + 0.01 && okSet.indexOf(g.key)<0){
+    // Допуск на покопійкове округлення нарахувань (сума округлених по кожній роботі трохи > фонду).
+    // Реальні переплати — це долари, вони лишаються у звірці.
+    var tol = Math.max(0.5, fund*0.005);
+    if(g.sum > fund + tol && okSet.indexOf(g.key)<0){
       problems.push({kind:"over", key:g.key, calcId:g.calcId, role:g.role, car:rec.car || g.car,
         txt:"нараховано "+g.sum.toFixed(2)+" $ при фонді "+fund.toFixed(2)+" $", over:g.sum - fund});
     }

@@ -182,6 +182,10 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ritem-name{font-size:11px;color:var(--tx);line-height:1.3}
 .ritem-side{font-family:var(--mono);font-size:10px;color:var(--ac)}
 .ritem-acc{font-family:var(--mono);font-size:9px;color:var(--gr);margin-top:2px}
+.ritem-note-wrap{display:flex;align-items:center;gap:3px;margin-top:2px}
+.ritem-note-ic{color:var(--tx3);font-size:10px;flex-shrink:0}
+.ritem-note-inp{border:none;background:transparent;font-family:var(--mono);font-size:10px;color:var(--bl);outline:none;width:100%;max-width:320px;font-style:italic;padding:0}
+.ritem-note-inp::placeholder{color:var(--tx3);font-style:normal}
 .ritem-acc.full{color:#0b6b33;font-weight:bold}
 @media print{ .ritem-acc{display:none!important} }
 .ritem-prices{text-align:right;flex-shrink:0}
@@ -410,7 +414,11 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
   .ritem-side{color:#1a3a6b!important;font-size:9pt!important}
   .ritem-usd{color:#1565C0!important;font-weight:bold!important;font-size:10pt!important}
   .ritem-uah{color:#555!important;font-size:9pt!important}
-  .ritem-rm,.ritem-coeff-wrap,.wadd-btn,.sec-chev{display:none!important}
+  .ritem-rm,.ritem-coeff-wrap,.wadd-btn,.sec-chev,.ritem-eye{display:none!important}
+  /* Коментар до роботи — у друці як текст (курсив), порожній не друкуємо */
+  .ritem-note-ic{display:none!important}
+  .ritem-note-inp{border:none!important;background:transparent!important;color:#7a3a00!important;font-size:9pt!important;font-style:italic!important;width:auto!important}
+  .ritem-note-wrap:has(.ritem-note-inp:placeholder-shown){display:none!important}
   .grand-tot{background:#fff!important;border-top:2px solid #0d2b6b!important}
   .gtrow.main{background:#e3edf8!important;padding:6px 4px!important;border-radius:3px}
   .gtval.ac,.gtrow.main .gtval{color:#1565C0!important}
@@ -2654,7 +2662,7 @@ function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
     dk:_v("disc-kuz"),ds:_v("disc-slu"),db:_v("disc-bez"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
-    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0];}),
+    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0,x.comment||""];}),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -3019,6 +3027,7 @@ function filterWorks(q){
   renderSecs(f);document.querySelectorAll(".sec.collapsed").forEach(function(s){s.classList.remove("collapsed");});
 }
 function setItemCoeff(uid,val){if(wsel[uid]){wsel[uid].coeff=val;wRecalc();}}
+function setItemComment(uid,val){ if(wsel[uid]){ var v=(val||"").trim(); if(v) wsel[uid].comment=v; else delete wsel[uid].comment; } }
 
 // ── RIGHT PANEL RENDER ────────────────────────────────────────────────────────
 function renderRList(elId,items,cur,disc,malBud,isSto){
@@ -3065,9 +3074,13 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
     }
     var eye='<span class="ritem-eye" title="'+(it.hidden?'Показати (враховувати й друкувати)':'Приховати (не рахувати, не друкувати)')+'" onclick="toggleWorkHidden(\''+it.uid+'\')">'+(it.hidden?'🙈':'👁')+'</span>';
+    var cval=(it.comment||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+    var noteEl='<div class="ritem-note-wrap"><span class="ritem-note-ic">✎</span>'
+      +'<input class="ritem-note-inp" value="'+cval+'" placeholder="коментар до роботи…" onchange="setItemComment(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/></div>';
     return '<div class="ritem'+(it.hidden?' ritem-hidden':'')+'">'
       +'<div class="ritem-left"><div class="ritem-name">'+it.name+'</div>'
       +(it.side?'<div class="ritem-side">▸ '+it.side+'</div>':'')
+      +noteEl
       +wAccBadge(it.uid)
       +coordLine
       +'</div>'

@@ -515,6 +515,7 @@ tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
   .pr-prio-btn{display:none!important}
   .pr-drag{display:none!important}
   .pr-move{display:none!important}
+  .pm-manual-inp{border:none!important;background:transparent!important;color:#000!important;font-weight:bold!important;text-align:right!important;-webkit-appearance:none!important;appearance:none!important;padding:0!important;width:auto!important}
   .pt tr.pr-vgroup td{background:rgba(124,58,237,.12)!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .pt tr.pr-vgroup td:first-child{border-left:3px solid #7c3aed!important;box-shadow:none!important}
   body.print-prio-only .pt tbody tr[data-item-id]:not(.pr-prio){display:none!important}
@@ -2676,7 +2677,7 @@ function partsSnapshot(){
   return JSON.stringify({
     car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),co:_v("pm-coord"),dc:(typeof pmDiscCode==="function"?pmDiscCode():_v("pm-disc")),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
-      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];});}),
+      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.manualPrice||0,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];});}),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -3033,6 +3034,15 @@ function filterWorks(q){
   renderSecs(f);document.querySelectorAll(".sec.collapsed").forEach(function(s){s.classList.remove("collapsed");});
 }
 function setItemCoeff(uid,val){if(wsel[uid]){wsel[uid].coeff=val;wRecalc();}}
+// Ручна ціна клієнту в Запчастинах (лише при націнці «вручну»)
+function setManualPrice(blockId, itemId, val){
+  var b=PM_BLOCKS.find(function(x){return x.id===blockId;}); if(!b) return;
+  var it=b.items.find(function(i){return i.id===itemId;});
+  if(!it){ b.items.forEach(function(i){ if(i.variants){ var v=i.variants.find(function(v){return v.id===itemId;}); if(v) it=v; } }); }
+  if(!it) return;
+  it.manualPrice=Math.round(parseFloat(val)||0);
+  pmScheduleRender(); pmUpdateSummary();
+}
 function setItemComment(uid,val){ if(wsel[uid]){ var v=(val||"").trim(); if(v) wsel[uid].comment=v; else delete wsel[uid].comment; } }
 
 // ── RIGHT PANEL RENDER ────────────────────────────────────────────────────────
@@ -4955,11 +4965,12 @@ function normCode(v){
 function pmProfit(item, disc){
   if(item.status === "hidden") return 0;
   var isClientItem = item.status === "client_wait" || item.status === "client_delivered";
-  if(isClientItem || !item.buyPrice) return 0;
+  var manual = (item.markupType||"auto") === "manual";
+  if(isClientItem || (!manual && !item.buyPrice)) return 0;
   var finalPrice = pmFinalWithDisc(pmFinalPrice(item), disc);
   if(!finalPrice) return 0;
   var tax = finalPrice * 0.06;
-  var buyTotal = item.buyPrice * (item.qty || 1);
+  var buyTotal = (item.buyPrice||0) * (item.qty || 1);
   return Math.round(finalPrice - buyTotal - tax);
 }
 
@@ -4978,6 +4989,8 @@ function pmFinalPrice(item){
   if(item.status === "hidden") return 0;
   var isClientItem = item.status === "client_wait" || item.status === "client_delivered";
   if(isClientItem) return 0;
+  // Ручна ціна: клієнтську вартість проставляють вручну (націнка «вручну»)
+  if((item.markupType||"auto") === "manual") return Math.round(item.manualPrice||0);
   if(!item.buyPrice) return 0;
   // Рядки з каси мають власну націнку (30% звичайні / 10% транспортні), поки майстер її не змінив
   var mk = item.cashMarkup ? item.cashMarkup : pmMarkup(item.buyPrice, item.markupType||"auto");
@@ -5134,6 +5147,10 @@ function pmUpdItem(blockId, itemId, field, value){
     });
   }
   if(item){
+    // Перехід на націнку «вручну» — підставляємо поточну ціну як стартову ручну (щоб не обнулилось)
+    if(field==="markupType" && value==="manual" && !(item.manualPrice>0)){
+      item.manualPrice = pmFinalPrice(item) || 0;
+    }
     item[field]=value;
     if(field==="status") item.statusDate=todayISO();   // дата зміни статусу
     // Якщо майстер змінив тип націнки — власна націнка з каси більше не діє.
@@ -5670,6 +5687,15 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   // Col 4: Price without discount (Вартість)
   var td4a=mkTd("width:5%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
   if(isClientItem||isHidden){ td4a.textContent="\u2014"; td4a.style.color="var(--tx3)"; }
+  else if((item.markupType||"auto")==="manual"){
+    var mInp=document.createElement("input");
+    mInp.className="pm-manual-inp";
+    mInp.type="number"; mInp.min="0"; mInp.value=item.manualPrice||""; mInp.placeholder="\u0446\u0456\u043d\u0430";
+    mInp.title="\u0420\u0443\u0447\u043d\u0430 \u0446\u0456\u043d\u0430 \u043a\u043b\u0456\u0454\u043d\u0442\u0443 (\u043d\u0430\u0446\u0456\u043d\u043a\u0430 \u00ab\u0432\u0440\u0443\u0447\u043d\u0443\u00bb)";
+    mInp.style.cssText="width:100%;background:rgba(124,58,237,.10);border:1px solid #7c3aed;border-radius:3px;color:#5b21b6;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+    (function(bid,iid){ mInp.addEventListener("change",function(){ setManualPrice(bid,iid,+this.value); }); mInp.addEventListener("click",function(e){ e.stopPropagation(); }); })(blockId,item.id);
+    td4a.appendChild(mInp);
+  }
   else td4a.textContent=finalRaw?finalRaw.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014";
   tr.appendChild(td4a);
 
@@ -5735,7 +5761,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var markupOpts=[
     {val:"auto", label:"\xd7"+markup+" (avto.pro)"},
     {val:"at",   label:"\xd71.4 (AT/AN)"},
-    {val:"risk", label:"\xd71.5 (\u0420\u0438\u0437\u0438\u043a)"}
+    {val:"risk", label:"\xd71.5 (\u0420\u0438\u0437\u0438\u043a)"},
+    {val:"manual", label:"\u2713 \u0432\u0440\u0443\u0447\u043d\u0443"}
   ];
   var markupSel=mkSel(markupOpts, item.markupType||"auto", "markupType");
   markupSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";

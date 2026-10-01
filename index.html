@@ -134,6 +134,8 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .rblock-hdr{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--blue-dark);cursor:pointer;user-select:none}
 .rblock-hdr:hover{background:#223d72}
 .rblock-lbl{font-family:var(--disp);font-size:12px;letter-spacing:1.5px;color:#fff}
+.rblock-disc-note{font-family:Verdana,sans-serif;font-size:10px;letter-spacing:0;font-weight:normal;font-style:italic;color:rgba(255,255,255,.85);margin-left:8px}
+@media print{ .rblock-disc-note{color:#fff!important;font-size:9pt!important} }
 .rblock-sums{display:flex;gap:10px;align-items:center}
 .rblock-usd{font-family:Verdana,sans-serif;font-size:11px;color:#ffd080;font-weight:600}
 .rblock-uah{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5)}
@@ -1241,7 +1243,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <!-- КУЗОВНІ -->
     <div class="rblock" id="rb-kuz">
       <div class="rblock-hdr" onclick="toggleRBlock('rb-kuz')">
-        <span class="rblock-lbl">КУЗОВНІ РОБОТИ</span>
+        <span class="rblock-lbl">КУЗОВНІ РОБОТИ<span class="rblock-disc-note" id="rb-kuz-dn"></span></span>
         <div class="rblock-sums"><span class="rblock-usd" id="rb-kuz-usd">—</span><span class="rblock-uah" id="rb-kuz-uah"></span><span class="sec-chev" style="color:rgba(255,255,255,.4)">▼</span></div>
       </div>
       <div class="rblock-body">
@@ -1260,7 +1262,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <!-- СЛЮСАРНІ -->
     <div class="rblock" id="rb-slu">
       <div class="rblock-hdr" onclick="toggleRBlock('rb-slu')">
-        <span class="rblock-lbl">СЛЮСАРНІ РОБОТИ</span>
+        <span class="rblock-lbl">СЛЮСАРНІ РОБОТИ<span class="rblock-disc-note" id="rb-slu-dn"></span></span>
         <div class="rblock-sums"><span class="rblock-usd" id="rb-slu-usd">—</span><span class="rblock-uah" id="rb-slu-uah"></span><span class="sec-chev" style="color:rgba(255,255,255,.4)">▼</span></div>
       </div>
       <div class="rblock-body">
@@ -1279,7 +1281,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <!-- БЕЗПЕКА -->
     <div class="rblock" id="rb-bez">
       <div class="rblock-hdr" onclick="toggleRBlock('rb-bez')">
-        <span class="rblock-lbl">РОБОТИ З БЕЗПЕКИ</span>
+        <span class="rblock-lbl">РОБОТИ З БЕЗПЕКИ<span class="rblock-disc-note" id="rb-bez-dn"></span></span>
         <div class="rblock-sums"><span class="rblock-usd" id="rb-bez-usd">—</span><span class="rblock-uah" id="rb-bez-uah"></span><span class="sec-chev" style="color:rgba(255,255,255,.4)">▼</span></div>
       </div>
       <div class="rblock-body">
@@ -3264,6 +3266,7 @@ function wRecalc(){
   else dr.style.display="none";
   document.getElementById("wsum-car").textContent=document.getElementById("w-car").value||"Авто не вказано";
   wUpdateHiddenBtn();
+  wUpdDiscNotes();
 }
 function delW(uid){delete wsel[uid];renderSecs(DB);wRecalc();}
 // Приховати/показати рядок роботи (аналог «Приховати варіант» у ЗЧ): не рахується і не друкується
@@ -4867,6 +4870,18 @@ function updDiscLabel(selId, lblId){
   var txt = sel.options[sel.selectedIndex].text;
   // Remove percentage — show only name part
   lbl.textContent = txt.replace(/\s*\(\d+%\)/, "");
+}
+// Позначка знижки в заголовку блоку робіт: «зі знижкою «Пост.клієнт»» (Інша → просто «зі знижкою»)
+function wDiscNote(selId){
+  var sel=document.getElementById(selId); if(!sel) return "";
+  var rate=parseFloat(sel.value)||0; if(!rate) return "";
+  var txt=(sel.options[sel.selectedIndex].text||"").replace(/\s*\(\d+%\)/,"").trim();
+  if(!txt || /^інша$/i.test(txt)) return "зі знижкою";
+  return "зі знижкою «"+txt+"»";
+}
+function wUpdDiscNotes(){
+  var map={"rb-kuz-dn":"disc-kuz","rb-slu-dn":"disc-slu","rb-bez-dn":"disc-bez"};
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e){ var n=wDiscNote(map[id]); e.textContent=n?(" ("+n+")"):""; } });
 }
 function updAllDiscLabels(){
   updDiscLabel("disc-kuz","disc-kuz-lbl");

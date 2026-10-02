@@ -1221,6 +1221,19 @@ body.hero-on .hero-pad{margin-right:40vw}
         <select id="w-bodyman"><option value="">— не призначено —</option></select>
       </div>
     </div>
+    <div class="org-block no-print" style="margin-top:8px;border:1px dashed var(--bd);border-radius:6px;padding:8px 10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600"><input type="checkbox" id="w-org-on" onchange="orgToggle('w')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
+      <div id="w-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="fld" style="grid-column:1/-1"><label>Назва ТОВ / ФОП</label><input type="text" id="w-org-name" placeholder="ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «...»"/></div>
+        <div class="fld"><label>ЄДРПОУ</label><input type="text" id="w-org-edrpou"/></div>
+        <div class="fld"><label>ІПН</label><input type="text" id="w-org-ipn"/></div>
+        <div class="fld" style="grid-column:1/-1"><label>Адреса</label><input type="text" id="w-org-addr"/></div>
+        <div class="fld" style="grid-column:1/-1"><label>IBAN</label><input type="text" id="w-org-iban"/></div>
+        <div class="fld"><label>Банк</label><input type="text" id="w-org-bank"/></div>
+        <div class="fld"><label>МФО</label><input type="text" id="w-org-mfo"/></div>
+        <div class="fld"><label>Телефон</label><input type="text" id="w-org-phone"/></div>
+      </div>
+    </div>
     <div id="w-cash-pending"></div>
     <div class="tpl-bar">
       <span class="tpl-lbl">ШАБЛОН:</span>
@@ -1411,6 +1424,19 @@ body.hero-on .hero-pad{margin-right:40vw}
           </div>
         </div>
       </div>
+      <div class="org-block no-print" style="margin:8px 0;border:1px dashed var(--bd);border-radius:6px;padding:8px 10px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600"><input type="checkbox" id="pm-org-on" onchange="orgToggle('pm')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
+        <div id="pm-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div class="fld" style="grid-column:1/-1"><label>Назва ТОВ / ФОП</label><input type="text" id="pm-org-name" placeholder="ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «...»"/></div>
+          <div class="fld"><label>ЄДРПОУ</label><input type="text" id="pm-org-edrpou"/></div>
+          <div class="fld"><label>ІПН</label><input type="text" id="pm-org-ipn"/></div>
+          <div class="fld" style="grid-column:1/-1"><label>Адреса</label><input type="text" id="pm-org-addr"/></div>
+          <div class="fld" style="grid-column:1/-1"><label>IBAN</label><input type="text" id="pm-org-iban"/></div>
+          <div class="fld"><label>Банк</label><input type="text" id="pm-org-bank"/></div>
+          <div class="fld"><label>МФО</label><input type="text" id="pm-org-mfo"/></div>
+          <div class="fld"><label>Телефон</label><input type="text" id="pm-org-phone"/></div>
+        </div>
+      </div>
 
       <div id="pm-cancel-banner" class="cancel-banner" style="display:none"></div>
       <!-- Parts blocks will be rendered here -->
@@ -1528,6 +1554,19 @@ body.hero-on .hero-pad{margin-right:40vw}
           <input type="number" id="so-disc-w-custom" min="0" max="100" step="0.5" value="6" oninput="soRecalc()" style="width:70px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:3px;outline:none"/>
           <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">% знижки</span>
         </div>
+      </div>
+    </div>
+    <div class="org-block no-print" style="margin:4px 0 8px;border:1px dashed var(--bd);border-radius:6px;padding:8px 10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600"><input type="checkbox" id="so-org-on" onchange="orgToggle('so')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
+      <div id="so-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="fld" style="grid-column:1/-1"><label>Назва ТОВ / ФОП</label><input type="text" id="so-org-name" placeholder="ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «...»"/></div>
+        <div class="fld"><label>ЄДРПОУ</label><input type="text" id="so-org-edrpou"/></div>
+        <div class="fld"><label>ІПН</label><input type="text" id="so-org-ipn"/></div>
+        <div class="fld" style="grid-column:1/-1"><label>Адреса</label><input type="text" id="so-org-addr"/></div>
+        <div class="fld" style="grid-column:1/-1"><label>IBAN</label><input type="text" id="so-org-iban"/></div>
+        <div class="fld"><label>Банк</label><input type="text" id="so-org-bank"/></div>
+        <div class="fld"><label>МФО</label><input type="text" id="so-org-mfo"/></div>
+        <div class="fld"><label>Телефон</label><input type="text" id="so-org-phone"/></div>
       </div>
     </div>
 
@@ -2268,6 +2307,25 @@ function applyPerms(){
   show("tab-parking-btn", can("parking"));
 }
 
+// ── ЮРИДИЧНА ОСОБА (ТОВ/ФОП) — реквізити замовника для рахунку/акту ────────────
+var ORG_FIELDS = ["name","edrpou","ipn","addr","iban","bank","mfo","phone"];
+function orgToggle(p){
+  var on=document.getElementById(p+"-org-on"), f=document.getElementById(p+"-org-fields");
+  if(f) f.style.display = (on&&on.checked) ? "grid" : "none";
+}
+function orgRead(p){
+  var on=document.getElementById(p+"-org-on"); var o={on:!!(on&&on.checked)};
+  ORG_FIELDS.forEach(function(k){ var e=document.getElementById(p+"-org-"+k); o[k]=e?e.value.trim():""; });
+  return o;
+}
+function orgSet(p, o){
+  o=o||{}; var on=document.getElementById(p+"-org-on"); if(on) on.checked=!!o.on;
+  ORG_FIELDS.forEach(function(k){ var e=document.getElementById(p+"-org-"+k); if(e) e.value=o[k]||""; });
+  orgToggle(p);
+}
+function orgClear(p){ orgSet(p, {on:false}); }
+function orgSnap(p){ var o=orgRead(p); return [o.on?1:0].concat(ORG_FIELDS.map(function(k){return o[k];})).join("|"); }
+
 // ── ЖУРНАЛ ЗМІН (Запчастини / ТО) ────────────────────────────────────────────
 // Знімок значущих полів калькуляції для порівняння «до/після».
 var pmLogSnap = null, soLogSnap = null;
@@ -2685,6 +2743,7 @@ function worksSnapshot(){
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
     dk:_v("disc-kuz"),ds:_v("disc-slu"),db:_v("disc-bez"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0,x.comment||""];}),
+    org:orgSnap("w"),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -2693,6 +2752,7 @@ function partsSnapshot(){
     car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),co:_v("pm-coord"),dc:(typeof pmDiscCode==="function"?pmDiscCode():_v("pm-disc")),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
       return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.manualPrice||0,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];});}),
+    org:orgSnap("pm"),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -2701,6 +2761,7 @@ function serviceSnapshot(){
     car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),dc:(typeof soDiscCode==="function"?soDiscCode():_v("so-disc")),dcw:(typeof soDiscCodeW==="function"?soDiscCodeW():""),inv:_v("so-invoice-num"),
     pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.manualPrice||0,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price,w.coord||"",w.actualUAH||0,w.cat||""];}),
+    org:orgSnap("so"),
     p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -3318,6 +3379,7 @@ function wUpdateHiddenBtn(){
 
 function clearW(){
   wsel={};uidCounter=0;
+  orgClear("w");
   ["w-car","w-client","w-vin","w-phone"].forEach(function(id){document.getElementById(id).value="";});
   document.getElementById("w-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("w-status").value="preliminary";
@@ -3377,6 +3439,7 @@ function saveW(){
     type:"works",car:car,vin:vin,
     client:document.getElementById("w-client").value,
     phone:document.getElementById("w-phone").value,
+    org:orgRead("w"),
     date:document.getElementById("w-date").value,
     status:document.getElementById("w-status").value,
     masterEmail:currentUser.email,
@@ -4043,6 +4106,7 @@ function loadRec(id){
       wRenderPayments();
       document.getElementById("mal-type").value=r.malType||"std";
       wMalCoord=r.malCoord||""; wMalActual=r.malActualUAH||0; wDoneDate=r.doneDate||""; wCredit=!!r.credit;
+      orgSet("w", r.org);
       var bmSel=document.getElementById("w-bodyman"); if(bmSel){ wFillBodymen(); bmSel.value=r.bodyman||""; }
       switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();
@@ -6741,6 +6805,7 @@ function pmRecalc(){ pmRender(); }
 
 function pmClear(){
   pmLogSnap = null;
+  orgClear("pm");
   pmRemoveVariantBlocks();   // прибрати додані блоки-варіанти (бампери ВАР2 тощо)
   PM_BLOCKS.forEach(function(b){
     if(!b.fixed) b.items = [];
@@ -6799,6 +6864,7 @@ function pmSave(){
     coord:(document.getElementById("pm-coord")||{value:""}).value,
     client:document.getElementById("pm-client").value,
     phone:document.getElementById("pm-phone").value,
+    org:orgRead("pm"),
     date:document.getElementById("pm-date").value,
     disc:disc,
     totalUAH:grandTotal,
@@ -6933,6 +6999,7 @@ function pmLoadFromRecord(r, docId){
   document.getElementById("pm-vin").value = r.vin||"";
   document.getElementById("pm-client").value = r.client||"";
   document.getElementById("pm-phone").value = r.phone||"";
+  orgSet("pm", r.org);
   document.getElementById("pm-date").value = r.date||"";
   pmSetDisc(r.disc||"none");
   var pmSt=document.getElementById("pm-status"); if(pmSt) pmSt.value=r.status||"preliminary";
@@ -7871,6 +7938,7 @@ function soSave(){
     coord:(document.getElementById("so-coord")||{value:""}).value,
     client:document.getElementById("so-client").value,
     phone:document.getElementById("so-phone").value,
+    org:orgRead("so"),
     date:document.getElementById("so-date").value,
     disc:disc, discW:discW, partsTotal:partsTotal, worksTotal:worksTotal,
     totalUAH:partsTotal+worksTotal,
@@ -7903,6 +7971,7 @@ function soLoadFromRecord(r, docId){
   document.getElementById("so-vin").value=r.vin||"";
   document.getElementById("so-client").value=r.client||"";
   document.getElementById("so-phone").value=r.phone||"";
+  orgSet("so", r.org);
   document.getElementById("so-date").value=r.date||"";
   soSetDisc(r.disc||"none");
   soSetDiscW(r.discW!=null ? r.discW : (r.disc||"none"));   // старі записи: роботи мали ту саму знижку, що й ЗЧ
@@ -7916,6 +7985,7 @@ function soLoadFromRecord(r, docId){
 
 function soClear(){
   soLogSnap = null;
+  orgClear("so");
   soCurrentDocId=null; soParts=[]; soWorks=[]; soPayments=[];
   ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   soSetDisc("none"); soSetDiscW("none");

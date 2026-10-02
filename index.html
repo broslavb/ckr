@@ -72,6 +72,13 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .fld label{display:block;font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase}
 .fld input,.fld select{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:6px 9px;border-radius:3px;outline:none;transition:border .2s}
 .fld input:focus,.fld select:focus{border-color:var(--ac)}
+/* ── Юр.особа (ТОВ/ФОП): компактні поля + згортання ── */
+.org-block .fld label{font-size:8.5px;letter-spacing:.5px;margin-bottom:1px}
+.org-block .fld input{font-size:11px;padding:3px 7px}
+.org-fold-btn{background:none;border:1px solid var(--bd);color:var(--tx3);font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;cursor:pointer}
+.org-fold-btn:hover{color:var(--bl);border-color:var(--bl)}
+.org-sum{font-family:var(--mono);font-size:11px;color:var(--tx3);margin-top:4px;padding:2px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.org-sum:hover{color:var(--bl)}
 .fld select option{background:var(--bg2)}
 
 /* ── TEMPLATES ── */
@@ -1231,9 +1238,13 @@ body.hero-on .hero-pad{margin-right:40vw}
         <select id="w-bodyman"><option value="">— не призначено —</option></select>
       </div>
     </div>
-    <div class="org-block no-print" style="margin-top:8px;border:1px dashed var(--bd);border-radius:6px;padding:8px 10px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600"><input type="checkbox" id="w-org-on" onchange="orgToggle('w')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
-      <div id="w-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <div class="org-block no-print" style="margin-top:8px;border:1px dashed var(--bd);border-radius:6px;padding:5px 10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600;flex:1"><input type="checkbox" id="w-org-on" onchange="orgToggle('w')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
+        <button type="button" class="org-fold-btn" id="w-org-fold" onclick="orgFold('w')" style="display:none">▴ Згорнути</button>
+      </div>
+      <div class="org-sum" id="w-org-sum" style="display:none" onclick="orgFold('w')" title="Розгорнути реквізити"></div>
+      <div id="w-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px">
         <div class="fld" style="grid-column:1/-1"><label>Назва ТОВ / ФОП</label><input type="text" id="w-org-name" placeholder="ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «...»"/></div>
         <div class="fld"><label>ЄДРПОУ</label><input type="text" id="w-org-edrpou"/></div>
         <div class="fld"><label>ІПН</label><input type="text" id="w-org-ipn"/></div>
@@ -1436,9 +1447,13 @@ body.hero-on .hero-pad{margin-right:40vw}
           </div>
         </div>
       </div>
-      <div class="org-block no-print" style="margin:8px 0;border:1px dashed var(--bd);border-radius:6px;padding:8px 10px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600"><input type="checkbox" id="pm-org-on" onchange="orgToggle('pm')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
-        <div id="pm-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <div class="org-block no-print" style="margin:8px 0;border:1px dashed var(--bd);border-radius:6px;padding:5px 10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600;flex:1"><input type="checkbox" id="pm-org-on" onchange="orgToggle('pm')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
+          <button type="button" class="org-fold-btn" id="pm-org-fold" onclick="orgFold('pm')" style="display:none">▴ Згорнути</button>
+        </div>
+        <div class="org-sum" id="pm-org-sum" style="display:none" onclick="orgFold('pm')" title="Розгорнути реквізити"></div>
+        <div id="pm-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px">
           <div class="fld" style="grid-column:1/-1"><label>Назва ТОВ / ФОП</label><input type="text" id="pm-org-name" placeholder="ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «...»"/></div>
           <div class="fld"><label>ЄДРПОУ</label><input type="text" id="pm-org-edrpou"/></div>
           <div class="fld"><label>ІПН</label><input type="text" id="pm-org-ipn"/></div>
@@ -1570,9 +1585,13 @@ body.hero-on .hero-pad{margin-right:40vw}
         </div>
       </div>
     </div>
-    <div class="org-block no-print" style="margin:4px 0 8px;border:1px dashed var(--bd);border-radius:6px;padding:8px 10px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600"><input type="checkbox" id="so-org-on" onchange="orgToggle('so')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
-      <div id="so-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <div class="org-block no-print" style="margin:4px 0 8px;border:1px dashed var(--bd);border-radius:6px;padding:5px 10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bl);cursor:pointer;font-weight:600;flex:1"><input type="checkbox" id="so-org-on" onchange="orgToggle('so')"/> 🏢 Юридична особа (ТОВ/ФОП) — реквізити для рахунку/акту</label>
+        <button type="button" class="org-fold-btn" id="so-org-fold" onclick="orgFold('so')" style="display:none">▴ Згорнути</button>
+      </div>
+      <div class="org-sum" id="so-org-sum" style="display:none" onclick="orgFold('so')" title="Розгорнути реквізити"></div>
+      <div id="so-org-fields" style="display:none;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px">
         <div class="fld" style="grid-column:1/-1"><label>Назва ТОВ / ФОП</label><input type="text" id="so-org-name" placeholder="ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ «...»"/></div>
         <div class="fld"><label>ЄДРПОУ</label><input type="text" id="so-org-edrpou"/></div>
         <div class="fld"><label>ІПН</label><input type="text" id="so-org-ipn"/></div>
@@ -2325,13 +2344,27 @@ function applyPerms(){
 
 // ── ЮРИДИЧНА ОСОБА (ТОВ/ФОП) — реквізити замовника для рахунку/акту ────────────
 var ORG_FIELDS = ["name","edrpou","ipn","addr","iban","bank","mfo","phone"];
+var ORG_FOLD={};
 function orgToggle(p){
   var on=document.getElementById(p+"-org-on"), f=document.getElementById(p+"-org-fields");
   var show = !!(on&&on.checked);
-  if(f) f.style.display = show ? "grid" : "none";
+  var folded = show && !!ORG_FOLD[p];
+  if(f) f.style.display = (show && !folded) ? "grid" : "none";
+  var btn=document.getElementById(p+"-org-fold");
+  if(btn){ btn.style.display = show ? "" : "none"; btn.textContent = folded ? "▾ Розгорнути" : "▴ Згорнути"; }
+  var sum=document.getElementById(p+"-org-sum");
+  if(sum){
+    if(folded){
+      var nm0=document.getElementById(p+"-org-name"), ed0=document.getElementById(p+"-org-edrpou");
+      var t=((nm0&&nm0.value.trim())||"")+((ed0&&ed0.value.trim())?" · ЄДРПОУ "+ed0.value.trim():"");
+      sum.textContent = t || "(реквізити не заповнені)";
+      sum.style.display="";
+    } else sum.style.display="none";
+  }
   // Юр.особа увімкнена — «Клієнт» тягнеться з назви ТОВ/ФОП
   if(show){ var nm=document.getElementById(p+"-org-name"), cl=document.getElementById(p+"-client"); if(nm&&cl&&nm.value.trim()) cl.value=nm.value.trim(); }
 }
+function orgFold(p){ ORG_FOLD[p]=!ORG_FOLD[p]; orgToggle(p); }
 function orgRead(p){
   var on=document.getElementById(p+"-org-on"); var o={on:!!(on&&on.checked)};
   ORG_FIELDS.forEach(function(k){ var e=document.getElementById(p+"-org-"+k); o[k]=e?e.value.trim():""; });
@@ -2340,9 +2373,11 @@ function orgRead(p){
 function orgSet(p, o){
   o=o||{}; var on=document.getElementById(p+"-org-on"); if(on) on.checked=!!o.on;
   ORG_FIELDS.forEach(function(k){ var e=document.getElementById(p+"-org-"+k); if(e) e.value=o[k]||""; });
+  // заповнені реквізити — показуємо згорнуто, щоб не займали місце
+  ORG_FOLD[p] = !!(o.on && (o.name||o.edrpou));
   orgToggle(p);
 }
-function orgClear(p){ orgSet(p, {on:false}); }
+function orgClear(p){ ORG_FOLD[p]=false; orgSet(p, {on:false}); }
 function orgSnap(p){ var o=orgRead(p); return [o.on?1:0].concat(ORG_FIELDS.map(function(k){return o[k];})).join("|"); }
 
 // ── ЗБЕРЕЖЕНІ ЗАМОВНИКИ (ТОВ/ФОП/фізособи) ────────────────────────────────────
@@ -8408,8 +8443,8 @@ function genClientDoc(kind){
     });
     return h;
   }
-  var tableRows = '<tr class="inv-car"><td colspan="5"><span class="inv-car-lbl">Автомобіль</span> '+esc(d.car||"")+(d.vin?'  |  VIN: '+esc(d.vin):'')+'</td></tr>'
-    + secRows("ЗАПЧАСТИНИ", d.parts) + secRows("РОБОТИ", d.works);
+  var carBar = '<div class="inv-carbar"><span class="inv-car-lbl">Автомобіль</span> '+esc(d.car||"")+(d.vin?'  |  VIN: '+esc(d.vin):'')+'</div>';
+  var tableRows = secRows("ЗАПЧАСТИНИ", d.parts) + secRows("РОБОТИ", d.works);
   var totalRow = '<tr class="inv-tot"><td colspan="4">ВСЬОГО до сплати</td><td class="inv-rt">'+nf(total)+'</td></tr>';
 
   var c = (d.org && d.org.on) ? d.org : null;
@@ -8455,7 +8490,7 @@ function genClientDoc(kind){
     +'#act-doc table.inv th:first-child{text-align:left}'
     +'#act-doc table.inv td{padding:6px 8px;border-bottom:1px solid #e3e9f3}'
     +'#act-doc .inv-nm{text-align:left}#act-doc .inv-ct{text-align:center}#act-doc .inv-rt{text-align:right;white-space:nowrap}'
-    +'#act-doc tr.inv-car td{background:#2f62b3;color:#fff;font-weight:700;font-size:15.5px;padding:8px}'
+    +'#act-doc .inv-carbar{background:#2f62b3;color:#fff;font-weight:700;font-size:15.5px;padding:8px;margin:3px 0}'
     +'#act-doc .inv-car-lbl{font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;margin-right:10px}'
     +'#act-doc tr.inv-sec td{background:#1e3f7d;color:#fff;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.5px}'
     +'#act-doc tr.inv-tot td{background:#2f62b3;color:#fff;font-weight:700;font-size:13px;padding:8px}#act-doc tr.inv-tot td:last-child{color:#fff;font-size:14px}'
@@ -8473,6 +8508,7 @@ function genClientDoc(kind){
     +'<div class="inv-top"><div><div class="l1">'+esc(CKR_SUP.shop)+'</div><div class="l2">'+esc(CKR_SUP.fop)+'</div></div><div class="num">INVOICE # '+esc(num)+'</div></div>'
     +'<div class="inv-title">'+(isAct?"АКТ ПРИЙОМУ-ПЕРЕДАЧІ ВИКОНАНИХ РОБІТ":"Рахунок-фактура")+'</div>'
     +'<div class="inv-cust"><div class="cl">Клієнту ПІБ або Назва організації</div><div class="nm">'+esc(custName)+'</div>'+custLines+'</div>'
+    + carBar
     +'<table class="inv"><thead><tr><th>Найменування</th><th>К-ть</th><th>Ціна</th><th>Знижка</th><th>Сума</th></tr></thead>'
     +'<tbody>'+tableRows+totalRow+'</tbody></table>'
     +'<div class="inv-words">'+numberToWords(Math.round(total))+'</div>'

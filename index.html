@@ -6457,10 +6457,10 @@ function pmRender(){
     table.className = "pt";
     var thead = document.createElement("thead");
     var hrow = document.createElement("tr");
-    [["3%","\u0412\u0430\u0440"],["31%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
-     ["4%","\u041a-\u0442\u044c"],["6%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["7%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
-     ["7%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
-     ["7%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
+    [["3%","\u0412\u0430\u0440"],["39%","\u041d\u0430\u044f\u0432\u043d\u0456\u0441\u0442\u044c / \u041d\u0430\u0437\u0432\u0430"],
+     ["4%","\u041a-\u0442\u044c"],["5%","\u0412\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],["6%","\u0424\u0456\u043d.\u0432\u0430\u0440\u0442\u0456\u0441\u0442\u044c"],
+     ["6%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043e\u0441\u043d."],
+     ["6%","\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0430\u043b\u044c\u0442."],
      ["3%","\u041f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f"],["6%","\u0422\u0422\u041d"],["11%","\u041f\u043e\u0441\u0442\u0430\u0447.\u043d\u0430\u0437\u0432\u0430"],
      ["7%","\u0417\u0430\u043a\u0443\u043f\u043a\u0430,\u0433\u0440\u043d"],
      ["6%","\u041d\u0430\u0446\u0435\u043d\u043a\u0430"],["3%","\u0421\u0442\u0430\u0442\u0443\u0441"],["4%","\u0414\u0456\u044f"]
@@ -7658,9 +7658,9 @@ function soRenderWorks(){
   table.className = "so-wt";
   var thead = document.createElement("thead");
   var hrow = document.createElement("tr");
-  var cols = [["30%","Назва роботи",""],["13%","Тип робіт","so-wt-type"],["6%","К-ть",""],["12%","Ціна (грн)",""],["13%","Фін.ціна (грн)",""]];
-  if(adm){ cols.push(["10%","Факт","so-wt-fact"]); cols.push(["12%","Координатор","so-wt-coord"]); }
-  cols.push(["5%","","so-wt-del"]);
+  var cols = [["40%","Назва роботи",""],["6%","К-ть",""],["10%","Ціна (грн)",""],["11%","Фін.ціна (грн)",""],["11%","Тип робіт","so-wt-type"]];
+  if(adm){ cols.push(["8%","Факт","so-wt-fact"]); cols.push(["10%","Координатор","so-wt-coord"]); }
+  cols.push(["4%","","so-wt-del"]);
   cols.forEach(function(h){ var th=document.createElement("th"); th.style.width=h[0]; th.textContent=h[1]; if(h[2]) th.className=h[2]; hrow.appendChild(th); });
   thead.appendChild(hrow); table.appendChild(thead);
 
@@ -7685,13 +7685,7 @@ function soRenderWorks(){
     wrapN.appendChild(inp); wrapN.appendChild(dd);
     tdN.appendChild(wrapN); tr.appendChild(tdN);
 
-    // 2) Тип робіт (блок-джерело)
-    var tdT = document.createElement("td"); tdT.className="so-wt-type";
-    tdT.style.cssText="vertical-align:middle;font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3)";
-    tdT.textContent = soWorkTypeLabel(w.cat);
-    tr.appendChild(tdT);
-
-    // 3) К-ть
+    // К-ть
     var tdQ = document.createElement("td"); tdQ.style.verticalAlign="middle";
     var qInp = document.createElement("input");
     qInp.type="number"; qInp.min="1"; qInp.value=w.qty||1;
@@ -7713,6 +7707,12 @@ function soRenderWorks(){
     var final = soWorkFinal(w);
     tdF.textContent = final ? final.toLocaleString("uk-UA")+" грн" : "—";
     tr.appendChild(tdF);
+
+    // Тип робіт (блок-джерело) — праворуч від цін
+    var tdT = document.createElement("td"); tdT.className="so-wt-type";
+    tdT.style.cssText="vertical-align:middle;font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3)";
+    tdT.textContent = soWorkTypeLabel(w.cat);
+    tr.appendChild(tdT);
 
     if(adm){
       // 6) Факт (фактичні витрати)

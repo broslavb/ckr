@@ -1387,6 +1387,8 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="acts">
       <button class="btn btn-p" onclick="saveW()">💾 Зберегти</button>
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
+      <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
+      <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
       <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
       <button class="btn btn-o" onclick="wArchiveCurrent()" title="Завершити ремонт і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
       <button class="btn btn-o" id="w-hidden-toggle" onclick="toggleWorksHidden()" title="Показати/сховати приховані роботи" style="display:none">👁 Показати приховані</button>
@@ -1504,6 +1506,8 @@ body.hero-on .hero-pad{margin-right:40vw}
         <div style="padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-p" onclick="pmSave()">&#128190; Зберегти</button>
           <button class="btn btn-o" onclick="showPrintModal('parts')">&#128424; Друк</button>
+          <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
+          <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
           <button class="btn btn-o" onclick="newCalcLinked('works')" title="Створити Роботи для цього ж авто">➕ Роботи (це авто)</button>
           <button class="btn btn-o" onclick="pmArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
           <button class="btn btn-o" onclick="openCalcLog('parts')" title="Історія змін цієї калькуляції">🕘 Історія</button>
@@ -1652,6 +1656,8 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div style="padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-p" onclick="soSave()">💾 Зберегти</button>
         <button class="btn btn-o" onclick="soShowPrint()">🖨 Друк</button>
+        <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
+        <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
         <button class="btn btn-o" onclick="soArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
         <button class="btn btn-o" onclick="openCalcLog('service')" title="Історія змін цього замовлення">🕘 Історія</button>
         <button class="btn btn-o" onclick="soClear()">✕ Нова</button>
@@ -8330,6 +8336,155 @@ function actPrint(){
       document.title=origTitle;
     }, 800);
   }, 150);
+}
+
+// ── РАХУНОК-ФАКТУРА / АКТ для ТОВ (ФОП) ───────────────────────────────────────
+var CKR_SUP = {
+  shop:"ЦЕХ КУЗОВНОГО РЕМОНТУ", fop:"ФОП БРОСЛАВ Б.В.", fopFull:"ФОП Брослав Борис Васильович",
+  code:"3062515837", iban:"UA183052990000026000045110312", bank:'АТ КБ "ПРИВАТБАНК"',
+  addr:"м.Кропивницький, Маланюка, 19А", phone:"+38 095 314 39 09", email:"broslav.b@gmail.com", site:"iaa.in.ua"
+};
+function _invPushPartSo(arr, it, dr){
+  if(it.status==="hidden") return;
+  var isClient=it.status==="client_wait"||it.status==="client_delivered";
+  if(isClient){ if(it.name) arr.push({name:it.name, qty:it.qty||1, price:0, disc:0, sum:0, note:"від клієнта"}); return; }
+  var price=soFinalPrice(it); if(!it.name && !price) return;
+  var sum=soFinalWithDisc(price, dr);
+  arr.push({name:it.name||"", qty:it.qty||1, price:price, disc:price-sum, sum:sum});
+}
+function _invPushPartPm(arr, it, pc){
+  if(it.status==="hidden") return;
+  var isClient=it.status==="client_wait"||it.status==="client_delivered";
+  if(isClient){ if(it.name) arr.push({name:it.name, qty:it.qty||1, price:0, disc:0, sum:0, note:"від клієнта"}); return; }
+  if(!it.name && !it.buyPrice && !(it.manualPrice>0)) return;
+  var price=pmFinalPrice(it); var sum=pmFinalWithDisc(price, pc);
+  arr.push({name:it.name||"", qty:it.qty||1, price:price, disc:price-sum, sum:sum});
+}
+function invCollect(){
+  var mod = CURRENT_TAB==="service" ? "service" : (CURRENT_TAB==="parts" ? "parts" : "works");
+  var P = mod==="service" ? "so" : (mod==="parts" ? "pm" : "w");
+  var g=function(id){ var e=document.getElementById(id); return e?e.value:""; };
+  var d={ mod:mod, prefix:P, car:g(P+"-car"), vin:g(P+"-vin"), client:g(P+"-client"), phone:g(P+"-phone"), org:orgRead(P), parts:[], works:[] };
+  if(mod==="service"){
+    var dr=soDiscRate();
+    soParts.forEach(function(it){ _invPushPartSo(d.parts,it,dr.parts); (it.variants||[]).forEach(function(v){ _invPushPartSo(d.parts,v,dr.parts); }); });
+    soWorks.forEach(function(w){ if(!w.name && !w.price) return; var price=Math.round((w.price||0)*(w.qty||1)); var sum=soWorkFinal(w); d.works.push({name:w.name||"", qty:w.qty||1, price:price, disc:price-sum, sum:sum}); });
+  } else if(mod==="parts"){
+    var pc=pmDiscCode();
+    PM_BLOCKS.forEach(function(b){ b.items.forEach(function(it){ _invPushPartPm(d.parts,it,pc); (it.variants||[]).forEach(function(v){ _invPushPartPm(d.parts,v,pc); }); }); });
+  } else {
+    var dk=parseFloat(g("disc-kuz"))||0, ds=parseFloat(g("disc-slu"))||0, dbz=parseFloat(g("disc-bez"))||0, ml=g("mal-type");
+    Object.keys(wsel).forEach(function(u){ var w=wsel[u]; if(w.hidden || !w.name) return;
+      var cur=(typeof DB!=="undefined"&&DB[w.cat])?DB[w.cat].cur:"usd";
+      var praw=(w.price||0)*(w.coeff||1); if(w.cat===CAT_MAL&&ml==="bud") praw=Math.round(praw*0.85*10)/10;
+      var grn=cur==="uah"?Math.round(praw):Math.round(praw*usdRate);
+      var dr=w.cat===CAT_KUZ?dk:(w.cat===CAT_SLU?ds:(w.cat===CAT_BEZ?dbz:0));
+      var sum=Math.round(grn*(1-dr));
+      d.works.push({name:w.name+(w.side?" ("+w.side+")":""), qty:1, price:grn, disc:grn-sum, sum:sum});
+    });
+  }
+  return d;
+}
+function genClientDoc(kind){
+  var isAct = kind==="act";
+  var d = invCollect();
+  if(!d.parts.length && !d.works.length){ showToast("Немає позицій для документа"); return; }
+  var dt=new Date(), p2=function(n){return (n<10?"0":"")+n;};
+  var defNum = p2(dt.getDate())+"."+p2(dt.getMonth()+1)+"."+String(dt.getFullYear()).slice(2)+"-01";
+  var existing = d.mod==="service" ? ((document.getElementById("so-invoice-num")||{}).value||"") : "";
+  var num = prompt("Номер документа (INVOICE #):", existing||defNum);
+  if(num===null) return; num=(num.trim())||defNum;
+  var nf=function(v){ return Math.round(v).toLocaleString("uk-UA")+" ₴"; };
+  var esc=escH, total=0;
+  function secRows(title, list){
+    if(!list.length) return "";
+    var h='<tr class="inv-sec"><td colspan="5">'+esc(title)+'</td></tr>';
+    list.forEach(function(r){
+      total += r.sum||0;
+      var price = r.note ? '<span style="color:#888">'+esc(r.note)+'</span>' : (r.price?nf(r.price):"—");
+      var disc  = (r.note||!r.disc) ? "—" : nf(r.disc);
+      var sum   = r.note ? "—" : (r.sum?nf(r.sum):"—");
+      h+='<tr><td class="inv-nm">'+esc(r.name||"")+'</td><td class="inv-ct">'+(r.qty||1)+'</td><td class="inv-rt">'+price+'</td><td class="inv-rt">'+disc+'</td><td class="inv-rt">'+sum+'</td></tr>';
+    });
+    return h;
+  }
+  var tableRows = '<tr class="inv-car"><td colspan="5">'+esc(d.car||"")+(d.vin?'  |  VIN: '+esc(d.vin):'')+'</td></tr>'
+    + secRows("ЗАПЧАСТИНИ", d.parts) + secRows("РОБОТИ", d.works);
+  var totalRow = '<tr class="inv-tot"><td colspan="4">ВСЬОГО до сплати</td><td class="inv-rt">'+nf(total)+'</td></tr>';
+
+  var c = (d.org && d.org.on) ? d.org : null;
+  var custName = c ? (c.name||"") : (d.client||"—");
+  var custLines = "";
+  if(c){
+    if(c.edrpou||c.ipn) custLines += '<div>'+(c.edrpou?'ЄДРПОУ '+esc(c.edrpou):'')+(c.ipn?'  ІПН '+esc(c.ipn):'')+'</div>';
+    if(c.addr) custLines += '<div>'+esc(c.addr)+'</div>';
+    if(c.iban) custLines += '<div>IBAN: '+esc(c.iban)+'</div>';
+    if(c.bank||c.mfo) custLines += '<div>Банк: '+esc(c.bank||"")+(c.mfo?', МФО '+esc(c.mfo):'')+'</div>';
+    if(c.phone) custLines += '<div>Тел.: '+esc(c.phone)+'</div>';
+  } else if(d.phone){ custLines='<div>Тел.: '+esc(d.phone)+'</div>'; }
+
+  var footer;
+  if(isAct){
+    footer = '<div class="inv-actnote">Роботи (послуги) виконані повністю, сторони претензій одна до одної не мають.</div>'
+      +'<div class="inv-signs">'
+      +'<div><div class="inv-sh">РОБОТУ ЗДАВ, ВИКОНАВЕЦЬ</div><div class="inv-sb">'+esc(CKR_SUP.fop)+'</div>'
+        +'<div class="inv-ss">"'+esc(CKR_SUP.shop)+'"<br>ЄДРПОУ '+esc(CKR_SUP.code)+'<br>'+esc(CKR_SUP.addr)+'<br>'+esc(CKR_SUP.phone)+'</div>'
+        +'<div class="inv-sline">м.п.________________підпис</div></div>'
+      +'<div><div class="inv-sh">РОБОТУ ПРИЙНЯВ, ЗАМОВНИК:</div><div class="inv-sb">'+esc(custName)+'</div>'
+        +'<div class="inv-ss">'+custLines+'</div>'
+        +'<div class="inv-sline">м.п.________________підпис</div></div>'
+      +'</div>';
+  } else {
+    footer = '<div class="inv-foot3">'
+      +'<div><div class="inv-fh">СТРОКИ СПЛАТИ РАХУНКУ</div>1 банк. день</div>'
+      +'<div><div class="inv-fh">ФІЗИЧНА АДРЕСА КОМПАНІЇ</div>'+esc(CKR_SUP.addr)+'</div>'
+      +'<div><div class="inv-fh">ПОСТАЧАЛЬНИК</div><b>'+esc(CKR_SUP.fop)+'</b><br>Код отримувача '+esc(CKR_SUP.code)+'<br>Рахунок отримувача (IBAN)<br>'+esc(CKR_SUP.iban)+'<br>Банк: '+esc(CKR_SUP.bank)+'<br>Тел. '+esc(CKR_SUP.phone)+'</div>'
+      +'</div>';
+  }
+
+  var css='<style>'
+    +'#act-doc .inv-page{font-family:Arial,Helvetica,sans-serif;color:#1b1f27;max-width:800px;margin:0 auto}'
+    +'#act-doc .inv-top{display:flex;justify-content:space-between;align-items:center;background:#1a2a4a;color:#fff;padding:14px 18px}'
+    +'#act-doc .inv-top .l1{font-weight:700;font-size:15px;letter-spacing:.5px}#act-doc .inv-top .l2{font-size:11px;opacity:.9}'
+    +'#act-doc .inv-top .num{font-weight:700;font-size:15px}'
+    +'#act-doc .inv-title{background:#2e4a73;color:#fff;text-align:center;font-weight:700;letter-spacing:1px;padding:8px;font-size:13px}'
+    +'#act-doc .inv-cust{background:#eef3fb;padding:10px 14px;font-size:11px;line-height:1.5}'
+    +'#act-doc .inv-cust .cl{color:#2e4a73;font-weight:600;font-size:10px}#act-doc .inv-cust .nm{font-weight:700;font-size:13px;margin:2px 0 4px}'
+    +'#act-doc table.inv{width:100%;border-collapse:collapse;margin-top:2px;font-size:11px}'
+    +'#act-doc table.inv th{background:#2e4a73;color:#fff;text-transform:uppercase;font-size:9.5px;letter-spacing:.5px;padding:6px 8px;text-align:right}'
+    +'#act-doc table.inv th:first-child{text-align:left}'
+    +'#act-doc table.inv td{padding:6px 8px;border-bottom:1px solid #e3e9f3}'
+    +'#act-doc .inv-nm{text-align:left}#act-doc .inv-ct{text-align:center}#act-doc .inv-rt{text-align:right;white-space:nowrap}'
+    +'#act-doc tr.inv-car td{background:#2e4a73;color:#fff;font-weight:700;font-size:11px}'
+    +'#act-doc tr.inv-sec td{background:#1a2a4a;color:#fff;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.5px}'
+    +'#act-doc tr.inv-tot td{background:#eef3fb;font-weight:700;font-size:12px}#act-doc tr.inv-tot td:last-child{color:#0d2b6b}'
+    +'#act-doc .inv-words{font-size:11px;font-style:italic;color:#444;margin:8px 14px}'
+    +'#act-doc .inv-foot3{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:14px;background:#eef3fb;padding:12px 14px;font-size:10px;line-height:1.5;margin-top:10px}'
+    +'#act-doc .inv-fh{color:#2e4a73;font-weight:700;font-size:9.5px;margin-bottom:3px}'
+    +'#act-doc .inv-actnote{font-size:11px;color:#333;margin:12px 14px}'
+    +'#act-doc .inv-signs{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 14px;margin-top:8px}'
+    +'#act-doc .inv-sh{color:#2e4a73;font-weight:700;font-size:10px}#act-doc .inv-sb{font-weight:700;font-size:11px;margin-top:2px}'
+    +'#act-doc .inv-ss{font-size:10px;color:#444;line-height:1.45;margin-top:3px}#act-doc .inv-sline{margin-top:28px;font-size:10px;color:#555}'
+    +'#act-doc .inv-botline{margin-top:16px;background:#1a2a4a;color:#fff;text-align:center;font-size:9px;padding:8px;letter-spacing:.3px}'
+    +'</style>';
+
+  var html = css + '<div class="inv-page">'
+    +'<div class="inv-top"><div><div class="l1">'+esc(CKR_SUP.shop)+'</div><div class="l2">'+esc(CKR_SUP.fop)+'</div></div><div class="num">INVOICE # '+esc(num)+'</div></div>'
+    +'<div class="inv-title">'+(isAct?"АКТ ПРИЙОМУ-ПЕРЕДАЧІ ВИКОНАНИХ РОБІТ":"Рахунок-фактура")+'</div>'
+    +'<div class="inv-cust"><div class="cl">Клієнту ПІБ або Назва організації</div><div class="nm">'+esc(custName)+'</div>'+custLines+'</div>'
+    +'<table class="inv"><thead><tr><th>Найменування</th><th>К-ть</th><th>Ціна</th><th>Знижка</th><th>Сума</th></tr></thead>'
+    +'<tbody>'+tableRows+totalRow+'</tbody></table>'
+    +'<div class="inv-words">'+numberToWords(Math.round(total))+'</div>'
+    + footer
+    +'<div class="inv-botline">'+esc(CKR_SUP.shop)+' '+esc(CKR_SUP.fop)+' • '+esc(CKR_SUP.addr.toUpperCase())+' • '+esc(CKR_SUP.email.toUpperCase())+' • '+esc(CKR_SUP.site.toUpperCase())+'</div>'
+    +'</div>';
+
+  var docEl=document.getElementById("act-doc"); docEl.innerHTML=html;
+  if(typeof closePrintModal==="function") closePrintModal();
+  var origTitle=document.title;
+  document.title=(isAct?"Акт ":"Рахунок ")+num;
+  document.body.classList.add("act-print");
+  setTimeout(function(){ window.print(); setTimeout(function(){ document.body.classList.remove("act-print"); document.title=origTitle; docEl.innerHTML=""; }, 800); }, 150);
 }
 
 // ── AUTO INVOICE NUMBER ───────────────────────────────────────────────────────

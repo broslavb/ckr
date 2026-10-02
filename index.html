@@ -9151,11 +9151,18 @@ function payLoadAll(){
     payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
+var PAY_SEEDED = false;
 function paySeedWorkers(){
-  var seed = [{name:"Чигряй Олександр",role:"slu"},{name:"Тютюшкін Дмитро",role:"slu"},
-              {name:"Стрижеус Володимир",role:"kuz"},{name:"Димура Дмитро",role:"kuz"}];
-  Promise.all(seed.map(function(w){ return db.collection("workers").add({name:w.name,role:w.role,active:true}); }))
-    .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
+  if(PAY_SEEDED) return;   // захист від повторного засіву в межах сесії (інакше — дублі)
+  PAY_SEEDED = true;
+  // Повторна (свіжа) перевірка: раптом перший read повернув порожньо помилково (збій/гонка)
+  db.collection("workers").get().then(function(snap){
+    if(snap.size > 0){ payLoadAll(); return; }   // працівники вже є — НЕ засіваємо
+    var seed = [{name:"Чигряй Олександр",role:"slu"},{name:"Тютюшкін Дмитро",role:"slu"},
+                {name:"Стрижеус Володимир",role:"kuz"},{name:"Димура Дмитро",role:"kuz"}];
+    Promise.all(seed.map(function(w){ return db.collection("workers").add({name:w.name,role:w.role,active:true}); }))
+      .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
+  }).catch(function(){ payRenderCards(); });
 }
 // Одноразово перерахувати координаторські бонуси з рихтувальних робіт на 15% (було 20%).
 function payMigrateCoordShare(){

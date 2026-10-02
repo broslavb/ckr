@@ -2700,7 +2700,7 @@ function serviceSnapshot(){
   return JSON.stringify({
     car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),dc:(typeof soDiscCode==="function"?soDiscCode():_v("so-disc")),dcw:(typeof soDiscCodeW==="function"?soDiscCodeW():""),inv:_v("so-invoice-num"),
     pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.manualPrice||0,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];}),
-    wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price];}),
+    wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price,w.coord||"",w.actualUAH||0];}),
     p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
 }
@@ -3438,6 +3438,16 @@ function wSyncCoordExt(calcId, rec){
           var bonusUAH=profit*PAY_COORD_SHARE_EXT;
           batch.push(mk({ src:"sto", workName:w.name, profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH), amountUSD:Math.round((bonusUAH/r)*100)/100 }));
         });
+        // ТО: сторонні роботи з фактичними витратами, координатор = Анікін → бонус 15% маржі
+        if(rec.type==="service_order"){
+          works.forEach(function(w){
+            if(w.coord!=="anikin") return;
+            var actual=parseFloat(w.actualUAH)||0; if(actual<=0) return;
+            var profit=(w.price||0)*(w.qty||1)-actual; if(profit<=0) return;
+            var bonusUAH=profit*PAY_COORD_SHARE_EXT;
+            batch.push(mk({ src:"to", workName:w.name, profitUAH:Math.round(profit), baseUAH:Math.round(bonusUAH), amountUSD:Math.round((bonusUAH/r)*100)/100 }));
+          });
+        }
         // Малярні роботи (один блок, координатор = Анікін)
         if(rec.malCoord==="anikin"){
           var malActual=parseFloat(rec.malActualUAH)||0;
@@ -7672,7 +7682,27 @@ function soRenderWorks(){
     })(w, inp, dd);
 
     wrapN.appendChild(inp); wrapN.appendChild(dd);
-    tdN.appendChild(wrapN); tr.appendChild(tdN);
+    tdN.appendChild(wrapN);
+    // Фактичні витрати + координатор (лише адмін; у друк не йде — .ritem-coord прихований)
+    if(isAdmin()){
+      var cl=document.createElement("div"); cl.className="ritem-coord"; cl.style.marginTop="3px";
+      var sel=document.createElement("select"); sel.className="rc-sel";
+      [["","— координатор —"],["broslav","Брослав"],["anikin","Анікін"]].forEach(function(o){ var op=document.createElement("option"); op.value=o[0]; op.textContent=o[1]; if((w.coord||"")===o[0]) op.selected=true; sel.appendChild(op); });
+      (function(wk){ sel.onchange=function(){ wk.coord=this.value; soRenderWorks(); soUpdateSummary(); }; sel.onclick=function(e){e.stopPropagation();}; })(w);
+      var lbl=document.createElement("span"); lbl.className="rc-lbl"; lbl.textContent="факт грн";
+      var act=document.createElement("input"); act.className="rc-act"; act.type="number"; act.min="0"; act.step="100"; act.placeholder="факт"; act.value=w.actualUAH||"";
+      (function(wk){ act.onchange=function(){ var n=parseFloat(this.value)||0; if(n>0) wk.actualUAH=n; else delete wk.actualUAH; soRenderWorks(); soUpdateSummary(); }; act.onclick=function(e){e.stopPropagation();}; })(w);
+      cl.appendChild(sel); cl.appendChild(lbl); cl.appendChild(act);
+      var actualV=parseFloat(w.actualUAH)||0;
+      if(actualV>0){
+        var client=(w.price||0)*(w.qty||1), m=client-actualV, isAnik=(w.coord==="anikin");
+        var mt=document.createElement("span"); mt.className="rc-prof"; mt.style.color=(m>=0?"var(--gr)":"var(--rd)");
+        mt.textContent="маржа "+m.toLocaleString("uk-UA")+" грн"+(isAnik?" · Анікіну "+Math.round(m>0?m*PAY_COORD_SHARE_EXT:0).toLocaleString("uk-UA"):"");
+        cl.appendChild(mt);
+      }
+      tdN.appendChild(cl);
+    }
+    tr.appendChild(tdN);
 
     // Qty
     var tdQ = document.createElement("td"); tdQ.style.verticalAlign="middle";
@@ -7712,27 +7742,30 @@ function soRenderWorks(){
 function soPopulateWorkDD(dropdown, query, work, input){
   dropdown.innerHTML="";
   var q = (query||"").toLowerCase().trim();
-  var hasResults = false;
-  for(var cat in SO_WORK_DB){
-    var items = SO_WORK_DB[cat].filter(function(item){
-      return !q || item.n.toLowerCase().indexOf(q) >= 0;
-    });
-    if(!items.length) continue;
-    hasResults = true;
-    var catDiv = document.createElement("div"); catDiv.className="so-work-cat"; catDiv.textContent=cat;
+  var has = false, rate = usdRate||44.1;
+  function addCat(title, items, cur){
+    var list = (items||[]).filter(function(it){ return it && it.n && (!q || it.n.toLowerCase().indexOf(q) >= 0); });
+    if(!list.length) return;
+    has = true;
+    var catDiv = document.createElement("div"); catDiv.className="so-work-cat"; catDiv.textContent=title;
     dropdown.appendChild(catDiv);
-    items.forEach(function(item){
+    list.forEach(function(it){
+      var grn = (cur==="usd") ? Math.round((it.p||0)*rate) : Math.round(it.p||0);   // ціни $ → грн за курсом
       var opt = document.createElement("div"); opt.className="so-work-opt";
-      opt.innerHTML='<span>'+item.n+'</span><span style="float:right;color:var(--ac);font-family:var(--mono);font-size:10px">'+item.p.toLocaleString("uk-UA")+" грн"+'</span>';
+      opt.innerHTML='<span>'+escH(it.n)+'</span><span style="float:right;color:var(--ac);font-family:var(--mono);font-size:10px">'+grn.toLocaleString("uk-UA")+" грн"+'</span>';
       (function(n,p){ opt.onmousedown=function(){
         work.name=n; work.price=p; input.value=n;
         dropdown.classList.remove("open");
         soRenderWorks(); soUpdateSummary();
-      }; })(item.n, item.p);
+      }; })(it.n, grn);
       dropdown.appendChild(opt);
     });
   }
-  dropdown.classList.toggle("open", hasResults || !q);
+  // Головний каталог «Ціни» (усі категорії разом) — щоб назви тягнулись звідти
+  if(typeof DB!=="undefined"){ Object.keys(DB).forEach(function(cat){ if(DB[cat]&&DB[cat].items) addCat(cat, DB[cat].items, DB[cat].cur||"usd"); }); }
+  // Каталог «Ціни ТО»
+  for(var cat in SO_WORK_DB){ addCat("ТО · "+cat, SO_WORK_DB[cat], "uah"); }
+  dropdown.classList.toggle("open", has);
 }
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
@@ -7796,14 +7829,21 @@ function soRenderProfit(disc, worksTotal){
     partsProfit += client - buy - Math.round(client*TAX);
   };
   soParts.forEach(function(it){ acc(it); (it.variants||[]).forEach(acc); });
-  var worksNet = worksTotal - Math.round(worksTotal*TAX);
+  // Роботи: дохід − 6% − фактичні витрати (де проставлено) − бонус координатора (Анікін 15% маржі)
+  var worksActual=0, worksCoord=0;
+  soWorks.forEach(function(w){
+    var actual=parseFloat(w.actualUAH)||0; if(actual>0){ worksActual+=actual;
+      if(w.coord==="anikin"){ var m=(w.price||0)*(w.qty||1)-actual; if(m>0) worksCoord+=Math.round(m*PAY_COORD_SHARE_EXT); }
+    }
+  });
+  var worksNet = worksTotal - Math.round(worksTotal*TAX) - worksActual - worksCoord;
   var total = partsProfit + worksNet;
   var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
   var col=function(v){ return v>=0?"var(--gr)":"var(--rd)"; };
   el.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px">'
     +'<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Прибуток на ТО (лише адмін)</div>'
     +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Прибуток ЗЧ (клієнту − закупка − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(partsProfit)+'">'+f(partsProfit)+' грн</span></div>'
-    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Роботи (дохід − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(worksNet)+'">'+f(worksNet)+' грн</span></div>'
+    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Роботи (дохід − 6%'+((worksActual||worksCoord)?' − факт − коорд':'')+')</span><span class="pm-sval" style="font-size:11px;color:'+col(worksNet)+'">'+f(worksNet)+' грн</span></div>'
     +'<div class="pm-srow main" style="margin-top:4px"><span class="pm-slbl" style="font-size:12px;color:var(--tx)">ПРИБУТОК ТО</span><span class="pm-sval" style="color:'+col(total)+'">'+f(total)+' грн</span></div>'
     +'<div class="pay-sub" style="margin-top:4px;font-size:10px">Оплата слюсаря за роботи — через Зарплату (нарахування).</div>'
     +'</div>';

@@ -2321,7 +2321,10 @@ function applyPerms(){
 var ORG_FIELDS = ["name","edrpou","ipn","addr","iban","bank","mfo","phone"];
 function orgToggle(p){
   var on=document.getElementById(p+"-org-on"), f=document.getElementById(p+"-org-fields");
-  if(f) f.style.display = (on&&on.checked) ? "grid" : "none";
+  var show = !!(on&&on.checked);
+  if(f) f.style.display = show ? "grid" : "none";
+  // Юр.особа увімкнена — «Клієнт» тягнеться з назви ТОВ/ФОП
+  if(show){ var nm=document.getElementById(p+"-org-name"), cl=document.getElementById(p+"-client"); if(nm&&cl&&nm.value.trim()) cl.value=nm.value.trim(); }
 }
 function orgRead(p){
   var on=document.getElementById(p+"-org-on"); var o={on:!!(on&&on.checked)};
@@ -2405,6 +2408,9 @@ function custInit(){
     inp.addEventListener("input", function(){ custRenderDD(p, this.value); });
     inp.addEventListener("focus", function(){ custRenderDD(p, this.value); });
     inp.addEventListener("blur", function(){ setTimeout(function(){ dd.classList.remove("open"); }, 200); });
+    // Назва ТОВ/ФОП → синхронізує «Клієнт», поки юр.особа увімкнена
+    var onm=document.getElementById(p+"-org-name");
+    if(onm){ onm.addEventListener("input", function(){ var oc=document.getElementById(p+"-org-on"); if(oc&&oc.checked) inp.value=this.value; }); }
   });
 }
 

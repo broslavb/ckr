@@ -2139,6 +2139,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div class="pay-btns">
       <button class="btn btn-p" onclick="payAddWorker()">Додати</button>
+      <button class="btn btn-o" id="pay-wk-dedup" onclick="payCleanDupWorkers()" style="display:none;color:#b71c1c;border-color:#b71c1c">🧹 Прибрати дублі</button>
       <button class="btn btn-o" onclick="payClose('pay-workers-modal')">Закрити</button>
     </div>
   </div>
@@ -9422,7 +9423,35 @@ function payOpenWorkers(){
     return '<div class="pay-wk"><span>'+escH(w.name)+' <span style="color:var(--tx3)">· '+(PAY_ROLE_LBL[w.role]||"")+'</span></span>'+
            '<span style="cursor:pointer;color:var(--rd);font-size:16px" onclick="payDelWorker(\''+w._id+'\')">&#215;</span></div>';
   }).join("") || '<div class="pay-sub">Порожньо</div>';
+  var dd=document.getElementById("pay-wk-dedup"); if(dd) dd.style.display = isAdmin() ? "" : "none";
   document.getElementById("pay-workers-modal").style.display = "flex";
+}
+// Прибрати дублікати працівників — лише ті, що БЕЗ даних (нарахувань/виплат/табеля); з історією лишаються
+function payCleanDupWorkers(){
+  if(!isAdmin()){ showToast("Лише адміністратор"); return; }
+  Promise.all([
+    db.collection("work_accruals").get(),
+    db.collection("worker_payments").get(),
+    db.collection("attendance").get()
+  ]).then(function(res){
+    var refs={};
+    res.forEach(function(snap){ snap.forEach(function(d){ var w=d.data().workerId; if(w) refs[w]=(refs[w]||0)+1; }); });
+    var active=PAY_WORKERS.filter(function(w){ return w.active!==false; });
+    var groups={};
+    active.forEach(function(w){ var k=(w.name||"").trim().toLowerCase()+"|"+(w.role||""); (groups[k]=groups[k]||[]).push(w); });
+    var del=[];
+    Object.keys(groups).forEach(function(k){
+      var g=groups[k]; if(g.length<2) return;                       // не дубль
+      g.sort(function(a,b){ return (refs[b._id]||0)-(refs[a._id]||0) || (a._id<b._id?-1:1); });  // з даними — першим
+      g.slice(1).forEach(function(w){ if((refs[w._id]||0)===0) del.push(w); });  // видаляємо лише порожні дублі
+    });
+    if(!del.length){ showToast("Дублікатів без даних не знайдено"); return; }
+    var msg="Видалити "+del.length+" дубль(ів) БЕЗ даних?\n\n"+del.map(function(w){return "• "+w.name+" ("+(PAY_ROLE_LBL[w.role]||w.role)+")";}).join("\n")+"\n\nДублі з історією (нарахування/виплати/табель) лишаться.";
+    if(!confirm(msg)) return;
+    Promise.all(del.map(function(w){ return db.collection("workers").doc(w._id).delete(); }))
+      .then(function(){ showToast("✅ Видалено дублів: "+del.length); payLoadAll(); payClose("pay-workers-modal"); })
+      .catch(function(e){ showToast("Помилка: "+e.message); });
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
 }
 function payAddWorker(){
   var n = document.getElementById("pay-wk-name").value.trim();

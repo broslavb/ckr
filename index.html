@@ -1505,7 +1505,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <option value="broslav">Брослав</option>
         </select>
       </div>
-      <div class="fld no-print"><label>Знижка</label>
+      <div class="fld no-print"><label>Знижка (запчастини)</label>
         <select id="so-disc" onchange="soDiscToggle()" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
           <option value="none">— без знижки —</option>
           <option value="regular">Постійний клієнт (7%)</option>
@@ -1514,6 +1514,18 @@ body.hero-on .hero-pad{margin-right:40vw}
         </select>
         <div id="so-disc-custom-wrap" style="display:none;align-items:center;gap:6px;margin-top:6px">
           <input type="number" id="so-disc-custom" min="0" max="100" step="0.5" value="6" oninput="soRecalc()" style="width:70px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:3px;outline:none"/>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">% знижки</span>
+        </div>
+      </div>
+      <div class="fld no-print"><label>Знижка (роботи)</label>
+        <select id="so-disc-w" onchange="soDiscToggle()" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
+          <option value="none">— без знижки —</option>
+          <option value="regular">Постійний клієнт (7%)</option>
+          <option value="max">Максимальна (13%)</option>
+          <option value="custom">Кастомна (%)</option>
+        </select>
+        <div id="so-disc-w-custom-wrap" style="display:none;align-items:center;gap:6px;margin-top:6px">
+          <input type="number" id="so-disc-w-custom" min="0" max="100" step="0.5" value="6" oninput="soRecalc()" style="width:70px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:3px;outline:none"/>
           <span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">% знижки</span>
         </div>
       </div>
@@ -2686,8 +2698,8 @@ function partsSnapshot(){
 }
 function serviceSnapshot(){
   return JSON.stringify({
-    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),dc:(typeof soDiscCode==="function"?soDiscCode():_v("so-disc")),inv:_v("so-invoice-num"),
-    pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status];})];}),
+    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),dc:(typeof soDiscCode==="function"?soDiscCode():_v("so-disc")),dcw:(typeof soDiscCodeW==="function"?soDiscCodeW():""),inv:_v("so-invoice-num"),
+    pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.manualPrice||0,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price];}),
     p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -7043,28 +7055,25 @@ var soCurrentDocId = null;
 function soUID(){ return "s"+Date.now()+Math.random().toString(36).substr(2,4); }
 
 // Discount rates
-function soDiscRate(){
-  var v = document.getElementById("so-disc");
-  if(!v) return {parts:0, works:0};
-  if(v.value==="custom"){
-    var p=parseFloat((document.getElementById("so-disc-custom")||{}).value); if(!(p>=0)) p=6;
-    var r=p/100; return {parts:r, works:r};
-  }
-  if(v.value==="regular") return {parts:0.07, works:0.07};
-  if(v.value==="max") return {parts:0.13, works:0.13};
-  return {parts:0, works:0};
+// Знижка ТО — ОКРЕМО для Запчастин (so-disc) і Робіт (so-disc-w)
+function soDiscRateOf(selId, inpId){
+  var v=document.getElementById(selId); if(!v) return 0;
+  if(v.value==="custom"){ var p=parseFloat((document.getElementById(inpId)||{}).value); if(!(p>=0)) p=6; return p/100; }
+  if(v.value==="regular") return 0.07;
+  if(v.value==="max") return 0.13;
+  return 0;
 }
-// Код знижки ТО для збереження: none/regular/max або "c:0.06"
-function soDiscCode(){
-  var sel=document.getElementById("so-disc"); if(!sel) return "none";
-  if(sel.value==="custom"){
-    var p=parseFloat((document.getElementById("so-disc-custom")||{}).value); if(!(p>=0)) p=6;
-    return "c:"+(Math.round(p*100)/10000);
-  }
+function soDiscRate(){ return { parts: soDiscRateOf("so-disc","so-disc-custom"), works: soDiscRateOf("so-disc-w","so-disc-w-custom") }; }
+// Код знижки для збереження: none/regular/max або "c:0.06"
+function soDiscCodeOf(selId, inpId){
+  var sel=document.getElementById(selId); if(!sel) return "none";
+  if(sel.value==="custom"){ var p=parseFloat((document.getElementById(inpId)||{}).value); if(!(p>=0)) p=6; return "c:"+(Math.round(p*100)/10000); }
   return sel.value;
 }
-function soSetDisc(code){
-  var sel=document.getElementById("so-disc"), inp=document.getElementById("so-disc-custom");
+function soDiscCode(){ return soDiscCodeOf("so-disc","so-disc-custom"); }        // запчастини
+function soDiscCodeW(){ return soDiscCodeOf("so-disc-w","so-disc-w-custom"); }    // роботи
+function soSetDiscOf(selId, inpId, wrapId, code){
+  var sel=document.getElementById(selId), inp=document.getElementById(inpId);
   code=code||"none";
   if(typeof code==="string" && code.slice(0,2)==="c:"){
     if(sel) sel.value="custom";
@@ -7073,11 +7082,15 @@ function soSetDisc(code){
     if(sel) sel.value=code;
     if(inp && !inp.value) inp.value=6;
   }
-  soDiscToggle();
+  var wrap=document.getElementById(wrapId); if(wrap) wrap.style.display=(sel&&sel.value==="custom")?"flex":"none";
 }
+function soSetDisc(code){ soSetDiscOf("so-disc","so-disc-custom","so-disc-custom-wrap",code); }     // запчастини
+function soSetDiscW(code){ soSetDiscOf("so-disc-w","so-disc-w-custom","so-disc-w-custom-wrap",code); } // роботи
 function soDiscToggle(){
-  var sel=document.getElementById("so-disc"), wrap=document.getElementById("so-disc-custom-wrap");
-  if(wrap) wrap.style.display=(sel&&sel.value==="custom")?"flex":"none";
+  [["so-disc","so-disc-custom-wrap"],["so-disc-w","so-disc-w-custom-wrap"]].forEach(function(p){
+    var sel=document.getElementById(p[0]), wrap=document.getElementById(p[1]);
+    if(wrap) wrap.style.display=(sel&&sel.value==="custom")?"flex":"none";
+  });
   if(typeof soRecalc==="function") soRecalc();
 }
 
@@ -7088,7 +7101,9 @@ function soMarkup(buyPrice, markupType){
 function soFinalPrice(item){
   if(item.status==="hidden") return 0;
   var isClient = item.status==="client_wait"||item.status==="client_delivered";
-  if(isClient||!item.buyPrice) return 0;
+  if(isClient) return 0;
+  if((item.markupType||"auto")==="manual") return Math.round(item.manualPrice||0);   // ручна ціна
+  if(!item.buyPrice) return 0;
   return Math.round(item.buyPrice * soMarkup(item.buyPrice, item.markupType||"auto") * (item.qty||1));
 }
 function soFinalWithDisc(fp, discRate){ return fp ? Math.round(fp*(1-discRate)) : 0; }
@@ -7179,7 +7194,10 @@ function soAddVariant(parentId){
 function soUpdPart(id, field, value){
   var item = soParts.find(function(p){return p.id===id;});
   if(!item){ soParts.forEach(function(p){ if(p.variants){ var v=p.variants.find(function(v){return v.id===id;}); if(v) item=v; }}); }
-  if(item){ item[field]=value;
+  if(item){
+    // Перехід на «вручну» — підставляємо поточну ціну як стартову ручну
+    if(field==="markupType" && value==="manual" && !(item.manualPrice>0)) item.manualPrice = soFinalPrice(item) || 0;
+    item[field]=value;
     if(field==="status"){ item.statusDate=todayISO(); warnStatusNoPrice(item, value); }   // дата зміни статусу + попередження про вартість
     if(field==="qty" || field==="buyPrice"){
       // як у ЗЧ: стрілки number-input у Safari — рендер із затримкою, підсумок оновлюємо одразу
@@ -7189,6 +7207,14 @@ function soUpdPart(id, field, value){
       if(field==="code" && value) soCheckDupCode(id, value);
     }
   }
+}
+// Ручна ціна клієнту для ЗЧ у ТО (лише при націнці «вручну»)
+function soSetManualPrice(id, val){
+  var it=soParts.find(function(p){return p.id===id;});
+  if(!it){ soParts.forEach(function(p){ if(p.variants){ var v=p.variants.find(function(v){return v.id===id;}); if(v) it=v; } }); }
+  if(!it) return;
+  it.manualPrice=Math.round(parseFloat(val)||0);
+  soUpdateSummary(); soScheduleRender();
 }
 var _soRenderTimer=null;
 function soScheduleRender(){ clearTimeout(_soRenderTimer); _soRenderTimer=setTimeout(function(){ soRenderParts(); }, 400); }
@@ -7456,9 +7482,20 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var qtyInp=mkInp(item.qty||1,"","qty","number"); qtyInp.min="1"; qtyInp.style.width="44px";
   td3.appendChild(qtyInp); tr.appendChild(td3);
 
-  // Col4: price without disc
+  // Col4: price without disc (для націнки «вручну» — редаговане поле ціни клієнту)
   var td4a=mkTd("width:8%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
-  td4a.textContent=(isClient||isHidden)?"—":(finalRaw?finalRaw.toLocaleString("uk-UA")+" грн":"—"); tr.appendChild(td4a);
+  if(isClient||isHidden){ td4a.textContent="—"; }
+  else if((item.markupType||"auto")==="manual"){
+    var smInp=document.createElement("input");
+    smInp.className="pm-manual-inp";
+    smInp.type="number"; smInp.min="0"; smInp.value=item.manualPrice||""; smInp.placeholder="ціна";
+    smInp.title="Ручна ціна клієнту (націнка «вручну»)";
+    smInp.style.cssText="width:100%;background:rgba(124,58,237,.10);border:1px solid #7c3aed;border-radius:3px;color:#5b21b6;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+    (function(iid){ smInp.addEventListener("change",function(){ soSetManualPrice(iid,+this.value); }); smInp.addEventListener("click",function(e){ e.stopPropagation(); }); })(item.id);
+    td4a.appendChild(smInp);
+  }
+  else td4a.textContent=finalRaw?finalRaw.toLocaleString("uk-UA")+" грн":"—";
+  tr.appendChild(td4a);
 
   // Col5: final price with disc
   var td4=mkTd("width:9%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
@@ -7519,7 +7556,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
 
   // Col11: markup
   var td10=mkTd("width:7%;vertical-align:middle");
-  var markupOpts=[{val:"auto",label:"×"+markup+" (avto.pro)"},{val:"at",label:"×1.4 (AT/AN)"},{val:"risk",label:"×1.5 (Ризик)"}];
+  var markupOpts=[{val:"auto",label:"×"+markup+" (avto.pro)"},{val:"at",label:"×1.4 (AT/AN)"},{val:"risk",label:"×1.5 (Ризик)"},{val:"manual",label:"✓ вручну"}];
   var mSel=document.createElement("select");
   mSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";
   markupOpts.forEach(function(o){ var opt=document.createElement("option"); opt.value=o.val; opt.textContent=o.label; if(o.val===(item.markupType||"auto")) opt.selected=true; mSel.appendChild(opt); });
@@ -7778,6 +7815,7 @@ function soSave(){
   var vin = document.getElementById("so-vin").value.toUpperCase();
   if(!requireVin(vin, "so-vin")) return;
   var disc = soDiscCode();
+  var discW = soDiscCodeW();
   var disc2 = soDiscRate();
   var partsTotal=0; soParts.forEach(function(item){ partsTotal+=soFinalWithDisc(soFinalPrice(item),disc2.parts); (item.variants||[]).forEach(function(v){partsTotal+=soFinalWithDisc(soFinalPrice(v),disc2.parts);}); });
   var worksTotal=0; soWorks.forEach(function(w){worksTotal+=soWorkFinal(w);});
@@ -7789,7 +7827,7 @@ function soSave(){
     client:document.getElementById("so-client").value,
     phone:document.getElementById("so-phone").value,
     date:document.getElementById("so-date").value,
-    disc:disc, partsTotal:partsTotal, worksTotal:worksTotal,
+    disc:disc, discW:discW, partsTotal:partsTotal, worksTotal:worksTotal,
     totalUAH:partsTotal+worksTotal,
     masterEmail:currentUser?currentUser.email:"",
     masterName:currentUserName||"",
@@ -7822,6 +7860,7 @@ function soLoadFromRecord(r, docId){
   document.getElementById("so-phone").value=r.phone||"";
   document.getElementById("so-date").value=r.date||"";
   soSetDisc(r.disc||"none");
+  soSetDiscW(r.discW!=null ? r.discW : (r.disc||"none"));   // старі записи: роботи мали ту саму знижку, що й ЗЧ
   var soSt = document.getElementById("so-status");
   if(soSt) soSt.value = r.status || "preliminary";
   var soCo = document.getElementById("so-coord"); if(soCo) soCo.value = r.coord || "";
@@ -7834,7 +7873,7 @@ function soClear(){
   soLogSnap = null;
   soCurrentDocId=null; soParts=[]; soWorks=[]; soPayments=[];
   ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
-  soSetDisc("none");
+  soSetDisc("none"); soSetDiscW("none");
   var soCoC=document.getElementById("so-coord"); if(soCoC) soCoC.value="";
   var d=document.getElementById("so-date"); if(d) d.value=new Date().toISOString().split("T")[0];
   soRenderParts(); soRenderWorks(); soRenderPayments(); soUpdateSummary();
@@ -9074,8 +9113,9 @@ function payIsTO(rec){ return rec && rec.type === "service_order"; }
 
 // Робота ТО: ціна в грн, знижка зі збереженого запису
 function payTOWorkUSD(w, rec){
-  var d = (typeof rec.disc==="string" && rec.disc.slice(0,2)==="c:") ? (parseFloat(rec.disc.slice(2))||0)
-        : (rec.disc === "regular" ? 0.07 : (rec.disc === "max" ? 0.13 : 0));
+  var code = (rec.discW!=null ? rec.discW : rec.disc);   // роботи мають власну знижку (стар. записи — спільна)
+  var d = (typeof code==="string" && code.slice(0,2)==="c:") ? (parseFloat(code.slice(2))||0)
+        : (code === "regular" ? 0.07 : (code === "max" ? 0.13 : 0));
   var uah = (w.price||0) * (w.qty||1) * (1 - d);
   return uah / (rec.rate || usdRate || 44.1);
 }

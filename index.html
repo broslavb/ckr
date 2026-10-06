@@ -1503,6 +1503,9 @@ body.hero-on .hero-pad{margin-right:40vw}
             <span class="pm-slbl" style="font-size:11px;color:var(--bl)" id="pm-mgr-lbl">Менеджер ЗЧ (10%)</span>
             <span class="pm-sval" id="pm-mgr-total" style="font-size:12px;font-weight:bold;color:var(--bl)">0 грн</span>
           </div>
+          <div class="no-print" id="pm-mgr-accrue-wrap" style="display:none;padding-top:4px">
+            <button type="button" class="pm-hidden-btn" onclick="pmMgrAccrueNow()" title="Нарахувати % менеджеру вже зараз; при архівації донарахується лише різниця">💰 Нарахувати менеджеру ЗЧ</button>
+          </div>
           <div id="pm-hidden-row" style="display:none;padding-top:8px">
             <button type="button" id="pm-hidden-toggle" class="pm-hidden-btn" onclick="toggleHiddenVariants()">👁 Показати приховані</button>
           </div>
@@ -3673,6 +3676,95 @@ function wSyncCoordExt(calcId, rec){
     }).catch(function(){});
 }
 
+// ── МЕНЕДЖЕР ЗЧ: % від прибутку запчастин (ТЕСТОВИЙ РЕЖИМ — лише власник) ─────
+// Прибуток ЗЧ із ЗБЕРЕЖЕНОГО запису калькуляції (parts_v2 / service_order), грн.
+function mgrPartsProfitOfRec(rec){
+  var total = 0;
+  if(rec.type === "parts_v2"){
+    (rec.blocks||[]).forEach(function(b){ (b.items||[]).forEach(function(i){
+      total += pmProfit(i, rec.disc||"none");
+      (i.variants||[]).forEach(function(v){ total += pmProfit(v, rec.disc||"none"); });
+    });});
+  } else if(rec.type === "service_order"){
+    var code = rec.disc;
+    var d = (typeof code==="string" && code.slice(0,2)==="c:") ? (parseFloat(code.slice(2))||0)
+          : (code==="regular" ? 0.07 : (code==="max" ? 0.13 : 0));
+    var acc = function(it){
+      var client = soFinalWithDisc(soFinalPrice(it), d);
+      if(!client) return;
+      var fpz = parseFloat(it.fpz)||0;
+      var buy = fpz>0 ? fpz : (it.buyPrice||0)*(it.qty||1);
+      total += client - buy - Math.round(client*0.06);
+    };
+    (rec.parts||[]).forEach(function(it){ acc(it); (it.variants||[]).forEach(acc); });
+  }
+  return Math.round(total);
+}
+// Сума (грн) запису нарахування — amountUAH, або amountUSD за курсом запису
+function accrUAH(a, fallbackRate){
+  return a.amountUAH!=null ? a.amountUAH : Math.round((a.amountUSD||0)*(a.rate||fallbackRate||usdRate||44.1));
+}
+// Нарахувати/донарахувати менеджеру ЗЧ по калькуляції. Ціль = прибуток × mgrPct;
+// вже нараховане по цій калькуляції віднімається — донараховується лише різниця (п.5).
+function payMgrAccrueFor(calcId, rec, opts){
+  if(!isAdmin() || !calcId || !rec) return;
+  var profit = mgrPartsProfitOfRec(rec);
+  var pct = (rec.mgrPct!=null ? parseFloat(rec.mgrPct) : 10); if(!(pct>=0)) pct = 10;
+  var target = Math.round(Math.max(0,profit)*pct/100);
+  var silent = !!(opts&&opts.silent);
+  db.collection("workers").where("role","==","pmgr").get().then(function(ws){
+    var mgr=null; ws.forEach(function(d){ var w=d.data(); if(w.active!==false && !mgr) mgr={_id:d.id, name:w.name}; });
+    if(!mgr){ if(!silent||target>0) showToast("Менеджера ЗЧ немає у «Працівниках» — додайте з роллю «Менеджер ЗЧ»"); return; }
+    db.collection("work_accruals").where("calcId","==",calcId).get().then(function(snap){
+      var existing=0;
+      snap.forEach(function(d){ var a=d.data(); if(a.type==="mgr_parts" && !a.void) existing += accrUAH(a); });
+      var diff = target - existing;
+      if(diff < 1){
+        if(!silent) showToast(existing>0
+          ? ("Менеджеру вже нараховано "+Math.round(existing).toLocaleString("uk-UA")+" грн (ціль "+target.toLocaleString("uk-UA")+" грн)"+(diff<-1?" — нараховано БІЛЬШЕ за ціль, корегуйте в Зарплаті":""))
+          : "Прибуток ЗЧ ≤ 0 — нараховувати нічого");
+        else if(diff < -1) showToast("⚠ Менеджеру ЗЧ по "+(rec.car||"авто")+" нараховано більше за ціль ("+Math.round(existing).toLocaleString("uk-UA")+" з "+target.toLocaleString("uk-UA")+" грн) — корегуйте в Зарплаті");
+        return;
+      }
+      var msg = "Нарахувати менеджеру ЗЧ «"+mgr.name+"»:\n\n"
+        + Math.round(diff).toLocaleString("uk-UA")+" грн — "+(rec.car||"")+"\n"
+        + "("+pct+"% від прибутку ЗЧ "+profit.toLocaleString("uk-UA")+" грн"
+        + (existing>0 ? ", вже нараховано "+Math.round(existing).toLocaleString("uk-UA")+" грн, донараховується різниця" : "")+")";
+      if(!confirm(msg)) return;
+      var rate=usdRate||44.1, today=new Date().toISOString().slice(0,10);
+      db.collection("work_accruals").add({
+        workerId:mgr._id, workerName:mgr.name, role:"pmgr", type:"mgr_parts",
+        src:(rec.type==="service_order"?"to":"parts"),
+        calcId:calcId, carName:rec.car||"", vin:rec.vin||"", rate:rate,
+        profitUAH:profit, pct:pct, baseUAH:target,
+        amountUAH:Math.round(diff), amountUSD:Math.round((diff/rate)*100)/100,
+        workName:(rec.type==="service_order"?"ТО":"ЗЧ")+" · прибуток "+profit.toLocaleString("uk-UA")+" грн",
+        date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+      }).then(function(){
+        showToast("💰 Менеджеру ЗЧ нараховано "+Math.round(diff).toLocaleString("uk-UA")+" грн");
+        if(typeof PAY_WORKERS!=="undefined" && PAY_WORKERS.length) payLoadAll();
+      }).catch(function(e){ showToast("Помилка: "+e.message); });
+    }).catch(function(e){ showToast("Помилка: "+e.message); });
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Кнопки «Нарахувати зараз» у калькуляціях (до архіву, п.5)
+function pmMgrAccrueNow(){
+  if(!isAdmin()) return;
+  if(typeof pmCurrentDocId==="undefined" || !pmCurrentDocId){ showToast("Спершу збережіть калькуляцію"); return; }
+  if(isTabDirty("parts")){ showToast("Є незбережені зміни — спершу «Зберегти»"); return; }
+  db.collection("calculations").doc(pmCurrentDocId).get().then(function(doc){
+    if(doc.exists) payMgrAccrueFor(pmCurrentDocId, doc.data());
+  });
+}
+function soMgrAccrueNow(){
+  if(!isAdmin()) return;
+  if(typeof soCurrentDocId==="undefined" || !soCurrentDocId){ showToast("Спершу збережіть замовлення"); return; }
+  if(isTabDirty("service")){ showToast("Є незбережені зміни — спершу «Зберегти»"); return; }
+  db.collection("calculations").doc(soCurrentDocId).get().then(function(doc){
+    if(doc.exists) payMgrAccrueFor(soCurrentDocId, doc.data());
+  });
+}
+
 // ── BUILD CARD HTML ─────────────────────────────────────────────────────────
 // Global doc registry for card clicks
 var _cardDocs = {};
@@ -3786,6 +3878,8 @@ function doneConfirm(){
       // Чернетка не породжує бонусів координатора; звичайне завершення — так.
       if(!shelved) wSyncCoordExt(id, Object.assign({}, r, {status:"done", doneDate:dd}));
       else wSyncCoordExt(id, Object.assign({}, r, {status:"draft"}));  // прибрати старі, якщо були
+      // Менеджер ЗЧ (п.3/п.5): при завершенні питаємо про (до)нарахування різниці
+      if(!shelved && isAdmin() && (r.type==="parts_v2" || r.type==="service_order")) payMgrAccrueFor(id, r, {silent:true});
       payClose("done-modal");
       showToast(shelved ? ("В архів як чернетку ("+dd+") — поза статистикою") : ("Завершено ("+dd+") → архів"));
       loadActive();
@@ -6855,6 +6949,8 @@ function pmUpdateSummary(){
     var mgrSum = Math.round(Math.max(0,totalProfit) * mgrPct/100);
     var mgrRow = document.getElementById("pm-mgr-row");
     if(mgrRow) mgrRow.style.display = (mgrPct>0 && totalProfit>0) ? "flex" : "none";
+    var mgrWrap = document.getElementById("pm-mgr-accrue-wrap");
+    if(mgrWrap) mgrWrap.style.display = (mgrPct>0 && totalProfit>0) ? "block" : "none";
     var mgrLbl = document.getElementById("pm-mgr-lbl");
     if(mgrLbl) mgrLbl.textContent = "Менеджер ЗЧ ("+mgrPct+"%)";
     var mgrEl = document.getElementById("pm-mgr-total");
@@ -8119,7 +8215,8 @@ function soRenderProfit(disc, worksTotal){
   el.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px">'
     +'<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Прибуток на ТО (лише адмін)</div>'
     +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Прибуток ЗЧ (клієнту − закупка/ФПЗ − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(partsProfit)+'">'+f(partsProfit)+' грн</span></div>'
-    +((mgrPct>0&&partsProfit>0)?'<div class="pm-srow" id="so-mgr-row"><span class="pm-slbl" style="font-size:11px;color:var(--bl)">Менеджер ЗЧ ('+mgrPct+'%)</span><span class="pm-sval" style="font-size:11px;font-weight:bold;color:var(--bl)">'+f(mgrSum)+' грн</span></div>':'')
+    +((mgrPct>0&&partsProfit>0)?'<div class="pm-srow" id="so-mgr-row"><span class="pm-slbl" style="font-size:11px;color:var(--bl)">Менеджер ЗЧ ('+mgrPct+'%)</span><span class="pm-sval" style="font-size:11px;font-weight:bold;color:var(--bl)">'+f(mgrSum)+' грн</span></div>'
+      +'<div class="no-print" style="padding:4px 0"><button type="button" class="pm-hidden-btn" onclick="soMgrAccrueNow()" title="Нарахувати % менеджеру вже зараз; при архівації донарахується лише різниця">💰 Нарахувати менеджеру ЗЧ</button></div>':'')
     +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Роботи (дохід − 6%'+((worksActual||worksCoord)?' − факт − коорд':'')+')</span><span class="pm-sval" style="font-size:11px;color:'+col(worksNet)+'">'+f(worksNet)+' грн</span></div>'
     +'<div class="pm-srow main" style="margin-top:4px"><span class="pm-slbl" style="font-size:12px;color:var(--tx)">ПРИБУТОК ТО</span><span class="pm-sval" style="color:'+col(total)+'">'+f(total)+' грн</span></div>'
     +'<div class="pay-sub" style="margin-top:4px;font-size:10px">Оплата слюсаря за роботи — через Зарплату (нарахування).</div>'
@@ -10630,11 +10727,16 @@ function statsRender(){
         (i.variants||[]).forEach(function(v){ partsProfit += pmProfit(v, p.disc||"none"); });
       });});
     });
+    // Бонус менеджера ЗЧ — витрата проти прибутку запчастин
+    var pcIds = pc.map(function(p){ return p._id; });
+    PAY_ACCRUALS.forEach(function(a){
+      if(a.role==="pmgr" && a.type==="mgr_parts" && !a.void && pcIds.indexOf(a.calcId)>=0) partsProfit -= accrUAH(a, rate);
+    });
     // Прибуток на роботах — рахований у самій калькуляції (worksProfitUAH). Fallback — по нарахуваннях.
     var worksProfit;
     if(r.worksProfitUAH!==undefined && r.worksProfitUAH!==null){ worksProfit = r.worksProfitUAH; }
     else {
-      var lU=0,cU=0; PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void) return; if(a.role==="coord") cU+=(a.amountUSD||0); else lU+=(a.amountUSD||0); });
+      var lU=0,cU=0; PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void||a.role==="pmgr") return; if(a.role==="coord") cU+=(a.amountUSD||0); else lU+=(a.amountUSD||0); });
       worksProfit = Math.round(worksPaid - (lU+cU)*rate - (r.malPaidUAH||0) - worksPaid*taxPct/100);
     }
     var bal = recordBalanceUAH(r);              // залишок по роботах

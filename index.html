@@ -2054,7 +2054,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       </div>
     </div>
     <div class="pay-hint">
-      Нараховувати можна лише з авто у статусі <b>«В роботі»</b>. Ліміт — 50% від суми робіт по авто:
+      Нараховувати можна лише з авто у статусі <b>«В роботі»</b>. Ліміт — слюсарям 45%, рихтувальникам 50% від суми робіт по авто:
       слюсарям (СЛЮСАРНІ + БЕЗПЕКА), рихтувальникам (КУЗОВНІ). Розрахунок: <b>рихтувальники — у $</b>, <b>слюсарі й координатор — у грн</b>.
       Баланс: <b>+</b> винні працівнику, <b>−</b> аванс; прогули віднімаються.
     </div>
@@ -2221,6 +2221,7 @@ body.hero-on .hero-pad{margin-right:40vw}
         <option value="slu">Слюсар</option>
         <option value="kuz">Рихтувальник</option>
         <option value="coord">Координатор</option>
+        <option value="pmgr">Менеджер ЗЧ</option>
       </select></div>
     </div>
     <div class="pay-btns">
@@ -9447,6 +9448,9 @@ document.addEventListener("click", function(e){
 // суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
+var PAY_SHARE_SLU = 0.45;              // ТИМЧАСОВО: слюсарям 45% (з 2026-10-06, було 50%)
+var PAY_SLU_CHANGE_DATE = "2026-10-06"; // до цієї дати нарахування слюсарям звіряються за старими 50%
+function payShareOf(role){ return role==="slu" ? PAY_SHARE_SLU : PAY_SHARE; }
 var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт (праця)
 var PAY_COORD_SHARE_KUZ = 0.15;  // координатору з рихтувальних (кузовних) робіт — 15%
 var PAY_COORD_SHARE_EXT = 0.15;  // координатору з прибутку сторонніх і малярних — 15%
@@ -9466,7 +9470,7 @@ function payMonthNav(delta){
 }
 var PAY_CAL_MONTH = null, PAY_CAL_WORKER = null;   // стан календаря табеля
 var PAY_COORD_ENSURED = false;
-var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник", coord:"Координатор"};
+var PAY_ROLE_LBL = {slu:"Слюсар", kuz:"Рихтувальник", coord:"Координатор", pmgr:"Менеджер ЗЧ"};
 
 // Яка спеціальність «годується» з якої категорії робіт
 function payRoleOfCat(cat){
@@ -9522,14 +9526,14 @@ function payFundFor(rec){
   if(payIsTO(rec)){
     // ТО не має категорій — усі роботи вважаємо слюсарними
     (rec.works||[]).forEach(function(w){ f.slu += payTOWorkUSD(w, rec); });
-    f.slu *= PAY_SHARE; f.kuz *= PAY_SHARE;
+    f.slu *= PAY_SHARE_SLU; f.kuz *= PAY_SHARE;
     return f;
   }
   (rec.works||[]).forEach(function(w){
     var r = payRoleOfCat(w.cat);
     if(r) f[r] += payWorkUSD(w, rec);
   });
-  f.slu *= PAY_SHARE; f.kuz *= PAY_SHARE;
+  f.slu *= PAY_SHARE_SLU; f.kuz *= PAY_SHARE;
   return f;
 }
 function payAccruedFor(calcId, role){
@@ -9585,6 +9589,7 @@ function payLoadAll(){
     if(!PAY_WORKERS.length){ paySeedWorkers(); return; }
     if(payEnsureCoord()) return;   // якщо додали координатора — payLoadAll перезапуститься
     payMigrateCoordShare();
+    payAutoDedup();                // тиха чистка дублів без даних (лише адмін, раз за сесію)
     payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -9595,11 +9600,41 @@ function paySeedWorkers(){
   // Повторна (свіжа) перевірка: раптом перший read повернув порожньо помилково (збій/гонка)
   db.collection("workers").get().then(function(snap){
     if(snap.size > 0){ payLoadAll(); return; }   // працівники вже є — НЕ засіваємо
-    var seed = [{name:"Чигряй Олександр",role:"slu"},{name:"Тютюшкін Дмитро",role:"slu"},
-                {name:"Стрижеус Володимир",role:"kuz"},{name:"Димура Дмитро",role:"kuz"}];
-    Promise.all(seed.map(function(w){ return db.collection("workers").add({name:w.name,role:w.role,active:true}); }))
+    // Фіксовані ID документів: навіть якщо засів спрацює двічі (гонка/старий таб) —
+    // set() просто перезапише той самий документ, дублі неможливі.
+    var seed = [{id:"seed_slu_chygriai",name:"Чигряй Олександр",role:"slu"},
+                {id:"seed_slu_tiutiushkin",name:"Тютюшкін Дмитро",role:"slu"},
+                {id:"seed_kuz_stryzheus",name:"Стрижеус Володимир",role:"kuz"},
+                {id:"seed_kuz_dymura",name:"Димура Дмитро",role:"kuz"}];
+    Promise.all(seed.map(function(w){ return db.collection("workers").doc(w.id).set({name:w.name,role:w.role,active:true}); }))
       .then(function(){ payLoadAll(); }).catch(function(){ payRenderCards(); });
   }).catch(function(){ payRenderCards(); });
+}
+// Само-чистка дублів (раз за сесію, лише адмін): дублікати імʼя+роль БЕЗ жодних даних
+// (нарахувань/виплат/табеля) видаляються тихо. Джерело дублів — старі відкриті вкладки
+// з версією до фіксу засіву, які пересівали список при збої читання.
+var PAY_DEDUPED = false;
+function payAutoDedup(){
+  if(PAY_DEDUPED || !isAdmin()) return;
+  PAY_DEDUPED = true;
+  var refs = {};
+  [PAY_ACCRUALS, PAY_PAYMENTS, PAY_ATTEND].forEach(function(arr){
+    arr.forEach(function(r){ if(r.workerId) refs[r.workerId]=(refs[r.workerId]||0)+1; });
+  });
+  var groups = {};
+  PAY_WORKERS.filter(function(w){ return w.active!==false; }).forEach(function(w){
+    var k=(w.name||"").trim().toLowerCase()+"|"+(w.role||""); (groups[k]=groups[k]||[]).push(w);
+  });
+  var del = [];
+  Object.keys(groups).forEach(function(k){
+    var g=groups[k]; if(g.length<2) return;
+    g.sort(function(a,b){ return (refs[b._id]||0)-(refs[a._id]||0) || (a._id<b._id?-1:1); });
+    g.slice(1).forEach(function(w){ if((refs[w._id]||0)===0) del.push(w); });
+  });
+  if(!del.length) return;
+  Promise.all(del.map(function(w){ return db.collection("workers").doc(w._id).delete(); }))
+    .then(function(){ showToast("🧹 Прибрано дублів працівників: "+del.length); payLoadAll(); })
+    .catch(function(){});
 }
 // Одноразово перерахувати координаторські бонуси з рихтувальних робіт на 15% (було 20%).
 function payMigrateCoordShare(){
@@ -9629,7 +9664,11 @@ function payEnsureCoord(){
 // ── КАРТКИ ПРАЦІВНИКІВ ──
 // Акаунт координатора (Анікін) — бачить власну картку зарплати, хоч і не адмін
 function isCoordAccount(){ return currentUser && currentUser.email === "icars.in.ua@gmail.com"; }
-function payCanSeeCard(w){ return w.active!==false && (w.role!=="coord" || isAdmin() || isCoordAccount()); }
+function payCanSeeCard(w){
+  if(w.active===false) return false;
+  if(w.role==="pmgr") return isAdmin();   // ТЕСТОВИЙ РЕЖИМ: менеджера ЗЧ бачить лише власник
+  return (w.role!=="coord" || isAdmin() || isCoordAccount());
+}
 function payRenderCards(){
   var el = document.getElementById("pay-cards"); if(!el) return;
   var mEl=document.getElementById("pay-month"); if(mEl && mEl.value!==PAY_MONTH) mEl.value=PAY_MONTH;
@@ -9654,8 +9693,14 @@ function payRenderCards(){
     if(loan.remaining>0.01){
       card.innerHTML += '<div class="pay-sub" style="color:#c0392b;font-weight:600">Розстрочка (борг): '+payFmt(loan.remaining,loan.cur)+'</div>';
     }
+    // Менеджер ЗЧ: ставка (редагує власник) + разом зі ставкою — для оцінки за місяць
+    if(w.role==="pmgr" && isAdmin()){
+      var mRate = Math.round(w.baseRateUAH||0);
+      card.innerHTML += '<div class="pay-sub" style="color:var(--bl);font-weight:600">Ставка/міс: '+mRate.toLocaleString("uk-UA")+' грн'+
+        ' · разом зі ставкою: <b>'+Math.round(mRate+b.bal).toLocaleString("uk-UA")+' грн</b></div>';
+    }
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
-    if(w.role!=="coord"){
+    if(w.role!=="coord" && w.role!=="pmgr"){
       var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
       (function(id){ b0.onclick = function(){ payOpenAccrue(id); }; })(w._id);
       btns.appendChild(b0);
@@ -9675,7 +9720,19 @@ function payRenderCards(){
       (function(id){ ba.onclick = function(){ payOpenGive("advance", id); }; })(w._id);
       var br = document.createElement("button"); br.textContent = "Розстрочка";
       (function(id){ br.onclick = function(){ payOpenGive("loan", id); }; })(w._id);
-      btns2.appendChild(ba); btns2.appendChild(br); card.appendChild(btns2);
+      btns2.appendChild(ba); btns2.appendChild(br);
+      // #9 Ручний бонус-корегування (Анікін, менеджер ЗЧ) — лише власник
+      if(w.role==="coord" || w.role==="pmgr"){
+        var bb = document.createElement("button"); bb.textContent = "＋ Бонус"; bb.style.cssText="color:var(--gr);border-color:var(--gr)";
+        (function(id){ bb.onclick = function(){ payManualBonus(id); }; })(w._id);
+        btns2.appendChild(bb);
+      }
+      if(w.role==="pmgr"){
+        var bs = document.createElement("button"); bs.textContent = "✎ Ставка";
+        (function(id){ bs.onclick = function(){ payEditBaseRate(id); }; })(w._id);
+        btns2.appendChild(bs);
+      }
+      card.appendChild(btns2);
     }
     el.appendChild(card);
   });
@@ -9692,6 +9749,8 @@ function payRenderLedger(){
   PAY_ACCRUALS.forEach(function(a){ if(a.workerId===w._id && payMonthMatch(a.date)){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="bonus"){ t="бонус"; txt=(a.carName||"")+" · "+(a.workName||""); }
+    else if(a.type==="bonus_manual"){ t="бонус (корегування)"; txt=a.workName||""; }
+    else if(a.type==="mgr_parts"){ t=(a.pct!=null?a.pct+"% ":"")+"від прибутку ЗЧ"; txt=(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
     rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext"), dkind:"acc"});
@@ -9812,11 +9871,12 @@ function payRenderAudit(){
   var el = document.getElementById("pay-audit"); if(!el) return;
   var okSet = payAuditOkSet(), groups = {};
   PAY_ACCRUALS.forEach(function(a){
-    if(a.void || a.role==="coord" || a.type==="bonus") return;   // координатор і бонуси поверх фонду — поза звіркою
+    if(a.void || a.role==="coord" || a.role==="pmgr" || a.type==="bonus") return;   // координатор, менеджер ЗЧ і бонуси поверх фонду — поза звіркою
     var k = a.calcId + "|" + a.role;
-    if(!groups[k]) groups[k] = {key:k, calcId:a.calcId, role:a.role, sum:0, car:a.carName||"", works:{}};
+    if(!groups[k]) groups[k] = {key:k, calcId:a.calcId, role:a.role, sum:0, car:a.carName||"", works:{}, maxDate:""};
     groups[k].sum += (a.amountUSD||0);
     groups[k].works[a.workUid] = a.workName || "";
+    if((a.date||"") > groups[k].maxDate) groups[k].maxDate = a.date||"";
   });
 
   var problems = [];
@@ -9825,6 +9885,8 @@ function payRenderAudit(){
     var rec = PAY_CALCS.find(function(c){ return c._id === g.calcId; });
     if(!rec){ problems.push({kind:"orphan", calcId:g.calcId, role:g.role, car:g.car, txt:"калькуляцію видалено, а нарахування лишились", over:g.sum}); return; }
     var fund = payFundFor(rec)[g.role] || 0;
+    // Слюсарі: нарахування, зроблені ДО переходу на 45%, звіряємо за старим фондом 50%
+    if(g.role==="slu" && g.maxDate && g.maxDate < PAY_SLU_CHANGE_DATE) fund = fund / PAY_SHARE_SLU * PAY_SHARE;
     // Допуск на покопійкове округлення нарахувань (сума округлених по кожній роботі трохи > фонду).
     // Реальні переплати — це долари, вони лишаються у звірці.
     var tol = Math.max(0.5, fund*0.005);
@@ -9863,7 +9925,7 @@ function payRenderAudit(){
 function payClose(id){ var e=document.getElementById(id); if(e) e.style.display="none"; }
 function payOpenWorkers(){
   var el = document.getElementById("pay-wk-list");
-  el.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && (w.role!=="coord" || isAdmin());}).map(function(w){
+  el.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && ((w.role!=="coord" && w.role!=="pmgr") || isAdmin());}).map(function(w){
     return '<div class="pay-wk"><span>'+escH(w.name)+' <span style="color:var(--tx3)">· '+(PAY_ROLE_LBL[w.role]||"")+'</span></span>'+
            '<span style="cursor:pointer;color:var(--rd);font-size:16px" onclick="payDelWorker(\''+w._id+'\')">&#215;</span></div>';
   }).join("") || '<div class="pay-sub">Порожньо</div>';
@@ -9910,6 +9972,36 @@ function payDelWorker(id){
   if(!confirm("Прибрати працівника зі списку? Історія збережеться.")) return;
   db.collection("workers").doc(id).update({active:false})
     .then(function(){ payLoadAll(); payClose("pay-workers-modal"); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// #9 Ручний бонус-корегування (грн) у поточний обраний місяць — лише власник
+function payManualBonus(wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var v = prompt("Бонус для «"+w.name+"», грн (місяць "+PAY_MONTH+").\nМінус — зменшити (корегування):", "");
+  if(v===null) return;
+  var uah = parseFloat(String(v).replace(",", ".")); if(!uah){ showToast("Сума не вказана"); return; }
+  var note = prompt("Коментар (за що):", "") || "";
+  var today = new Date().toISOString().slice(0,10);
+  var date = payMonthMatch(today) ? today : PAY_MONTH + "-15";   // лягає в обраний місяць
+  var rate = usdRate||44.1;
+  db.collection("work_accruals").add({
+    workerId:w._id, workerName:w.name, role:w.role, type:"bonus_manual", rate:rate,
+    workName:"Бонус (корегування)"+(note?" · "+note:""), carName:"",
+    amountUAH:Math.round(uah), amountUSD:Math.round((uah/rate)*100)/100, date:date,
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+  }).then(function(){ showToast("Бонус "+Math.round(uah).toLocaleString("uk-UA")+" грн — "+w.name); payLoadAll(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// #7 Ставка менеджера ЗЧ (грн/міс) — зберігається на працівникові, редагує власник
+function payEditBaseRate(wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var v = prompt("Ставка за місяць для «"+w.name+"», грн:", Math.round(w.baseRateUAH||0));
+  if(v===null) return;
+  var uah = parseFloat(String(v).replace(",", "."))||0;
+  db.collection("workers").doc(wid).update({baseRateUAH:Math.round(uah)})
+    .then(function(){ showToast("Ставка: "+Math.round(uah).toLocaleString("uk-UA")+" грн/міс"); payLoadAll(); })
     .catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
@@ -10024,7 +10116,7 @@ function payOpenAccrue(preWid){
   var ws = document.getElementById("pay-ac-worker");
   var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // фіксований порядок
   var rank = function(nm){ for(var i=0;i<order.length;i++){ if((nm||"").indexOf(order[i])===0) return i; } return 99; };
-  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord";})
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr";})
     .sort(function(a,b){ return rank(a.name)-rank(b.name); })
     .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
   if(preWid){ ws.value = preWid; }   // передвибір з картки
@@ -10126,7 +10218,7 @@ function payDoAccrue(){
     var pct = parseFloat(inputs[i].value)||0;
     if(pct <= 0) continue;
     var usd = parseFloat(inputs[i].getAttribute("data-usd"))||0;
-    var amt = usd*(pct/100)*PAY_SHARE;
+    var amt = usd*(pct/100)*payShareOf(role);
     total += amt;
     batch.push({ workerId:worker._id, workerName:worker.name, role:role, rate:acRate,
       calcId:rec._id, carName:rec.car||"", vin:rec.vin||"",
@@ -10144,7 +10236,7 @@ function payDoAccrue(){
   if(total > left + 0.01){
     var toCur = function(u){ return acCur==="usd"?Math.round(u*100)/100:Math.round(u*acRate); };
     st.className="pay-status err";
-    st.textContent="Перевищено ліміт 50% по авто: доступно "+payFmt(toCur(left),acCur)+", а нараховуєте "+payFmt(toCur(total),acCur)+" (бонус вносьте окремим полем)";
+    st.textContent="Перевищено ліміт "+Math.round(payShareOf(role)*100)+"% по авто: доступно "+payFmt(toCur(left),acCur)+", а нараховуєте "+payFmt(toCur(total),acCur)+" (бонус вносьте окремим полем)";
     return;
   }
   if(bonusUSD>0){

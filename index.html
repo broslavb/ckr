@@ -900,8 +900,12 @@ input, select, button, .btn, .pp-inp, .cinp,
 @media print{
   .pt-profit, #pm-profit-row,
   #w-adm-profit, .ritem-coord, .ritem-coord-sum,
+  .pt-fpz, #pm-mgr-row, #so-mgr-row, .adm-fld,
   .no-print, [data-admin-only]{ display:none!important; }
 }
+/* Адмін-поля на екрані: видимі лише власнику (body.is-adm ставить applyPerms) */
+.adm-fld{display:none}
+body.is-adm .adm-fld{display:block}
 
 /* ── MECHANIC PRINT ── show only: Наявність/Назва, К-ть, Артикул осн., Артикул альт. */
 @media print {
@@ -1434,6 +1438,9 @@ body.hero-on .hero-pad{margin-right:40vw}
             <option value="broslav">Брослав</option>
           </select>
         </div>
+        <div class="fld adm-fld"><label>Менеджер ЗЧ, % прибутку</label>
+          <input type="number" id="pm-mgr-pct" min="0" max="100" step="0.5" value="10" oninput="pmRecalc()" title="Відсоток менеджера ЗЧ від загального прибутку запчастин (бачите лише ви)"/>
+        </div>
         <div class="fld no-print"><label>Знижка</label>
           <select class="pm-disc-sel" id="pm-disc" onchange="pmDiscToggle()" style="width:100%">
             <option value="none">— без знижки —</option>
@@ -1491,6 +1498,10 @@ body.hero-on .hero-pad{margin-right:40vw}
           <div class="pm-srow" id="pm-profit-row" style="display:none">
             <span class="pm-slbl" style="font-size:11px;color:var(--gr)">Прибуток (після податку 6%)</span>
             <span class="pm-sval" id="pm-profit-total" style="font-size:13px;font-weight:bold">0 грн</span>
+          </div>
+          <div class="pm-srow" id="pm-mgr-row" style="display:none">
+            <span class="pm-slbl" style="font-size:11px;color:var(--bl)" id="pm-mgr-lbl">Менеджер ЗЧ (10%)</span>
+            <span class="pm-sval" id="pm-mgr-total" style="font-size:12px;font-weight:bold;color:var(--bl)">0 грн</span>
           </div>
           <div id="pm-hidden-row" style="display:none;padding-top:8px">
             <button type="button" id="pm-hidden-toggle" class="pm-hidden-btn" onclick="toggleHiddenVariants()">👁 Показати приховані</button>
@@ -1559,6 +1570,9 @@ body.hero-on .hero-pad{margin-right:40vw}
           <option value="manager">Менеджер</option>
           <option value="broslav">Брослав</option>
         </select>
+      </div>
+      <div class="fld adm-fld"><label>Менеджер ЗЧ, % прибутку</label>
+        <input type="number" id="so-mgr-pct" min="0" max="100" step="0.5" value="10" oninput="soRecalc()" title="Відсоток менеджера ЗЧ від прибутку запчастин ТО (бачите лише ви)" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:3px;outline:none"/>
       </div>
       <div class="fld no-print"><label>Знижка (запчастини)</label>
         <select id="so-disc" onchange="soDiscToggle()" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
@@ -2335,6 +2349,7 @@ function userPerms(){
 function can(cap){ var p=userPerms(); return !!(p.admin || p[cap]); }
 // Показати/сховати вкладки й пункти меню відповідно до прав
 function applyPerms(){
+  document.body.classList.toggle("is-adm", isAdmin());   // адмін-поля (.adm-fld) — лише власнику
   var show=function(id,on){ var e=document.getElementById(id); if(e) e.style.display = on ? "" : "none"; };
   show("tab-pay-btn",  can("pay"));
   show("cm-works",     can("works"));   // пункт «Роботи» у меню створення
@@ -2881,7 +2896,7 @@ function worksSnapshot(){
 }
 function partsSnapshot(){
   return JSON.stringify({
-    car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),co:_v("pm-coord"),dc:(typeof pmDiscCode==="function"?pmDiscCode():_v("pm-disc")),
+    car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),co:_v("pm-coord"),mp:_v("pm-mgr-pct"),dc:(typeof pmDiscCode==="function"?pmDiscCode():_v("pm-disc")),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
       return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.manualPrice||0,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];});}),
     org:orgSnap("pm"),
@@ -2890,7 +2905,7 @@ function partsSnapshot(){
 }
 function serviceSnapshot(){
   return JSON.stringify({
-    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),dc:(typeof soDiscCode==="function"?soDiscCode():_v("so-disc")),dcw:(typeof soDiscCodeW==="function"?soDiscCodeW():""),inv:_v("so-invoice-num"),
+    car:_v("so-car"),vin:_v("so-vin"),cl:_v("so-client"),ph:_v("so-phone"),dt:_v("so-date"),st:_v("so-status"),co:_v("so-coord"),mp:_v("so-mgr-pct"),dc:(typeof soDiscCode==="function"?soDiscCode():_v("so-disc")),dcw:(typeof soDiscCodeW==="function"?soDiscCodeW():""),inv:_v("so-invoice-num"),
     pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.manualPrice||0,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price,w.coord||"",w.actualUAH||0,w.cat||""];}),
     org:orgSnap("so"),
@@ -5200,11 +5215,13 @@ function pmProfit(item, disc){
   if(item.status === "hidden") return 0;
   var isClientItem = item.status === "client_wait" || item.status === "client_delivered";
   var manual = (item.markupType||"auto") === "manual";
-  if(isClientItem || (!manual && !item.buyPrice)) return 0;
+  var fpz = parseFloat(item.fpz)||0;   // ФПЗ — фактично понесені затрати (з доставкою), грн за рядок
+  if(isClientItem || (!manual && !item.buyPrice && !fpz)) return 0;
   var finalPrice = pmFinalWithDisc(pmFinalPrice(item), disc);
   if(!finalPrice) return 0;
   var tax = finalPrice * 0.06;
-  var buyTotal = (item.buyPrice||0) * (item.qty || 1);
+  // ФПЗ заповнене — прибуток від фактичної закупки; порожнє — умова виконана за розрахунком
+  var buyTotal = fpz > 0 ? fpz : (item.buyPrice||0) * (item.qty || 1);
   return Math.round(finalPrice - buyTotal - tax);
 }
 
@@ -6045,8 +6062,20 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   (function(bid,iid,isV){ delBtn.onclick=function(){ pmDelItem(bid,iid,isV); }; })(blockId,item.id,isVariant);
   td12.appendChild(delBtn); tr.appendChild(td12);
 
-  // Col 13: Profit — admin only
+  // Col 13: ФПЗ (фактично понесені затрати) + Profit — admin only
   if(isAdmin()){
+    var tdF = mkTd("width:6%;vertical-align:middle");
+    tdF.className = "pt-fpz";
+    if(!isClientItem && !isHidden){
+      var fpzInp = document.createElement("input");
+      fpzInp.type = "number"; fpzInp.min = "0"; fpzInp.value = item.fpz||""; fpzInp.placeholder = "—";
+      fpzInp.title = "ФПЗ: фактична вартість з доставкою, грн (за весь рядок). Порожньо = прибуток за розрахунком";
+      var fpzOn = parseFloat(item.fpz)>0;
+      fpzInp.style.cssText = "width:100%;background:"+(fpzOn?"rgba(25,118,210,.12)":"transparent")+";border:1px "+(fpzOn?"solid var(--bl)":"dashed var(--bd)")+";border-radius:3px;color:var(--bl);font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+      (function(bid,iid){ fpzInp.addEventListener("change",function(){ pmUpdItem(bid,iid,"fpz",+this.value||0); }); })(blockId,item.id);
+      tdF.appendChild(fpzInp);
+    }
+    tr.appendChild(tdF);
     var disc = pmDiscCode();
     var profit = pmProfit(item, disc);
     var td13 = mkTd("width:8%;vertical-align:middle;text-align:right;white-space:nowrap;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold");
@@ -6667,6 +6696,13 @@ function pmRender(){
       hrow.appendChild(th);
     });
     if(isAdmin()){
+      var thFpz = document.createElement("th");
+      thFpz.className = "pt-fpz";
+      thFpz.style.width = "6%";
+      thFpz.style.color = "var(--bl)";
+      thFpz.textContent = "ФПЗ,грн";
+      thFpz.title = "Фактично понесені затрати (товар + доставка). Порожньо = закупка за розрахунком";
+      hrow.appendChild(thFpz);
       var thProfit = document.createElement("th");
       thProfit.className = "pt-profit";
       thProfit.style.width = "8%";
@@ -6814,6 +6850,15 @@ function pmUpdateSummary(){
       profEl.textContent = totalProfit.toLocaleString("uk-UA") + " грн";
       profEl.style.color = totalProfit > 0 ? "var(--gr)" : "var(--rd)";
     }
+    // #3/#4 Дохід менеджера ЗЧ = прибуток × його відсоток (бачить лише власник)
+    var mgrPct = parseFloat((document.getElementById("pm-mgr-pct")||{}).value); if(!(mgrPct>=0)) mgrPct = 10;
+    var mgrSum = Math.round(Math.max(0,totalProfit) * mgrPct/100);
+    var mgrRow = document.getElementById("pm-mgr-row");
+    if(mgrRow) mgrRow.style.display = (mgrPct>0 && totalProfit>0) ? "flex" : "none";
+    var mgrLbl = document.getElementById("pm-mgr-lbl");
+    if(mgrLbl) mgrLbl.textContent = "Менеджер ЗЧ ("+mgrPct+"%)";
+    var mgrEl = document.getElementById("pm-mgr-total");
+    if(mgrEl) mgrEl.textContent = mgrSum.toLocaleString("uk-UA") + " грн";
   }
 
   // Payments
@@ -6968,6 +7013,7 @@ function pmClear(){
   pmSetDisc("none");
   var pmStC=document.getElementById("pm-status"); if(pmStC) pmStC.value="preliminary";
   var pmCoC=document.getElementById("pm-coord"); if(pmCoC) pmCoC.value="";
+  var pmMpC=document.getElementById("pm-mgr-pct"); if(pmMpC) pmMpC.value=10;
   pmRender();
   pmRenderPayments();
   takeSnap("parts");
@@ -6994,6 +7040,7 @@ function pmSave(){
   var rec = {
     type:"parts_v2", car:car, vin:vin, status:(document.getElementById("pm-status")||{value:"preliminary"}).value,
     coord:(document.getElementById("pm-coord")||{value:""}).value,
+    mgrPct:(function(){ var v=parseFloat((document.getElementById("pm-mgr-pct")||{}).value); return v>=0?v:10; })(),
     client:document.getElementById("pm-client").value,
     phone:document.getElementById("pm-phone").value,
     org:orgRead("pm"),
@@ -7136,6 +7183,7 @@ function pmLoadFromRecord(r, docId){
   pmSetDisc(r.disc||"none");
   var pmSt=document.getElementById("pm-status"); if(pmSt) pmSt.value=r.status||"preliminary";
   var pmCo=document.getElementById("pm-coord"); if(pmCo) pmCo.value=r.coord||"";
+  var pmMp=document.getElementById("pm-mgr-pct"); if(pmMp) pmMp.value=(r.mgrPct!=null?r.mgrPct:10);
   pmRender();
   pmRenderPayments();
   takeSnap("parts");
@@ -7584,6 +7632,11 @@ function soRenderParts(){
   ].forEach(function(h){
     var th=document.createElement("th"); th.style.width=h[0]; th.textContent=h[1]; hrow.appendChild(th);
   });
+  if(isAdmin()){
+    var thF=document.createElement("th"); thF.className="pt-fpz"; thF.style.width="6%"; thF.style.color="var(--bl)";
+    thF.textContent="ФПЗ,грн"; thF.title="Фактично понесені затрати (товар + доставка). Порожньо = закупка за розрахунком";
+    hrow.appendChild(thF);
+  }
   thead.appendChild(hrow); table.appendChild(thead);
 
   var tbody = document.createElement("tbody");
@@ -7822,6 +7875,22 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   (function(iid,isV){ delBtn.onclick=function(){ soDelPart(iid,isV); }; })(item.id,isVariant);
   td12.appendChild(delBtn); tr.appendChild(td12);
 
+  // ФПЗ (фактично понесені затрати) — лише адмін, не друкується
+  if(isAdmin()){
+    var tdF=mkTd("width:6%;vertical-align:middle");
+    tdF.className="pt-fpz";
+    if(!isClient && !isHidden){
+      var fpzInp=document.createElement("input");
+      fpzInp.type="number"; fpzInp.min="0"; fpzInp.value=item.fpz||""; fpzInp.placeholder="—";
+      fpzInp.title="ФПЗ: фактична вартість з доставкою, грн (за весь рядок). Порожньо = прибуток за розрахунком";
+      var fpzOn=parseFloat(item.fpz)>0;
+      fpzInp.style.cssText="width:100%;background:"+(fpzOn?"rgba(25,118,210,.12)":"transparent")+";border:1px "+(fpzOn?"solid var(--bl)":"dashed var(--bd)")+";border-radius:3px;color:var(--bl);font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+      (function(iid){ fpzInp.addEventListener("change",function(){ soUpdPart(iid,"fpz",+this.value||0); }); })(item.id);
+      tdF.appendChild(fpzInp);
+    }
+    tr.appendChild(tdF);
+  }
+
   return tr;
 }
 
@@ -8029,7 +8098,8 @@ function soRenderProfit(disc, worksTotal){
   var acc=function(it){
     var client=soFinalWithDisc(soFinalPrice(it), disc.parts);
     if(!client) return;                         // від клієнта / приховані / без ціни — 0
-    var buy=(it.buyPrice||0)*(it.qty||1);
+    var fpz=parseFloat(it.fpz)||0;              // ФПЗ: фактична закупка з доставкою
+    var buy=fpz>0 ? fpz : (it.buyPrice||0)*(it.qty||1);
     partsProfit += client - buy - Math.round(client*TAX);
   };
   soParts.forEach(function(it){ acc(it); (it.variants||[]).forEach(acc); });
@@ -8042,11 +8112,14 @@ function soRenderProfit(disc, worksTotal){
   });
   var worksNet = worksTotal - Math.round(worksTotal*TAX) - worksActual - worksCoord;
   var total = partsProfit + worksNet;
+  var mgrPct=parseFloat((document.getElementById("so-mgr-pct")||{}).value); if(!(mgrPct>=0)) mgrPct=10;
+  var mgrSum=Math.round(Math.max(0,partsProfit)*mgrPct/100);
   var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
   var col=function(v){ return v>=0?"var(--gr)":"var(--rd)"; };
   el.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px">'
     +'<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Прибуток на ТО (лише адмін)</div>'
-    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Прибуток ЗЧ (клієнту − закупка − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(partsProfit)+'">'+f(partsProfit)+' грн</span></div>'
+    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Прибуток ЗЧ (клієнту − закупка/ФПЗ − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(partsProfit)+'">'+f(partsProfit)+' грн</span></div>'
+    +((mgrPct>0&&partsProfit>0)?'<div class="pm-srow" id="so-mgr-row"><span class="pm-slbl" style="font-size:11px;color:var(--bl)">Менеджер ЗЧ ('+mgrPct+'%)</span><span class="pm-sval" style="font-size:11px;font-weight:bold;color:var(--bl)">'+f(mgrSum)+' грн</span></div>':'')
     +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Роботи (дохід − 6%'+((worksActual||worksCoord)?' − факт − коорд':'')+')</span><span class="pm-sval" style="font-size:11px;color:'+col(worksNet)+'">'+f(worksNet)+' грн</span></div>'
     +'<div class="pm-srow main" style="margin-top:4px"><span class="pm-slbl" style="font-size:12px;color:var(--tx)">ПРИБУТОК ТО</span><span class="pm-sval" style="color:'+col(total)+'">'+f(total)+' грн</span></div>'
     +'<div class="pay-sub" style="margin-top:4px;font-size:10px">Оплата слюсаря за роботи — через Зарплату (нарахування).</div>'
@@ -8068,6 +8141,7 @@ function soSave(){
     car:car, vin:vin,
     status:(document.getElementById("so-status")||{value:"preliminary"}).value,
     coord:(document.getElementById("so-coord")||{value:""}).value,
+    mgrPct:(function(){ var v=parseFloat((document.getElementById("so-mgr-pct")||{}).value); return v>=0?v:10; })(),
     client:document.getElementById("so-client").value,
     phone:document.getElementById("so-phone").value,
     org:orgRead("so"),
@@ -8110,6 +8184,7 @@ function soLoadFromRecord(r, docId){
   var soSt = document.getElementById("so-status");
   if(soSt) soSt.value = r.status || "preliminary";
   var soCo = document.getElementById("so-coord"); if(soCo) soCo.value = r.coord || "";
+  var soMp = document.getElementById("so-mgr-pct"); if(soMp) soMp.value = (r.mgrPct!=null?r.mgrPct:10);
   soInit();
   takeSnap("service");
   soCheckCancellations();   // попередження про скасовані замовлення
@@ -8122,6 +8197,7 @@ function soClear(){
   ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   soSetDisc("none"); soSetDiscW("none");
   var soCoC=document.getElementById("so-coord"); if(soCoC) soCoC.value="";
+  var soMpC=document.getElementById("so-mgr-pct"); if(soMpC) soMpC.value=10;
   var d=document.getElementById("so-date"); if(d) d.value=new Date().toISOString().split("T")[0];
   soRenderParts(); soRenderWorks(); soRenderPayments(); soUpdateSummary();
   document.getElementById("so-car-label").textContent="Авто не вказано";

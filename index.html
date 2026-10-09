@@ -520,8 +520,18 @@ tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
 /* Група варіантів (Вар1 + Вар2/Вар3) — фіолетова смуга + фон, щоб пара виділялась у роботі й друці */
 .pt tr.pr-vgroup td{background:rgba(124,58,237,.08)}
 .pt tr.pr-vgroup td:first-child{box-shadow:inset 3px 0 0 0 #7c3aed}
+/* Докуплено в процесі ремонту (кнопка «N») — зелена позначка, ВИДИМА клієнту і в друці */
+.pr-new-btn{display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;font-size:9px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;margin-right:3px;font-family:var(--mono)}
+.pr-new-btn.on{background:#2e7d32;border-color:#1b5e20;color:#fff}
+.pt tr.pr-newpart td{background:rgba(46,125,50,.10)!important}
+.pt tr.pr-newpart td:nth-child(2){box-shadow:inset 3px 0 0 #2e7d32}
+.pr-new-tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:bold;color:#fff;background:#2e7d32;border-radius:2px;padding:1px 4px;flex-shrink:0}
 @media print{
   .pr-prio-btn{display:none!important}
+  .pr-new-btn{display:none!important}
+  .pt tr.pr-newpart td{background:rgba(46,125,50,.14)!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .pt tr.pr-newpart td:nth-child(2){border-left:3px solid #2e7d32!important;box-shadow:none!important}
+  .pr-new-tag{display:inline-block!important;color:#1b5e20!important;background:transparent!important;border:1px solid #2e7d32!important;font-size:7pt!important;padding:0 3px!important;margin-right:3px!important}
   .pr-drag{display:none!important}
   .pr-move{display:none!important}
   .pm-manual-inp{border:none!important;background:transparent!important;color:#000!important;font-weight:bold!important;text-align:right!important;-webkit-appearance:none!important;appearance:none!important;padding:0!important;width:auto!important}
@@ -1494,6 +1504,10 @@ body.hero-on .hero-pad{margin-right:40vw}
           <div class="pm-srow" id="pm-prio-row" style="display:none">
             <span class="pm-slbl" style="color:#ff8f00;font-weight:bold">Першочергові</span>
             <span class="pm-sval" id="pm-prio-total" style="color:#ff8f00;font-weight:bold">0 грн</span>
+          </div>
+          <div class="pm-srow" id="pm-new-row" style="display:none">
+            <span class="pm-slbl" style="color:#2e7d32;font-weight:bold">Докуплено в процесі ремонту</span>
+            <span class="pm-sval" id="pm-new-total" style="color:#2e7d32;font-weight:bold">0 грн</span>
           </div>
           <div class="pm-srow" id="pm-profit-row" style="display:none">
             <span class="pm-slbl" style="font-size:11px;color:var(--gr)">Прибуток (після податку 6%)</span>
@@ -5920,6 +5934,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(item.status==="cancelled") tr.classList.add("pr-cancelled");
   if(isHidden) tr.classList.add("pr-hidden");
   if(hasVariants||isVariant) tr.classList.add("pr-vgroup");   // Вар1 (з варіантами) + Вар2/Вар3
+  if(!isVariant && item.isNew) tr.classList.add("pr-newpart"); // докуплено в процесі ремонту
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 
@@ -6020,6 +6035,13 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   availTxt.textContent=pmAvailLabel(item.avail);
   var nameInp=mkInp(item.name,"\u041d\u0430\u0437\u0432\u0430...","name","text");
   nameInp.style.flex="1";
+  // \u041c\u0456\u0442\u043a\u0430 NEW \u2014 \u0434\u043e\u043a\u0443\u043f\u043b\u0435\u043d\u0430 \u0432 \u043f\u0440\u043e\u0446\u0435\u0441\u0456 \u0440\u0435\u043c\u043e\u043d\u0442\u0443 (\u0432\u0438\u0434\u043d\u043e \u0456 \u043d\u0430 \u0435\u043a\u0440\u0430\u043d\u0456, \u0456 \u043a\u043b\u0456\u0454\u043d\u0442\u0443 \u0432 \u0434\u0440\u0443\u0446\u0456)
+  if(!isVariant && item.isNew){
+    var ntag=document.createElement("span");
+    ntag.className="pr-new-tag"; ntag.textContent="NEW";
+    ntag.title="\u0414\u043e\u043a\u0443\u043f\u043b\u0435\u043d\u043e \u0432 \u043f\u0440\u043e\u0446\u0435\u0441\u0456 \u0440\u0435\u043c\u043e\u043d\u0442\u0443";
+    wrap.appendChild(ntag);
+  }
   wrap.appendChild(availSel); wrap.appendChild(availTxt); wrap.appendChild(nameInp);
   td2.appendChild(wrap); tr.appendChild(td2);
 
@@ -6145,6 +6167,12 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     prioBtn.textContent="1"; prioBtn.title="\u0414\u0435\u0442\u0430\u043b\u044c \u043f\u0435\u0440\u0448\u043e\u0457 \u0447\u0435\u0440\u0433\u0438";
     (function(it){ prioBtn.onclick=function(){ it.priority=!it.priority; pmRender(); pmUpdateSummary(); }; })(item);
     td12.appendChild(prioBtn);
+    // Кнопка «N» — докуплено в процесі ремонту (підсвічується клієнту в друці)
+    var newBtn=document.createElement("span");
+    newBtn.className="pr-new-btn"+(item.isNew?" on":"");
+    newBtn.textContent="N"; newBtn.title="Докуплено в процесі ремонту — виділяється зеленим і в друці для клієнта";
+    (function(it){ newBtn.onclick=function(){ it.isNew=!it.isNew; pmRender(); pmUpdateSummary(); }; })(item);
+    td12.appendChild(newBtn);
     var varBtn=document.createElement("span");
     varBtn.className="pr-var"; varBtn.textContent="+\u0412";
     varBtn.title="\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0430\u0440\u0456\u0430\u043d\u0442";
@@ -6929,6 +6957,19 @@ function pmUpdateSummary(){
   var prioEl = document.getElementById("pm-prio-total");
   if(prioRow) prioRow.style.display = prioTotal > 0 ? "flex" : "none";
   if(prioEl) prioEl.textContent = prioTotal.toLocaleString("uk-UA") + " грн";
+
+  // Сума докуплених у процесі ремонту (кнопка «N») — видно й клієнту
+  var newTotal = 0;
+  PM_BLOCKS.forEach(function(block){ block.items.forEach(function(item){
+    if(item.isNew){
+      newTotal += pmFinalWithDisc(pmFinalPrice(item), disc);
+      (item.variants||[]).forEach(function(v){ newTotal += pmFinalWithDisc(pmFinalPrice(v), disc); });
+    }
+  }); });
+  var newRow = document.getElementById("pm-new-row");
+  var newEl = document.getElementById("pm-new-total");
+  if(newRow) newRow.style.display = newTotal > 0 ? "flex" : "none";
+  if(newEl) newEl.textContent = newTotal.toLocaleString("uk-UA") + " грн";
 
   // Profit summary — admin only
   if(isAdmin()){

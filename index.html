@@ -1107,6 +1107,39 @@ body.is-adm .adm-fld{display:block}
   /* Дрібні таблиці (вартість, гарантія), «Порядок звернення» і підписи — не розривати */
   #act-doc .akt-signs,#act-doc .akt-keep,#act-doc .akt-callout{page-break-inside:avoid}
 }
+/* ═══ ЛИСТ СЛЮСАРЯ — зарплатна калькуляція по авто (Слюсарні + Безпека, частка 45%).
+   Без цін клієнта. Наповнюється в sluSheetPrint, показується лише при друку. ═══ */
+#slu-doc{display:none;font-family:Verdana,sans-serif;color:#15233f;max-width:720px;margin:0 auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+#slu-doc .sl-band{background:#0d2b6b;color:#fff;border-radius:8px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+#slu-doc .sl-brand{font-family:'Lora',Georgia,serif;font-size:21px;font-weight:700;letter-spacing:2px}
+#slu-doc .sl-brand small{display:block;font-family:Verdana,sans-serif;font-size:8.5px;letter-spacing:2.5px;color:#aebfdd;margin-top:3px}
+#slu-doc .sl-date{font-size:10px;color:#aebfdd;text-align:right;line-height:1.6}
+#slu-doc .sl-tag{display:inline-block;background:#ffb300;color:#15233f;font-size:10.5px;font-weight:bold;letter-spacing:2.5px;padding:4px 13px;border-radius:3px;margin:18px 0 7px}
+#slu-doc .sl-car{font-size:24px;font-weight:bold;color:#0d2b6b}
+#slu-doc .sl-vin{font-family:Menlo,Consolas,monospace;font-size:11px;color:#5a6473;letter-spacing:1.5px;margin:3px 0 6px}
+#slu-doc .sl-sec{margin-top:16px;page-break-inside:avoid}
+#slu-doc .sl-sech{display:flex;justify-content:space-between;align-items:center;background:#e3edf8;border-left:4px solid #0d2b6b;padding:8px 12px;border-radius:0 4px 4px 0}
+#slu-doc .sl-sech .t{font-size:12px;font-weight:bold;letter-spacing:1.5px;color:#0d2b6b}
+#slu-doc .sl-sech .s{font-size:13px;font-weight:bold;color:#0d2b6b;white-space:nowrap}
+#slu-doc table{width:100%;border-collapse:collapse;margin-top:2px}
+#slu-doc td{padding:7px 10px;border-bottom:1px solid #e3e9f2;font-size:11.5px;vertical-align:middle}
+#slu-doc tr:nth-child(even) td{background:#f6f9fd}
+#slu-doc td.n{width:5%;color:#9aa6b8;font-size:10px}
+#slu-doc td.pay{width:18%;text-align:right;font-weight:bold;white-space:nowrap;font-size:12.5px;color:#0d2b6b}
+#slu-doc .side{color:#1565c0;font-size:10.5px;margin-top:1px}
+#slu-doc .cmt{color:#5a6473;font-size:10px;font-style:italic;margin-top:1px}
+#slu-doc .sl-grand{margin-top:24px;background:#0d2b6b;color:#fff;border-radius:8px;padding:17px 22px;display:flex;justify-content:space-between;align-items:center;page-break-inside:avoid}
+#slu-doc .sl-grand .l{font-size:12.5px;font-weight:bold;letter-spacing:2px}
+#slu-doc .sl-grand .l small{display:block;font-weight:normal;font-size:9px;color:#aebfdd;letter-spacing:.5px;margin-top:4px;text-transform:none}
+#slu-doc .sl-grand .v{font-size:28px;font-weight:bold;white-space:nowrap}
+#slu-doc .sl-sign{margin-top:30px;display:flex;gap:34px;font-size:10.5px;color:#5a6473;page-break-inside:avoid}
+#slu-doc .sl-sign span{border-top:1px solid #9aa6b8;padding-top:5px;flex:1;text-align:center}
+#slu-doc .sl-note{margin-top:14px;font-size:9px;color:#9aa6b8;text-align:center;line-height:1.5}
+@media print{
+  body.slu-print #app-screen{display:none !important}
+  body.slu-print #print-header{display:none !important}
+  body.slu-print #slu-doc{display:block !important}
+}
 /* ═══ ГЛОБАЛЬНА ЗАСТАВКА (оглядові вкладки; ховається в редакторах авто) ═══ */
 #app-hero{position:fixed;top:93px;right:0;width:40vw;height:calc(100vh - 93px);display:none;overflow:hidden;isolation:isolate;border-left:1px solid var(--bd);z-index:40}
 body.hero-on #app-hero{display:flex;align-items:center;justify-content:center}
@@ -1127,6 +1160,9 @@ body.hero-on .hero-pad{margin-right:40vw}
 
 <!-- АКТ ВИКОНАНИХ РОБІТ (наповнюється у actPrint, показується лише при друку) -->
 <div id="act-doc"></div>
+
+<!-- ЛИСТ СЛЮСАРЯ (наповнюється у sluSheetPrint, показується лише при друку) -->
+<div id="slu-doc"></div>
 
 <!-- Стандартні постачальники (для поля ПОСТАЧ.НАЗВА у Запчастинах і ТО) -->
 <datalist id="ckr-suppliers">
@@ -1414,6 +1450,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
       <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
       <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
+      <button class="btn btn-o" onclick="sluSheetPrint()" title="Зарплатна калькуляція для слюсаря: Слюсарні + Безпека, без цін клієнта">🔧 Лист слюсаря</button>
       <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
       <button class="btn btn-o" onclick="wArchiveCurrent()" title="Завершити ремонт і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
       <button class="btn btn-o" id="w-hidden-toggle" onclick="toggleWorksHidden()" title="Показати/сховати приховані роботи" style="display:none">👁 Показати приховані</button>
@@ -8588,6 +8625,76 @@ function actPrint(){
   }, 150);
 }
 
+// ── ЛИСТ СЛЮСАРЯ ──────────────────────────────────────────────────────────────
+// Зарплатна калькуляція по авто для слюсаря: лише СЛЮСАРНІ + БЕЗПЕКА,
+// без цін клієнта — кожна робота показана часткою слюсаря (45%, від ціни
+// зі знижкою — так само рахується фонд у Зарплаті). Кузовні (рихтувальники),
+// малярні та сторонні у лист не потрапляють, приховані роботи — теж.
+function sluSheetPrint(){
+  var groups=[
+    {cat:CAT_SLU, disc:parseFloat((document.getElementById("disc-slu")||{}).value)||0, label:"СЛЮСАРНІ РОБОТИ"},
+    {cat:CAT_BEZ, disc:parseFloat((document.getElementById("disc-bez")||{}).value)||0, label:"РОБОТИ З БЕЗПЕКИ"}
+  ];
+  var secs=[], grand=0, cnt=0;
+  groups.forEach(function(g){
+    var rows=[], tot=0;
+    Object.keys(wsel).forEach(function(u){
+      var it=wsel[u];
+      if(it.cat!==g.cat || it.hidden) return;
+      var cur=DB[it.cat]?DB[it.cat].cur:"uah";
+      var pRaw=(it.price||0)*(it.coeff||1);
+      var pUAH=cur==="uah"?pRaw:pRaw*usdRate;
+      var pay=Math.round(pUAH*(1-g.disc)*PAY_SHARE_SLU);
+      rows.push({name:it.name, side:it.side||"", comment:it.comment||"", pay:pay});
+      tot+=pay;
+    });
+    if(rows.length){ secs.push({label:g.label, rows:rows, tot:tot}); grand+=tot; cnt+=rows.length; }
+  });
+  if(!secs.length){ showToast("Немає слюсарних робіт чи робіт з безпеки"); return; }
+
+  var car=(document.getElementById("w-car")||{}).value||"Авто не вказано";
+  var vin=((document.getElementById("w-vin")||{}).value||"").toUpperCase();
+  var now=new Date();
+  var dateStr=("0"+now.getDate()).slice(-2)+"."+("0"+(now.getMonth()+1)).slice(-2)+"."+now.getFullYear();
+
+  var h='<div class="sl-band"><div class="sl-brand">CKR<small>ЦЕХ КУЗОВНОГО РЕМОНТУ</small></div>'
+    +'<div class="sl-date">м. Кропивницький<br>'+dateStr+'</div></div>'
+    +'<div class="sl-tag">🔧 РОЗРАХУНОК СЛЮСАРЯ</div>'
+    +'<div class="sl-car">'+actEsc(car)+'</div>'
+    +(vin?'<div class="sl-vin">VIN: '+actEsc(vin)+'</div>':'');
+
+  secs.forEach(function(sec){
+    h+='<div class="sl-sec"><div class="sl-sech"><span class="t">'+sec.label+'</span>'
+      +'<span class="s">'+sec.tot.toLocaleString("uk-UA")+' грн</span></div><table><tbody>';
+    sec.rows.forEach(function(r,i){
+      h+='<tr><td class="n">'+(i+1)+'</td><td>'+actEsc(r.name)
+        +(r.side?'<div class="side">▸ '+actEsc(r.side)+'</div>':'')
+        +(r.comment?'<div class="cmt">'+actEsc(r.comment)+'</div>':'')
+        +'</td><td class="pay">'+r.pay.toLocaleString("uk-UA")+' грн</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+
+  h+='<div class="sl-grand"><div class="l">ДО ВИПЛАТИ ЗА АВТО'
+    +'<small>робіт у розрахунку: '+cnt+'</small></div>'
+    +'<div class="v">'+grand.toLocaleString("uk-UA")+' грн</div></div>'
+    +'<div class="sl-sign"><span>Слюсар (ПІБ)</span><span>Підпис</span><span>Дата</span></div>'
+    +'<div class="sl-note">Попередня калькуляція за розрахованими роботами по цьому авто.<br>'
+    +'Остаточна сума — за фактично виконані роботи.</div>';
+
+  document.getElementById("slu-doc").innerHTML=h;
+  var origTitle=document.title;
+  document.title="Слюсар — "+car;
+  document.body.classList.add("slu-print");
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      document.body.classList.remove("slu-print");
+      document.title=origTitle;
+    }, 800);
+  }, 150);
+}
+
 // ── РАХУНОК-ФАКТУРА / АКТ для ТОВ (ФОП) ───────────────────────────────────────
 var CKR_SUP = {
   shop:"ЦЕХ КУЗОВНОГО РЕМОНТУ", fop:"ФОП БРОСЛАВ Б.В.", fopFull:"ФОП Брослав Борис Васильович",
@@ -9662,8 +9769,8 @@ document.addEventListener("click", function(e){
 // суми робіт своєї спеціальності. Нарахування — лише з авто у статусі «В роботі».
 // ══════════════════════════════════════════════════════════════════════════════
 var PAY_SHARE = 0.5;
-var PAY_SHARE_SLU = 0.45;              // ТИМЧАСОВО: слюсарям 45% (з 2026-10-06, було 50%)
-var PAY_SLU_CHANGE_DATE = "2026-10-06"; // до цієї дати нарахування слюсарям звіряються за старими 50%
+var PAY_SHARE_SLU = 0.45;              // слюсарям 45% — ПОСТІЙНА ставка (враховує податкове навантаження); до 06.10.2026 було 50%
+var PAY_SLU_CHANGE_DATE = "2026-10-06"; // історична межа: нарахування ДО цієї дати звіряються за старими 50%
 function payShareOf(role){ return role==="slu" ? PAY_SHARE_SLU : PAY_SHARE; }
 var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт (праця)
 var PAY_COORD_SHARE_KUZ = 0.15;  // координатору з рихтувальних (кузовних) робіт — 15%

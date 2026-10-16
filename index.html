@@ -10183,8 +10183,8 @@ function payRenderCards(){
     if(loan.remaining>0.01){
       card.innerHTML += '<div class="pay-sub" style="color:#c0392b;font-weight:600">Розстрочка (борг): '+payFmt(loan.remaining,loan.cur)+'</div>';
     }
-    // Менеджер ЗЧ: ставка (редагує власник) + разом зі ставкою — для оцінки за місяць
-    if(w.role==="pmgr" && isAdmin()){
+    // Менеджер ЗЧ: місячна ставка — лише якщо НЕ на денній системі (довідково)
+    if(w.role==="pmgr" && isAdmin() && !payIsDaily(w)){
       var mRate = Math.round(w.baseRateUAH||0);
       card.innerHTML += '<div class="pay-sub" style="color:var(--bl);font-weight:600">Ставка/міс: '+mRate.toLocaleString("uk-UA")+' грн'+
         ' · разом зі ставкою: <b>'+Math.round(mRate+b.bal).toLocaleString("uk-UA")+' грн</b></div>';
@@ -10197,7 +10197,8 @@ function payRenderCards(){
         + ' · днів у місяці: <b>'+dCnt+'</b></div>';
     }
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
-    if(w.role!=="coord" && w.role!=="pmgr"){
+    // «+ Нарах.»: слюсарі/рихтувальники — завжди; менеджер ЗЧ — лише на денній системі (календар)
+    if(w.role!=="coord" && (w.role!=="pmgr" || payIsDaily(w))){
       var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
       (function(id, daily){ b0.onclick = function(){ daily ? payOpenDaily(id) : payOpenAccrue(id); }; })(w._id, payIsDaily(w));
       btns.appendChild(b0);
@@ -10643,9 +10644,13 @@ function payEnsureDailyWorkers(){
   if(PAY_DAILY_MIGRATED) return;
   PAY_DAILY_MIGRATED = true;
   PAY_WORKERS.forEach(function(w){
-    if(w.active!==false && (w.name||"").indexOf("Тютюшкін")===0 && !w.payMode){
-      w.payMode="daily"; w.dailyRateUAH=1500; w.dailyFrom="2026-10-14";   // локально одразу
-      db.collection("workers").doc(w._id).update({payMode:"daily", dailyRateUAH:1500, dailyFrom:"2026-10-14"}).catch(function(){});
+    if(w.active===false || w.payMode) return;
+    var daily = null;
+    if((w.name||"").indexOf("Тютюшкін")===0) daily = {dailyRateUAH:1500, dailyFrom:"2026-10-14"};
+    if((w.name||"").indexOf("Алдошин")>=0 || (w.name||"").indexOf("Ренат")===0) daily = {dailyRateUAH:1000, dailyFrom:"2026-10-01"};   // менеджер ЗЧ
+    if(daily){
+      w.payMode="daily"; w.dailyRateUAH=daily.dailyRateUAH; w.dailyFrom=daily.dailyFrom;   // локально одразу
+      db.collection("workers").doc(w._id).update({payMode:"daily", dailyRateUAH:daily.dailyRateUAH, dailyFrom:daily.dailyFrom}).catch(function(){});
     }
   });
 }
@@ -10769,7 +10774,9 @@ function payDailyAccrue(){
   st.className="pay-status"; st.textContent="Збереження...";
   Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); }))
     .then(function(refs){
-      // Координатору 20% з праці — як і з %-нарахувань (рішення власника 16.10)
+      // Координатору 20% з праці — лише зі слюсарів/рихтувальників (рішення власника 16.10);
+      // з денної ставки менеджера ЗЧ координаторський бонус НЕ йде
+      if(w.role!=="slu" && w.role!=="kuz") return null;
       var coords = PAY_WORKERS.filter(function(x){ return x.role==="coord" && x.active!==false; });
       if(!coords.length) return null;
       var extra = [];

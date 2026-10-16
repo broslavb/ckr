@@ -1015,6 +1015,11 @@ body.is-adm .adm-fld{display:block}
 .cal-cell.empty{border:none;background:transparent;cursor:default}
 .cal-cell.abs{background:var(--rd);color:#fff;border-color:var(--rd);font-weight:700}
 .cal-cell.off{background:var(--blue-mid);color:#fff;border-color:var(--blue-mid);font-weight:700}
+/* Денна ставка: обраний день / вже нарахований / недоступний */
+.cal-cell.sel{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark);font-weight:700}
+.cal-cell.acc{background:#2e7d32;color:#fff;border-color:#2e7d32;font-weight:700;cursor:default}
+.cal-cell.dis{opacity:.35;cursor:default}
+.cal-cell.dis:hover{border-color:var(--bd)}
 .cal-sum{margin-top:10px;font-size:12px;color:var(--tx2);line-height:1.6}
 .pay-card{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
 .pay-card.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--acd)}
@@ -2322,6 +2327,38 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="pay-hint" style="margin-top:8px">Клік по дню: чисто → <b style="color:var(--rd)">Прогул</b> → <b style="color:var(--blue-mid)">Відгул</b> → чисто.</div>
     <div class="pay-btns">
       <button class="btn btn-o" onclick="payClose('pay-attend-modal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ НАРАХУВАННЯ — ДЕННА СТАВКА (payMode:"daily") ══════════════════════════ -->
+<div class="pay-modal" id="pay-daily-modal">
+  <div class="pay-box" style="max-width:520px">
+    <div class="pay-box-t" id="pay-daily-title">Нарахування — денна ставка</div>
+    <div class="cal-nav">
+      <button class="btn btn-o" onclick="payDailyNav(-1)">‹</button>
+      <div class="cal-title" id="pay-daily-cal-title"></div>
+      <button class="btn btn-o" onclick="payDailyNav(1)">›</button>
+    </div>
+    <div class="cal-legend">
+      <span><i class="cal-dot" style="background:var(--blue-dark)"></i>Обрано до нарахування</span>
+      <span><i class="cal-dot" style="background:#2e7d32"></i>Вже нараховано</span>
+    </div>
+    <div id="pay-daily-grid" class="cal-grid"></div>
+    <div id="pay-daily-sum" class="cal-sum"></div>
+    <div style="border-top:1px dashed var(--bd);margin-top:10px;padding-top:8px">
+      <div class="pay-sub" style="font-weight:600;margin-bottom:6px">Доплати (фіксовані операції — список у «Ціни»)</div>
+      <div class="pay-row2">
+        <div class="fld"><label>Операція</label><select id="pay-daily-op"></select></div>
+        <div class="fld"><label>Авто (контроль повторів)</label><select id="pay-daily-car"></select></div>
+      </div>
+      <button class="btn btn-o" style="font-size:11px" onclick="payDailyAddOp()">＋ Додати доплату</button>
+      <div id="pay-daily-ops-list" style="margin-top:6px"></div>
+    </div>
+    <div class="pay-status" id="pay-daily-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payDailyAccrue()">Нарахувати</button>
+      <button class="btn btn-o" onclick="payClose('pay-daily-modal')">Закрити</button>
     </div>
   </div>
 </div>
@@ -4703,9 +4740,49 @@ function makePriceRow(cat, item, cur){
   return tr;
 }
 
+// ── ЦІНИ: каталог доплат денної системи (settings/daily_ops) ──
+function dailyOpsRenderEditor(){
+  var box=document.getElementById("daily-ops-editor"); if(!box) return;
+  var h = DAILY_OPS.map(function(o,i){
+    return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'
+      +'<input type="text" value="'+escH(o.name)+'" onchange="dailyOpUpd('+i+',\'name\',this.value)" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:12px;padding:5px 8px;border-radius:3px;outline:none"/>'
+      +'<input type="number" value="'+(o.price||0)+'" min="0" step="50" onchange="dailyOpUpd('+i+',\'price\',+this.value)" style="width:90px;background:var(--bg);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-size:12px;font-weight:bold;padding:5px 8px;border-radius:3px;outline:none;text-align:right"/>'
+      +'<span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">грн</span>'
+      +'<span style="color:var(--rd);cursor:pointer;font-size:16px" onclick="dailyOpDel('+i+')">&#215;</span></div>';
+  }).join("");
+  box.innerHTML = h
+    + '<button class="btn btn-o" style="font-size:10px;margin-top:4px" onclick="dailyOpAdd()">＋ Додати операцію</button>'
+    + '<div class="pay-sub" style="margin-top:4px">Зміни зберігаються одразу. Використовується в нарахуванні працівникам на денній ставці (Тютюшкін).</div>';
+}
+function dailyOpsSave(){
+  db.collection("settings").doc("daily_ops").set({ops:DAILY_OPS, updatedAt:new Date().toISOString()})
+    .then(function(){ showToast("Доплати збережено"); })
+    .catch(function(e){ showToast("Помилка збереження доплат: "+e.message); });
+}
+function dailyOpUpd(i, f, v){ if(!DAILY_OPS[i]) return; DAILY_OPS[i][f] = (f==="price") ? (Math.round(v)||0) : String(v).trim(); dailyOpsSave(); }
+function dailyOpAdd(){
+  var n = prompt("Назва операції:",""); if(!n || !n.trim()) return;
+  var p = parseFloat(prompt("Вартість, грн:","0"))||0;
+  DAILY_OPS.push({id:"op_"+Date.now(), name:n.trim(), price:Math.round(p)});
+  dailyOpsSave(); dailyOpsRenderEditor();
+}
+function dailyOpDel(i){
+  if(!DAILY_OPS[i]) return;
+  if(!confirm("Прибрати «"+DAILY_OPS[i].name+"» з каталогу? Вже зроблені нарахування не зміняться.")) return;
+  DAILY_OPS.splice(i,1); dailyOpsSave(); dailyOpsRenderEditor();
+}
+
 function renderSettingsContent(){
   var el=document.getElementById("settings-content");if(!el)return;
   el.innerHTML="";
+  // Блок доплат денної системи — вгорі
+  var dsec=document.createElement("div");
+  dsec.className="settings-section";
+  dsec.innerHTML='<div class="settings-section-title">ДОПЛАТИ — ДЕННА СТАВКА'
+    +'<span style="font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3);margin-left:8px">· грн · фіксовані операції понад ставку/день</span></div>'
+    +'<div id="daily-ops-editor" style="max-width:560px;padding:4px 0"></div>';
+  el.appendChild(dsec);
+  dailyOpsLoad(function(){ dailyOpsRenderEditor(); });
   var catLabels={
     "КУЗОВНІ РОБОТИ":"USD",
     "СЛЮСАРНІ РОБОТИ":"грн",
@@ -9948,7 +10025,8 @@ function payFundFor(rec){
   return f;
 }
 function payAccruedFor(calcId, role){
-  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.role===role && !a.void) ? (a.amountUSD||0) : 0); }, 0);
+  // денна ставка і доплати (daily/dailyop) — поза фондом 45/50%, у ліміт не входять
+  return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.role===role && !a.void && a.type!=="daily" && a.type!=="dailyop") ? (a.amountUSD||0) : 0); }, 0);
 }
 function payAccruedWork(calcId, workUid){
   return PAY_ACCRUALS.reduce(function(s,a){ return s + ((a.calcId===calcId && a.workUid===workUid && !a.void) ? (a.partPct||0) : 0); }, 0);
@@ -10001,6 +10079,7 @@ function payLoadAll(){
     if(payEnsureCoord()) return;   // якщо додали координатора — payLoadAll перезапуститься
     payMigrateCoordShare();
     payAutoDedup();                // тиха чистка дублів без даних (лише адмін, раз за сесію)
+    payEnsureDailyWorkers();       // Тютюшкін → денна система (1500/день з 14.10.2026)
     payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -10110,10 +10189,17 @@ function payRenderCards(){
       card.innerHTML += '<div class="pay-sub" style="color:var(--bl);font-weight:600">Ставка/міс: '+mRate.toLocaleString("uk-UA")+' грн'+
         ' · разом зі ставкою: <b>'+Math.round(mRate+b.bal).toLocaleString("uk-UA")+' грн</b></div>';
     }
+    // Денна система (Тютюшкін): ставка/день + число нарахованих днів у місяці
+    if(payIsDaily(w)){
+      var dCnt = PAY_ACCRUALS.filter(function(a){ return a.workerId===w._id && a.type==="daily" && !a.void && payMonthMatch(a.date); }).length;
+      card.innerHTML += '<div class="pay-sub" style="color:var(--bl);font-weight:600">📅 Денна ставка: '+Math.round(w.dailyRateUAH||0).toLocaleString("uk-UA")+' грн/день'
+        + (isAdmin()?' <span style="cursor:pointer" title="Змінити ставку" onclick="payEditDailyRate(\''+w._id+'\')">✎</span>':'')
+        + ' · днів у місяці: <b>'+dCnt+'</b></div>';
+    }
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
     if(w.role!=="coord" && w.role!=="pmgr"){
       var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
-      (function(id){ b0.onclick = function(){ payOpenAccrue(id); }; })(w._id);
+      (function(id, daily){ b0.onclick = function(){ daily ? payOpenDaily(id) : payOpenAccrue(id); }; })(w._id, payIsDaily(w));
       btns.appendChild(b0);
     }
     var b1 = document.createElement("button"); b1.textContent = "Історія";
@@ -10161,6 +10247,8 @@ function payRenderLedger(){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="bonus"){ t="бонус"; txt=(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="bonus_manual"){ t="бонус (корегування)"; txt=a.workName||""; }
+    else if(a.type==="daily"){ t="ставка (день)"; txt=(a.amountUAH||0).toLocaleString("uk-UA")+" грн"; }
+    else if(a.type==="dailyop"){ t="доплата"; txt=(a.carName?a.carName+" · ":"")+(a.workName||""); }
     else if(a.type==="mgr_parts"){ t=(a.pct!=null?a.pct+"% ":"")+"від прибутку ЗЧ"; txt=(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
@@ -10282,7 +10370,7 @@ function payRenderAudit(){
   var el = document.getElementById("pay-audit"); if(!el) return;
   var okSet = payAuditOkSet(), groups = {};
   PAY_ACCRUALS.forEach(function(a){
-    if(a.void || a.role==="coord" || a.role==="pmgr" || a.type==="bonus") return;   // координатор, менеджер ЗЧ і бонуси поверх фонду — поза звіркою
+    if(a.void || a.role==="coord" || a.role==="pmgr" || a.type==="bonus" || a.type==="daily" || a.type==="dailyop") return;   // координатор, менеджер ЗЧ, бонуси і денна система — поза звіркою
     var k = a.calcId + "|" + a.role;
     if(!groups[k]) groups[k] = {key:k, calcId:a.calcId, role:a.role, sum:0, car:a.carName||"", works:{}, maxDate:""};
     groups[k].sum += (a.amountUSD||0);
@@ -10521,13 +10609,209 @@ function payAttendCycle(date){
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ДЕННА СТАВКА (payMode:"daily") — Тютюшкін з 14.10.2026: 1500 грн/день ─────
+// Нарахування: календар відпрацьованих днів (повторно день не нарахуєш) +
+// доплати з каталогу settings/daily_ops із привʼязкою до авто (контроль повторів).
+// Поза фондом 45% і поза звіркою. Координатору — 20%, як і з %-нарахувань.
+// ══════════════════════════════════════════════════════════════════════════════
+var DAILY_OPS = [];
+var DAILY_OPS_SEED = [
+  {id:"op_dvs_rem",   name:"Зняття двигуна ДВС",                    price:2000},
+  {id:"op_hvb_rem",   name:"Зняття високовольтної батареї",         price:2000},
+  {id:"op_tesla_rem", name:"Зняття електродвигуна Tesla",           price:1750},
+  {id:"op_dvs_inst",  name:"Встановлення двигуна",                  price:2000},
+  {id:"op_hvb_inst",  name:"Встановлення високовольтної батареї",   price:2000},
+  {id:"op_tesla_inst",name:"Встановлення електродвигуна Tesla",     price:1750},
+  {id:"op_street",    name:"Вуличні роботи",                        price:500}
+];
+function dailyOpsLoad(cb){
+  db.collection("settings").doc("daily_ops").get().then(function(doc){
+    if(doc.exists && Array.isArray(doc.data().ops) && doc.data().ops.length){
+      DAILY_OPS = doc.data().ops;
+    } else {
+      DAILY_OPS = DAILY_OPS_SEED.slice();
+      // Запис settings/* дозволений лише власнику — у майстра сід просто не збережеться
+      if(isAdmin()) db.collection("settings").doc("daily_ops").set({ops:DAILY_OPS}).catch(function(){});
+    }
+    if(cb) cb();
+  }).catch(function(){ DAILY_OPS = DAILY_OPS_SEED.slice(); if(cb) cb(); });
+}
+// Одноразово: перевести Тютюшкіна на денну систему (ставка 1500, з 14.10.2026)
+var PAY_DAILY_MIGRATED = false;
+function payEnsureDailyWorkers(){
+  if(PAY_DAILY_MIGRATED) return;
+  PAY_DAILY_MIGRATED = true;
+  PAY_WORKERS.forEach(function(w){
+    if(w.active!==false && (w.name||"").indexOf("Тютюшкін")===0 && !w.payMode){
+      w.payMode="daily"; w.dailyRateUAH=1500; w.dailyFrom="2026-10-14";   // локально одразу
+      db.collection("workers").doc(w._id).update({payMode:"daily", dailyRateUAH:1500, dailyFrom:"2026-10-14"}).catch(function(){});
+    }
+  });
+}
+function payIsDaily(w){ return !!(w && w.payMode==="daily"); }
+// Мапа «дата → запис» уже нарахованих днів ставки
+function payDailyAccruedMap(wid){
+  var m={};
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId===wid && a.type==="daily" && !a.void && a.date) m[a.date]=a; });
+  return m;
+}
+var PAY_DAILY = {wid:null, month:null, sel:{}, ops:[]};
+function payOpenDaily(wid){
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var n = new Date();
+  PAY_DAILY = {wid:wid, month:new Date(n.getFullYear(), n.getMonth(), 1), sel:{}, ops:[]};
+  document.getElementById("pay-daily-title").textContent = w.name+" — "+(w.dailyRateUAH||0)+" грн/день";
+  // Авто «В роботі» для доплат
+  var cs = document.getElementById("pay-daily-car");
+  cs.innerHTML = '<option value="">— без авто —</option>' + PAY_CARS.map(function(c){
+    return '<option value="'+c._id+'|'+escH(c.car||"")+'|'+escH(c.vin||"")+'">'+escH(c.car||"")+' · '+escH((c.vin||"").slice(-6))+'</option>';
+  }).join("");
+  document.getElementById("pay-daily-status").textContent = "";
+  dailyOpsLoad(function(){
+    document.getElementById("pay-daily-op").innerHTML = DAILY_OPS.map(function(o){
+      return '<option value="'+escH(o.id)+'">'+escH(o.name)+' — '+(o.price||0).toLocaleString("uk-UA")+' грн</option>';
+    }).join("") || '<option value="">(каталог порожній — додайте у «Ціни»)</option>';
+  });
+  payDailyRenderOps();
+  payDailyRender();
+  document.getElementById("pay-daily-modal").style.display = "flex";
+}
+function payDailyNav(d){ PAY_DAILY.month = new Date(PAY_DAILY.month.getFullYear(), PAY_DAILY.month.getMonth()+d, 1); payDailyRender(); }
+function payDailyRender(){
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_DAILY.wid; }); if(!w) return;
+  var grid = document.getElementById("pay-daily-grid"); if(!grid) return;
+  var y = PAY_DAILY.month.getFullYear(), m = PAY_DAILY.month.getMonth();
+  document.getElementById("pay-daily-cal-title").textContent = PAY_MONTHS[m]+" "+y;
+  var accMap = payDailyAccruedMap(PAY_DAILY.wid);
+  var from = w.dailyFrom || "2026-10-14";
+  var today = new Date().toISOString().slice(0,10);
+  var wd = ["ПН","ВТ","СР","ЧТ","ПТ","СБ","НД"];
+  var h = wd.map(function(d){ return '<div class="cal-wd">'+d+'</div>'; }).join("");
+  var lead = (new Date(y,m,1).getDay()+6)%7;
+  var days = new Date(y,m+1,0).getDate();
+  for(var i=0;i<lead;i++) h += '<div class="cal-cell empty"></div>';
+  for(var d=1; d<=days; d++){
+    var date = y+"-"+((m+1<10?"0":"")+(m+1))+"-"+((d<10?"0":"")+d);
+    var dow = new Date(y,m,d).getDay();
+    var cls = "cal-cell", click = "";
+    if(accMap[date]){ cls+=" acc"; click='onclick="showToast(\'Цей день вже нараховано — див. Історію\')"'; }
+    else if(date<from || date>today){ cls+=" dis"; }
+    else {
+      if(PAY_DAILY.sel[date]) cls+=" sel";
+      else if(dow===0||dow===6) cls+=" we";
+      click='onclick="payDailyToggle(\''+date+'\')"';
+    }
+    h += '<div class="'+cls+'" '+click+' title="'+date+'">'+d+'</div>';
+  }
+  grid.innerHTML = h;
+  payDailySum();
+}
+function payDailyToggle(date){
+  if(PAY_DAILY.sel[date]) delete PAY_DAILY.sel[date]; else PAY_DAILY.sel[date]=1;
+  payDailyRender();
+}
+function payDailySum(){
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_DAILY.wid; }); if(!w) return;
+  var rate = w.dailyRateUAH||0;
+  var nd = Object.keys(PAY_DAILY.sel).length;
+  var opsSum = PAY_DAILY.ops.reduce(function(s,o){ return s+(o.price||0); }, 0);
+  document.getElementById("pay-daily-sum").innerHTML =
+    'Днів обрано: <b>'+nd+'</b> × '+rate.toLocaleString("uk-UA")+' = <b>'+(nd*rate).toLocaleString("uk-UA")+' грн</b>'
+    + (opsSum>0 ? ' · доплати: <b>'+opsSum.toLocaleString("uk-UA")+' грн</b>' : '')
+    + ' · разом: <b style="color:var(--gr)">'+(nd*rate+opsSum).toLocaleString("uk-UA")+' грн</b>';
+}
+function payDailyAddOp(){
+  var opSel = document.getElementById("pay-daily-op");
+  var op = DAILY_OPS.find(function(o){ return o.id===opSel.value; });
+  if(!op){ showToast("Оберіть операцію (каталог у «Ціни»)"); return; }
+  var cv = document.getElementById("pay-daily-car").value;
+  var p = cv ? cv.split("|") : ["","",""];
+  var calcId=p[0]||"", car=p[1]||"", vin=p[2]||"";
+  // Контроль повторів: ця сама операція по цьому авто вже нараховувалась?
+  if(calcId){
+    var prev = PAY_ACCRUALS.find(function(a){ return a.workerId===PAY_DAILY.wid && a.type==="dailyop" && a.opId===op.id && a.calcId===calcId && !a.void; });
+    if(prev && !confirm("⚠ «"+op.name+"» по авто "+car+" ВЖЕ НАРАХОВАНО ("+(prev.date||"")+", "+(prev.amountUAH||0)+" грн).\n\nНарахувати повторно?")) return;
+    var pend = PAY_DAILY.ops.find(function(o){ return o.opId===op.id && o.calcId===calcId; });
+    if(pend && !confirm("⚠ Ця доплата по цьому авто вже у списку нижче. Додати ще раз?")) return;
+  }
+  PAY_DAILY.ops.push({opId:op.id, name:op.name, price:op.price||0, calcId:calcId, car:car, vin:vin});
+  payDailyRenderOps(); payDailySum();
+}
+function payDailyRemoveOp(i){ PAY_DAILY.ops.splice(i,1); payDailyRenderOps(); payDailySum(); }
+function payDailyRenderOps(){
+  var el = document.getElementById("pay-daily-ops-list"); if(!el) return;
+  el.innerHTML = PAY_DAILY.ops.map(function(o,i){
+    return '<div class="pay-sub" style="display:flex;justify-content:space-between;gap:8px;padding:2px 0">'
+      +'<span>🔧 '+escH(o.name)+(o.car?' · <b>'+escH(o.car)+'</b>':' · без авто')+'</span>'
+      +'<span style="white-space:nowrap">'+(o.price||0).toLocaleString("uk-UA")+' грн <span style="color:var(--rd);cursor:pointer" onclick="payDailyRemoveOp('+i+')">×</span></span></div>';
+  }).join("");
+}
+function payDailyAccrue(){
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_DAILY.wid; }); if(!w) return;
+  var st = document.getElementById("pay-daily-status");
+  var days = Object.keys(PAY_DAILY.sel).sort();
+  if(!days.length && !PAY_DAILY.ops.length){ st.className="pay-status err"; st.textContent="Оберіть дні та/або додайте доплати"; return; }
+  var rate = w.dailyRateUAH||0, fx = usdRate||44.1, today = new Date().toISOString().slice(0,10);
+  var batch = [];
+  days.forEach(function(d){
+    batch.push({ workerId:w._id, workerName:w.name, role:w.role, type:"daily", rate:fx,
+      workName:"Ставка за день", amountUAH:Math.round(rate), amountUSD:Math.round((rate/fx)*100)/100,
+      date:d, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+  });
+  PAY_DAILY.ops.forEach(function(o){
+    batch.push({ workerId:w._id, workerName:w.name, role:w.role, type:"dailyop", rate:fx,
+      opId:o.opId, workName:o.name, calcId:o.calcId||"", carName:o.car||"", vin:o.vin||"",
+      amountUAH:Math.round(o.price||0), amountUSD:Math.round(((o.price||0)/fx)*100)/100,
+      date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+  });
+  var total = batch.reduce(function(s,a){ return s+(a.amountUAH||0); }, 0);
+  st.className="pay-status"; st.textContent="Збереження...";
+  Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); }))
+    .then(function(refs){
+      // Координатору 20% з праці — як і з %-нарахувань (рішення власника 16.10)
+      var coords = PAY_WORKERS.filter(function(x){ return x.role==="coord" && x.active!==false; });
+      if(!coords.length) return null;
+      var extra = [];
+      refs.forEach(function(ref, i){
+        var a = batch[i];
+        coords.forEach(function(co){
+          var bUAH = Math.round((a.amountUAH||0)*payCoordShare(a.role));
+          extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:a.rate,
+            srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
+            calcId:a.calcId||"", carName:a.carName||"", vin:a.vin||"", workName:a.workName,
+            baseUSD:a.amountUSD, amountUAH:bUAH, amountUSD:Math.round((a.amountUSD*payCoordShare(a.role))*100)/100,
+            date:a.date, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+        });
+      });
+      return extra.length ? Promise.all(extra.map(function(e){ return db.collection("work_accruals").add(e); })) : null;
+    })
+    .then(function(){
+      payClose("pay-daily-modal");
+      showToast("Нараховано "+total.toLocaleString("uk-UA")+" грн — "+w.name+(days.length?" ("+days.length+" дн"+(PAY_DAILY.ops.length?" + "+PAY_DAILY.ops.length+" допл.":"")+")":""));
+      payLoadAll();
+    })
+    .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+}
+// Ставка/день — редагує власник
+function payEditDailyRate(wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var v = prompt("Денна ставка для «"+w.name+"», грн/день:", Math.round(w.dailyRateUAH||0));
+  if(v===null) return;
+  var uah = parseFloat(String(v).replace(",", "."))||0;
+  db.collection("workers").doc(wid).update({dailyRateUAH:Math.round(uah)})
+    .then(function(){ showToast("Ставка: "+Math.round(uah).toLocaleString("uk-UA")+" грн/день"); payLoadAll(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
 // ── НАРАХУВАННЯ ──
 function payOpenAccrue(preWid){
   if(!PAY_WORKERS.length){ showToast("Спершу додайте працівників"); return; }
   var ws = document.getElementById("pay-ac-worker");
   var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // фіксований порядок
   var rank = function(nm){ for(var i=0;i<order.length;i++){ if((nm||"").indexOf(order[i])===0) return i; } return 99; };
-  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr";})
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr" && !payIsDaily(w);})
     .sort(function(a,b){ return rank(a.name)-rank(b.name); })
     .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
   if(preWid){ ws.value = preWid; }   // передвибір з картки
@@ -10749,6 +11033,8 @@ function payBuildReport(wid){
     var lbl;
     if(a.type==="coord_labor") lbl="15/20% з праці: "+(a.srcWorkerName||"");
     else if(a.type==="coord_ext") lbl="15% "+(a.src==="mal"?"малярні":"сторонні");
+    else if(a.type==="daily") lbl="Ставка за день";
+    else if(a.type==="dailyop") lbl="Доплата: "+(a.workName||"")+(a.carName?" · "+a.carName:"");
     else lbl=(a.carName||"")+(a.workName?" · "+a.workName:"")+(a.partPct?" ("+a.partPct+"%)":"");
     L.push("  "+fmtDMY(a.date)+"  "+lbl+" — "+payFmt(payNative(a,cur),cur));
   });

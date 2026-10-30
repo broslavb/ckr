@@ -1285,6 +1285,7 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="tab" id="tab-cash-btn" onclick="switchTab('cash',this)">💰 Каса</div>
   <div class="tab" id="tab-parking-btn" onclick="switchTab('parking',this)">🅿 Парковка</div>
   <div class="tab" id="tab-paint-btn" onclick="switchTab('paint',this)">🎨 Малярки</div>
+  <div class="tab" id="tab-lamps-btn" onclick="switchTab('lamps',this)">💡 Лампи</div>
   <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
   <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
@@ -2521,6 +2522,88 @@ body.hero-on .hero-pad{margin-right:40vw}
   </div>
 </div>
 
+<!-- ══ ЛАМПИ Y011 (LED DETAILING) ═════════════════════════════════════════════ -->
+<div id="tab-lamps" style="display:none">
+  <div class="pay-wrap">
+    <div class="pay-bar">
+      <div class="pay-h1">💡 ЛАМПИ Y011 · LED DETAILING</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-p" onclick="lampOpenSale()">➕ Відправка / Продаж</button>
+        <button class="btn btn-o adm-fld" onclick="lampOpenMove('in')">📦 Прихід</button>
+        <button class="btn btn-o adm-fld" onclick="lampOpenMove('off')">🗑 Списання</button>
+      </div>
+    </div>
+    <div class="pay-hint">
+      Стільниковий LED-світильник Y011 (Hexagon Honeycomb, 2,43×4,84 м, 6500K). Облік окремий від Каси СТО.
+      ТТН вписується вручну, статус — кнопкою ⟳ (Нова Пошта). Коли посилку <b>отримано</b> — відправка
+      закривається і бонус менеджеру нараховується в Зарплату автоматично.
+    </div>
+    <div id="lamps-head"></div>
+    <div id="lamps-econ"></div>
+    <div id="lamps-parts"></div>
+    <div id="lamps-list" class="pay-cards"></div>
+  </div>
+</div>
+
+<!-- Модалка: відправка/продаж лампи -->
+<div class="pay-modal" id="lamp-sale-modal">
+  <div class="pay-box" style="max-width:520px">
+    <div class="pay-box-t" id="lamp-sale-title">Відправка / Продаж — Y011</div>
+    <div class="pay-row2">
+      <div class="fld"><label>Кількість, шт</label><input type="number" id="lamp-s-qty" min="1" step="1" value="1" oninput="lampSaleRecalc()"/></div>
+      <div class="fld"><label>Ціна за шт, грн</label><input type="number" id="lamp-s-price" min="0" step="100" oninput="lampSaleRecalc()"/></div>
+    </div>
+    <div class="pay-row2">
+      <div class="fld"><label>Канал</label><select id="lamp-s-channel">
+        <option value="instagram">Instagram</option><option value="site">Сайт</option>
+        <option value="olx">OLX</option><option value="sto">СТО-клієнти</option>
+        <option value="opt">Опт</option><option value="other">Інше</option>
+      </select></div>
+      <div class="fld"><label>Оплата / доставка</label><select id="lamp-s-pay" onchange="lampSaleRecalc()">
+        <option value="ship500">НП · аванс 500, решта накладним</option>
+        <option value="full">НП · повна передплата на р/р ФОП</option>
+        <option value="pickup">Самовивіз · готівка</option>
+      </select></div>
+    </div>
+    <div class="pay-row2">
+      <div class="fld"><label>Отримувач (ПІБ)</label><input type="text" id="lamp-s-name" placeholder="Іваненко Іван"/></div>
+      <div class="fld"><label>Телефон</label><input type="text" id="lamp-s-phone" placeholder="+380..."/></div>
+    </div>
+    <div class="pay-row2" id="lamp-s-np-wrap">
+      <div class="fld"><label>Місто</label><input type="text" id="lamp-s-city" placeholder="Київ"/></div>
+      <div class="fld"><label>Відділення НП</label><input type="text" id="lamp-s-wh" placeholder="№ 25"/></div>
+    </div>
+    <div class="pay-row2">
+      <div class="fld"><label>ТТН (можна додати пізніше)</label><input type="text" id="lamp-s-ttn" placeholder="20450..."/></div>
+      <div class="fld adm-fld"><label>Бонус менеджеру, грн</label><input type="number" id="lamp-s-bonus" min="0" step="50" value="100"/></div>
+    </div>
+    <div class="fld"><label>Коментар</label><input type="text" id="lamp-s-note" placeholder="необовʼязково"/></div>
+    <div class="pay-status" id="lamp-s-calc" style="font-weight:bold"></div>
+    <div class="pay-status" id="lamp-s-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="lampDoSale()">Зберегти</button>
+      <button class="btn btn-o" onclick="payClose('lamp-sale-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: прихід / списання -->
+<div class="pay-modal" id="lamp-move-modal">
+  <div class="pay-box">
+    <div class="pay-box-t" id="lamp-move-title">Прихід</div>
+    <div class="pay-row2">
+      <div class="fld"><label>Кількість, шт</label><input type="number" id="lamp-m-qty" min="1" step="1" value="1"/></div>
+      <div class="fld"><label>Дата</label><input type="date" id="lamp-m-date"/></div>
+    </div>
+    <div class="fld"><label>Примітка (партія / брак / зразок / подарунок)</label><input type="text" id="lamp-m-note"/></div>
+    <div class="pay-status" id="lamp-m-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="lampDoMove()">Зберегти</button>
+      <button class="btn btn-o" onclick="payClose('lamp-move-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2550,12 +2633,12 @@ function isAdmin(){ return currentUser && ADMINS.indexOf(currentUser.email) >= 0
 var USER_PERMS = {
   "broslav.b@gmail.com":    {admin:true},
   "icars.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true, parking:true, paint:true}, // + нарахування робіт; без виплат/статистики/цін
-  "icars.in.ua2@gmail.com": {parts:true}                                    // Manager: лише Запчастини/ТО (без Каси, Парковки, Робіт, Зарплати, Статистики, цін)
+  "icars.in.ua2@gmail.com": {parts:true, lamps:true}                        // Manager: Запчастини/ТО + Лампи Y011 (без Каси, Парковки, Робіт, Зарплати, Статистики, цін)
 };
 var DEFAULT_PERMS = {parts:true, cash:true, parking:true}; // невідомий залогінений — мінімум прав
 function userPerms(){
   if(!currentUser) return {};
-  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true, parking:true, paint:true};
+  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true, parking:true, paint:true, lamps:true};
   return USER_PERMS[currentUser.email] || DEFAULT_PERMS;
 }
 function can(cap){ var p=userPerms(); return !!(p.admin || p[cap]); }
@@ -2569,6 +2652,7 @@ function applyPerms(){
   show("tab-cash-btn", can("cash"));
   show("tab-parking-btn", can("parking"));
   show("tab-paint-btn", can("paint"));
+  show("tab-lamps-btn", can("lamps"));
 }
 
 // ── ЮРИДИЧНА ОСОБА (ТОВ/ФОП) — реквізити замовника для рахунку/акту ────────────
@@ -3136,6 +3220,7 @@ function switchTab(t, el) {
   if(t==="cash" && !can("cash")){ showToast("Немає доступу до Каси"); return; }
   if(t==="parking" && !can("parking")){ showToast("Немає доступу до Парковки"); return; }
   if(t==="paint" && !can("paint")){ showToast("Немає доступу до Малярок"); return; }
+  if(t==="lamps" && !can("lamps")){ showToast("Немає доступу до Ламп"); return; }
   if((t==="stats") && !can("stats")){ showToast("Немає доступу до Статистики"); return; }
   if((t==="settings"||t==="svcprices"||t==="presets") && !can("prices")){ showToast("Немає доступу до цін"); return; }
   // Незбережені зміни в поточній калькуляції — попередити
@@ -3146,7 +3231,7 @@ function switchTab(t, el) {
   document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
   el.classList.add("active");
   var editorTab = (t==="works"||t==="parts"||t==="service");
-  ["works","parts","service","cash","parking","paint","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
+  ["works","parts","service","cash","parking","paint","lamps","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
     var e = document.getElementById("tab-"+id);
     if (!e) return;
     e.style.display = id===t ? (id==="works"||id==="parts"||id==="service"?"grid":"block") : "none";
@@ -3161,6 +3246,7 @@ function switchTab(t, el) {
   if (t === "cash") cashInit();
   if (t === "parking") parkInit();
   if (t === "paint") paintInit();
+  if (t === "lamps") lampsInit();
   if (t === "pay") payInit();
   if (t === "stats") statsInit();
   if (t === "archive") loadArchive();
@@ -10408,6 +10494,7 @@ function payRenderLedger(){
     else if(a.type==="bonus_manual"){ t="бонус (корегування)"; txt=a.workName||""; }
     else if(a.type==="daily"){ t="ставка (день)"; txt=(a.amountUAH||0).toLocaleString("uk-UA")+" грн"; }
     else if(a.type==="dailyop"){ t="доплата"; txt=(a.carName?a.carName+" · ":"")+(a.workName||""); }
+    else if(a.type==="lamp_bonus"){ t="бонус · лампи Y011"; txt=a.workName||""; }
     else if(a.type==="mgr_parts"){ t=(a.pct!=null?a.pct+"% ":"")+"від прибутку ЗЧ"; txt=(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
@@ -11200,6 +11287,7 @@ function payBuildReport(wid){
     else if(a.type==="coord_ext") lbl="15% "+(a.src==="mal"?"малярні":"сторонні");
     else if(a.type==="daily") lbl="Ставка за день";
     else if(a.type==="dailyop") lbl="Доплата: "+(a.workName||"")+(a.carName?" · "+a.carName:"");
+    else if(a.type==="lamp_bonus") lbl="Бонус за відправку ламп: "+(a.workName||"");
     else lbl=(a.carName||"")+(a.workName?" · "+a.workName:"")+(a.partPct?" ("+a.partPct+"%)":"");
     L.push("  "+fmtDMY(a.date)+"  "+lbl+" — "+payFmt(payNative(a,cur),cur));
   });
@@ -12348,6 +12436,331 @@ function wPaintMarkLinked(){
   });
   W_PAINT_TO_LINK = [];
   var el = document.getElementById("w-paint-pending"); if(el) el.innerHTML = "";
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ЛАМПИ Y011 (LED DETAILING) ────────────────────────────────────────────────
+// Окремий бізнес (ФОП 6%), у Касу СТО не пишеться. Доступ: власник + менеджер
+// (icars.in.ua2). Менеджер бачить ціну продажу і відправки; собівартість,
+// прибуток, податок і бонус-поле — лише власник. Налаштування в settings/lamps
+// (пише лише власник). Залишок = старт + приходи − продано − списано.
+// Бонус менеджеру (дефолт 100 грн) капає в ЗП (pmgr) по ОТРИМАНИХ ТТН.
+// ══════════════════════════════════════════════════════════════════════════════
+var LAMP_CFG = null, LAMP_SALES = [];
+var LAMP_DEFAULTS = {stockStart:410, costUAH:4227, priceUAH:9000, lowStock:30, bonusUAH:100, moves:[],
+  parts:{long:0, short:0},   // розукомплектовані трубки: довгі 1175 мм / короткі 440 мм
+  grants:[]};                // гарантійні видачі: {id,date,lq,sq,note}
+var LAMP_PAY_LBL = {ship500:"НП · аванс 500 + накладений", full:"НП · повна передплата (р/р ФОП)", pickup:"Самовивіз · готівка"};
+var LAMP_CH_LBL = {instagram:"Instagram", site:"Сайт", olx:"OLX", sto:"СТО", opt:"Опт", other:"Інше"};
+
+function lampsInit(){
+  db.collection("settings").doc("lamps").get().then(function(doc){
+    if(doc.exists) LAMP_CFG = Object.assign({}, LAMP_DEFAULTS, doc.data());
+    else {
+      LAMP_CFG = Object.assign({}, LAMP_DEFAULTS);
+      if(isAdmin()) db.collection("settings").doc("lamps").set(LAMP_CFG).catch(function(){});
+    }
+    db.collection("lamp_sales").limit(1000).get().then(function(snap){
+      LAMP_SALES = []; snap.forEach(function(d){ LAMP_SALES.push(Object.assign({_id:d.id}, d.data())); });
+      LAMP_SALES.sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
+      lampsRender();
+    }).catch(function(e){ showToast("Лампи: "+e.message+" — перевірте правило lamp_sales у Firestore"); });
+  }).catch(function(e){ showToast("Лампи: "+e.message); });
+}
+function lampCfgSave(patch){
+  if(!isAdmin()) return;
+  Object.assign(LAMP_CFG, patch);
+  db.collection("settings").doc("lamps").set(Object.assign({updatedAt:new Date().toISOString()}, LAMP_CFG))
+    .then(function(){ showToast("Збережено"); lampsRender(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function lampStock(){
+  var s = (LAMP_CFG.stockStart||0);
+  (LAMP_CFG.moves||[]).forEach(function(m){ s += (m.kind==="in"?1:-1)*(m.qty||0); });
+  LAMP_SALES.forEach(function(x){ if(!x.canceled) s -= (x.qty||0); });
+  return s;
+}
+function lampSaleSum(x){ return Math.round((x.qty||0)*(x.priceUAH||0)); }
+function lampFmt(v){ return Math.round(v).toLocaleString("uk-UA"); }
+
+function lampsRender(){
+  var head=document.getElementById("lamps-head"); if(!head) return;
+  var stock=lampStock(), low=(LAMP_CFG.lowStock||0);
+  var sold=0, revenue=0, bonusSum=0;
+  LAMP_SALES.forEach(function(x){ if(x.canceled) return; sold+=(x.qty||0); revenue+=lampSaleSum(x); if(x.bonusAccrued) bonusSum+=(x.bonusUAH||0); });
+  head.innerHTML =
+    '<div class="pay-led" style="margin-bottom:14px;display:flex;gap:28px;flex-wrap:wrap;align-items:center">'
+    +'<div><div class="pay-sub">ЗАЛИШОК НА СКЛАДІ</div><div class="pay-bal '+(stock<=low?"neg":"pos")+'" style="font-size:26px">'+stock+' шт</div>'
+    +(stock<=low?'<div class="pay-sub" style="color:var(--rd);font-weight:600">⚠ нижче порогу '+low+' шт — час замовляти партію (цикл 2,5–3 міс)</div>':'')+'</div>'
+    +'<div><div class="pay-sub">ПРОДАНО</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">'+sold+' шт</div></div>'
+    +'<div><div class="pay-sub">ВИРУЧКА</div><div style="font-family:var(--mono);font-size:18px;font-weight:600">'+lampFmt(revenue)+' грн</div></div>'
+    +'<div><div class="pay-sub">ЦІНА ЗА ЗАМОВЧ.</div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--bl)">'+lampFmt(LAMP_CFG.priceUAH||0)+' грн</div></div>'
+    +'</div>';
+  lampsRenderEcon(sold, revenue, bonusSum);
+  lampsRenderParts();
+  lampsRenderList();
+}
+// Розукомплектовані комплекти — гарантійні заміни окремих трубок
+function lampPartsLeft(){
+  var p=LAMP_CFG.parts||{long:0,short:0}, L=p.long||0, S=p.short||0;
+  (LAMP_CFG.grants||[]).forEach(function(g){ L-=(g.lq||0); S-=(g.sq||0); });
+  return {long:L, short:S};
+}
+function lampsRenderParts(){
+  var el=document.getElementById("lamps-parts"); if(!el) return;
+  var p=LAMP_CFG.parts||{long:0,short:0}, left=lampPartsLeft();
+  var grants=(LAMP_CFG.grants||[]).slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
+  if(!(p.long||p.short) && !grants.length && !isAdmin()){ el.innerHTML=""; return; }
+  var h='<div class="pay-led" style="margin-bottom:14px">'
+    +'<div class="pay-nm" style="margin-bottom:4px">🔧 Розукомплектовано для гарантійних замін</div>'
+    +'<div class="pay-sub" style="font-size:12px">Трубки <b>довгі 1175 мм</b>: <b style="color:'+(left.long>0?"var(--gr)":"var(--rd)")+'">'+left.long+' шт</b>'
+    +' · <b>короткі 440 мм</b>: <b style="color:'+(left.short>0?"var(--gr)":"var(--rd)")+'">'+left.short+' шт</b>'
+    +((p.long||p.short)?' <span style="color:var(--tx3)">(розукомплектовано всього: '+(p.long||0)+' дов. / '+(p.short||0)+' кор.)</span>':'')+'</div>';
+  if(grants.length){
+    h+='<div class="pay-sub" style="margin-top:4px">Видано на заміну:</div>';
+    grants.slice(0,10).forEach(function(g){
+      h+='<div class="pay-sub">• '+escH(g.date||"")+' — '+(g.lq?g.lq+' дов. ':'')+(g.sq?g.sq+' кор. ':'')+(g.note?'· '+escH(g.note):'')
+        +(isAdmin()?' <span style="color:var(--rd);cursor:pointer" title="Скасувати видачу" onclick="lampGrantDel(\''+g.id+'\')">×</span>':'')+'</div>';
+    });
+  }
+  if(isAdmin()){
+    h+='<div class="pay-cbtns" style="margin-top:6px">'
+      +'<button onclick="lampUnkit()">📦→🔧 Розукомплектувати комплект</button>'
+      +'<button style="color:var(--gr);border-color:var(--gr)" onclick="lampGrant()">➕ Видати на заміну</button>'
+      +'</div>';
+  }
+  el.innerHTML=h+'</div>';
+}
+function lampUnkit(){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  if(lampStock()<1){ showToast("На складі немає комплектів"); return; }
+  if(!confirm("Розукомплектувати 1 комплект Y011?\nЗі складу спишеться 1 шт, трубки підуть у гарантійний запас.")) return;
+  var L=parseInt(prompt("Скільки ДОВГИХ трубок (1175 мм) у комплекті?","")); if(isNaN(L)||L<0) return;
+  var S=parseInt(prompt("Скільки КОРОТКИХ трубок (440 мм) у комплекті?","")); if(isNaN(S)||S<0) return;
+  var today=new Date().toISOString().slice(0,10);
+  var moves=(LAMP_CFG.moves||[]).concat([{id:"lm"+Date.now(), kind:"off", qty:1, date:today, note:"розукомплектовано на гарантійні трубки"}]);
+  var p=LAMP_CFG.parts||{long:0,short:0};
+  lampCfgSave({moves:moves, parts:{long:(p.long||0)+L, short:(p.short||0)+S}});
+}
+function lampGrant(){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var left=lampPartsLeft();
+  var L=parseInt(prompt("Видати ДОВГИХ (1175 мм), шт (доступно "+left.long+"):","0")); if(isNaN(L)||L<0) return;
+  var S=parseInt(prompt("Видати КОРОТКИХ (440 мм), шт (доступно "+left.short+"):","0")); if(isNaN(S)||S<0) return;
+  if(!L && !S) return;
+  if(L>left.long || S>left.short){ showToast("Недостатньо трубок у запасі — спершу розукомплектуйте комплект"); return; }
+  var note=prompt("Кому / причина (клієнт, гарантійний випадок):","")||"";
+  var grants=(LAMP_CFG.grants||[]).concat([{id:"lg"+Date.now(), date:new Date().toISOString().slice(0,10), lq:L, sq:S, note:note.trim()}]);
+  lampCfgSave({grants:grants});
+}
+function lampGrantDel(id){
+  if(!isAdmin()) return;
+  if(!confirm("Скасувати цю видачу? Трубки повернуться в запас.")) return;
+  lampCfgSave({grants:(LAMP_CFG.grants||[]).filter(function(g){ return g.id!==id; })});
+}
+// Економіка — лише власник
+function lampsRenderEcon(sold, revenue, bonusSum){
+  var el=document.getElementById("lamps-econ"); if(!el) return;
+  if(!isAdmin()){ el.innerHTML=""; return; }
+  var cost=LAMP_CFG.costUAH||0, stock=lampStock();
+  var cogs=sold*cost, gross=revenue-cogs;
+  // Податок 6% з виручки по кварталах (для декларації)
+  var q={};
+  LAMP_SALES.forEach(function(x){ if(x.canceled||!x.date) return;
+    var m=+x.date.slice(5,7), key=x.date.slice(0,4)+" Q"+Math.ceil(m/3);
+    q[key]=(q[key]||0)+lampSaleSum(x); });
+  var qRows=Object.keys(q).sort().reverse().slice(0,4).map(function(k){
+    return '<div class="pay-sub">'+k+': виручка '+lampFmt(q[k])+' грн · податок 6% = <b>'+lampFmt(q[k]*0.06)+' грн</b></div>'; }).join("");
+  el.innerHTML =
+    '<div class="pay-led" style="margin-bottom:14px" data-admin-only>'
+    +'<div class="pay-nm" style="margin-bottom:6px">Економіка (лише власник)</div>'
+    +'<div class="pay-sub" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">'
+      +'Собівартість/шт: <input type="number" value="'+cost+'" min="0" step="10" style="width:84px;background:var(--bg);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-weight:bold;font-size:12px;padding:3px 6px;border-radius:3px;outline:none;text-align:right" onchange="lampCfgSave({costUAH:Math.round(+this.value||0)})"/> грн'
+      +' · Ціна за замовч.: <input type="number" value="'+(LAMP_CFG.priceUAH||0)+'" min="0" step="100" style="width:84px;background:var(--bg);border:1px solid var(--bd);color:var(--bl);font-family:var(--mono);font-weight:bold;font-size:12px;padding:3px 6px;border-radius:3px;outline:none;text-align:right" onchange="lampCfgSave({priceUAH:Math.round(+this.value||0)})"/> грн'
+      +' · Поріг залишку: <input type="number" value="'+(LAMP_CFG.lowStock||0)+'" min="0" step="5" style="width:60px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:3px 6px;border-radius:3px;outline:none;text-align:right" onchange="lampCfgSave({lowStock:Math.round(+this.value||0)})"/> шт'
+      +' · Бонус за замовч.: <input type="number" value="'+(LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100)+'" min="0" step="50" style="width:60px;background:var(--bg);border:1px solid var(--bd);color:var(--gr);font-family:var(--mono);font-weight:bold;font-size:12px;padding:3px 6px;border-radius:3px;outline:none;text-align:right" onchange="lampCfgSave({bonusUAH:Math.round(+this.value||0)})"/> грн</div>'
+    +'<div class="pay-sub">Склад: '+lampStock()+' шт × '+lampFmt(cost)+' = <b>'+lampFmt(stock*cost)+' грн</b> заморожено'
+    +' · Собівартість проданого: '+lampFmt(cogs)+' грн · <b style="color:'+(gross>=0?"var(--gr)":"var(--rd)")+'">Валовий прибуток: '+lampFmt(gross)+' грн</b>'
+    +' · Бонуси менеджеру (нараховані): '+lampFmt(bonusSum)+' грн</div>'
+    +qRows
+    +'</div>';
+}
+function lampsRenderList(){
+  var el=document.getElementById("lamps-list"); if(!el) return;
+  var adm=isAdmin(), cost=LAMP_CFG.costUAH||0;
+  var open=LAMP_SALES.filter(function(x){ return !x.canceled && !x.delivered; });
+  var closed=LAMP_SALES.filter(function(x){ return x.canceled || x.delivered; }).slice(0,30);
+  function card(x){
+    var sum=lampSaleSum(x), closedC=x.canceled||x.delivered;
+    var payTxt = x.payType==="ship500" ? "аванс 500 · накладений "+lampFmt(Math.max(0,sum-500))+" грн"
+               : x.payType==="full" ? "передплата "+lampFmt(sum)+" грн (р/р ФОП)"
+               : "самовивіз · готівка "+lampFmt(sum)+" грн";
+    var st = x.canceled ? '<span style="color:var(--rd)">✕ скасовано</span>'
+           : x.delivered ? '<span style="color:var(--gr)">✓ отримано'+(x.deliveredAt?" "+escH(x.deliveredAt):"")+'</span>'
+           : (x.ttn ? '<span style="color:#e67e22">🚚 в дорозі</span>' : '<span style="color:var(--tx3)">● нова</span>');
+    var h='<div class="pay-card"'+(closedC?' style="opacity:.55"':'')+'>'
+      +'<div class="pay-nm">'+(x.qty||1)+' шт × '+lampFmt(x.priceUAH||0)+' = '+lampFmt(sum)+' грн</div>'
+      +'<div class="pay-rl">'+escH(x.date||"")+' · '+(LAMP_CH_LBL[x.channel]||"")+' · '+st+'</div>'
+      +'<div class="pay-sub">'+escH(x.client||"—")+(x.phone?' · '+escH(x.phone):'')+(x.city?' · '+escH(x.city)+(x.wh?', '+escH(x.wh):''):'')+'</div>'
+      +'<div class="pay-sub">'+payTxt+'</div>'
+      +(x.ttn?'<div class="pay-sub">ТТН: <b>'+escH(x.ttn)+'</b>'+(x.ttnStatus?' · '+escH(x.ttnStatus):'')+'</div>':'')
+      +(x.note?'<div class="pay-sub">✎ '+escH(x.note)+'</div>':'');
+    if(adm){
+      var profit=sum-(x.qty||0)*cost-Math.round(sum*0.06)-(x.bonusUAH||0);
+      h+='<div class="pay-sub" data-admin-only style="color:'+(profit>=0?"var(--gr)":"var(--rd)")+'">прибуток (− собівартість − 6% − бонус): <b>'+lampFmt(profit)+' грн</b>'
+        +' · бонус менеджеру: '+lampFmt(x.bonusUAH||0)+' грн'+(x.bonusAccrued?' <span style="color:var(--gr)">✓ нараховано</span>':'')+'</div>';
+    }
+    var btns='<div class="pay-cbtns">';
+    if(!closedC){
+      if(!x.ttn) btns+='<button onclick="lampSetTTN(\''+x._id+'\')">＋ ТТН</button>';
+      else btns+='<button onclick="lampTrack(\''+x._id+'\')">⟳ Статус НП</button>';
+      btns+='<button style="color:var(--gr);border-color:var(--gr)" onclick="lampMarkDelivered(\''+x._id+'\')">✓ Отримано</button>';
+      if(adm) btns+='<button style="color:var(--rd)" onclick="lampCancel(\''+x._id+'\')">✕ Скасувати</button>';
+    } else if(adm){
+      btns+='<button style="color:var(--rd)" onclick="lampDelete(\''+x._id+'\')">×</button>';
+    }
+    btns+='</div>';
+    return h+btns+'</div>';
+  }
+  el.innerHTML = (open.map(card).join("") || '<div class="pay-sub">Відкритих відправок немає</div>') + closed.map(card).join("");
+}
+
+// ── Продаж/відправка ──
+function lampOpenSale(){
+  document.getElementById("lamp-s-qty").value=1;
+  document.getElementById("lamp-s-price").value=LAMP_CFG.priceUAH||9000;
+  document.getElementById("lamp-s-channel").value="instagram";
+  document.getElementById("lamp-s-pay").value="ship500";
+  ["lamp-s-name","lamp-s-phone","lamp-s-city","lamp-s-wh","lamp-s-ttn","lamp-s-note"].forEach(function(id){ document.getElementById(id).value=""; });
+  var b=document.getElementById("lamp-s-bonus"); if(b) b.value=(LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
+  document.getElementById("lamp-s-status").textContent="";
+  lampSaleRecalc();
+  document.getElementById("lamp-sale-modal").style.display="flex";
+}
+function lampSaleRecalc(){
+  var qty=parseInt(document.getElementById("lamp-s-qty").value)||1;
+  var price=parseFloat(document.getElementById("lamp-s-price").value)||0;
+  var pay=document.getElementById("lamp-s-pay").value;
+  var sum=Math.round(qty*price);
+  var npw=document.getElementById("lamp-s-np-wrap"); if(npw) npw.style.display = pay==="pickup" ? "none" : "";
+  var el=document.getElementById("lamp-s-calc");
+  el.className="pay-status";
+  el.innerHTML = "Сума: <b>"+lampFmt(sum)+" грн</b>"
+    + (pay==="ship500" ? " · аванс <b>500</b> + накладений <b>"+lampFmt(Math.max(0,sum-500))+" грн</b>"
+      : pay==="full" ? " · повна передплата на р/р ФОП" : " · готівка при самовивозі")
+    + " · залишок після продажу: <b>"+(lampStock()-qty)+" шт</b>";
+}
+function lampDoSale(){
+  var st=document.getElementById("lamp-s-status");
+  var qty=parseInt(document.getElementById("lamp-s-qty").value)||0;
+  var price=parseFloat(document.getElementById("lamp-s-price").value)||0;
+  if(qty<1){ st.className="pay-status err"; st.textContent="Вкажіть кількість"; return; }
+  if(price<=0){ st.className="pay-status err"; st.textContent="Вкажіть ціну"; return; }
+  if(qty>lampStock()){ st.className="pay-status err"; st.textContent="На складі лише "+lampStock()+" шт"; return; }
+  var name=(document.getElementById("lamp-s-name").value||"").trim();
+  if(!name){ st.className="pay-status err"; st.textContent="Вкажіть отримувача"; return; }
+  var pay=document.getElementById("lamp-s-pay").value;
+  var bonus = isAdmin() ? (parseFloat(document.getElementById("lamp-s-bonus").value)||0) : (LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
+  var rec={
+    date:new Date().toISOString().slice(0,10), qty:qty, priceUAH:Math.round(price),
+    channel:document.getElementById("lamp-s-channel").value, payType:pay,
+    client:name, phone:(document.getElementById("lamp-s-phone").value||"").trim(),
+    city:(document.getElementById("lamp-s-city").value||"").trim(), wh:(document.getElementById("lamp-s-wh").value||"").trim(),
+    ttn:ttnDigits(document.getElementById("lamp-s-ttn").value), ttnStatus:"",
+    note:(document.getElementById("lamp-s-note").value||"").trim(),
+    bonusUAH:Math.round(bonus), bonusAccrued:false,
+    delivered:false, canceled:false,
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:"",
+    createdAt:new Date().toISOString()
+  };
+  // Самовивіз — продаж закривається одразу (бонус нарахується теж одразу)
+  if(pay==="pickup"){ rec.delivered=true; rec.deliveredAt=rec.date; }
+  db.collection("lamp_sales").add(rec).then(function(ref){
+    payClose("lamp-sale-modal");
+    showToast("💡 Продаж збережено: "+qty+" шт · "+lampFmt(qty*price)+" грн");
+    if(rec.delivered && rec.bonusUAH>0) lampAccrueBonus(Object.assign({_id:ref.id}, rec));
+    else lampsInit();
+  }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+}
+
+// ── ТТН / статус ──
+function lampSetTTN(id){
+  var x=LAMP_SALES.find(function(s){ return s._id===id; }); if(!x) return;
+  var v=prompt("Номер ТТН Нової Пошти:", x.ttn||""); if(v===null) return;
+  var t=ttnDigits(v); if(t.length<10){ showToast("ТТН закороткий"); return; }
+  db.collection("lamp_sales").doc(id).update({ttn:t}).then(function(){ lampsInit(); });
+}
+function lampTrack(id){
+  var x=LAMP_SALES.find(function(s){ return s._id===id; }); if(!x||!x.ttn) return;
+  npTrack(x.ttn).then(function(s){
+    db.collection("lamp_sales").doc(id).update({ttnStatus:s.status||"", ttnCode:s.code||""}).catch(function(){});
+    x.ttnStatus=s.status; x.ttnCode=s.code;
+    if(npIsDelivered(s.code)){ lampMarkDelivered(id, true); }
+    else { showToast("НП: "+(s.status||"статус невідомий")); lampsRenderList(); }
+  }).catch(function(){ showToast("НП недоступна, спробуйте пізніше"); });
+}
+function lampMarkDelivered(id, silent){
+  var x=LAMP_SALES.find(function(s){ return s._id===id; }); if(!x||x.delivered||x.canceled) return;
+  if(!silent && !confirm("Посилку отримано клієнтом?\nВідправка закриється"+((x.bonusUAH||0)>0?", менеджеру нарахується бонус "+lampFmt(x.bonusUAH)+" грн":"")+".")) return;
+  var today=new Date().toISOString().slice(0,10);
+  db.collection("lamp_sales").doc(id).update({delivered:true, deliveredAt:today}).then(function(){
+    x.delivered=true; x.deliveredAt=today;
+    showToast("✓ Отримано — відправку закрито");
+    if((x.bonusUAH||0)>0 && !x.bonusAccrued) lampAccrueBonus(x);
+    else lampsInit();
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Бонус менеджеру ЗЧ (pmgr) за відправку — по отриманій посилці, разово
+function lampAccrueBonus(x){
+  db.collection("workers").where("role","==","pmgr").get().then(function(ws){
+    var mgr=null; ws.forEach(function(d){ var w=d.data(); if(w.active!==false && !mgr) mgr={_id:d.id, name:w.name}; });
+    if(!mgr){ showToast("Менеджера ЗЧ немає у Працівниках — бонус не нараховано"); lampsInit(); return; }
+    var rate=usdRate||44.1, today=new Date().toISOString().slice(0,10);
+    db.collection("work_accruals").add({
+      workerId:mgr._id, workerName:mgr.name, role:"pmgr", type:"lamp_bonus", rate:rate,
+      saleId:x._id, workName:"Лампи Y011 · "+(x.qty||1)+" шт · "+(x.client||""), carName:"",
+      amountUAH:Math.round(x.bonusUAH||0), amountUSD:Math.round(((x.bonusUAH||0)/rate)*100)/100,
+      date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+    }).then(function(ref){
+      db.collection("lamp_sales").doc(x._id).update({bonusAccrued:true, bonusAccrualId:ref.id}).catch(function(){});
+      showToast("💰 Бонус "+lampFmt(x.bonusUAH||0)+" грн → "+mgr.name);
+      lampsInit();
+    }).catch(function(e){ showToast("Бонус не записався: "+e.message); lampsInit(); });
+  }).catch(function(){ lampsInit(); });
+}
+function lampCancel(id){
+  if(!isAdmin()) return;
+  var x=LAMP_SALES.find(function(s){ return s._id===id; }); if(!x) return;
+  if(!confirm("Скасувати відправку? Кількість повернеться на залишок."+(x.bonusAccrued?"\n⚠ Бонус вже нараховано — сторнуйте в Зарплаті вручну.":""))) return;
+  db.collection("lamp_sales").doc(id).update({canceled:true}).then(function(){ lampsInit(); });
+}
+function lampDelete(id){
+  if(!isAdmin()) return;
+  if(!confirm("Видалити запис назавжди?")) return;
+  db.collection("lamp_sales").doc(id).delete().then(function(){ lampsInit(); });
+}
+
+// ── Прихід / Списання (лише власник; пишеться в settings/lamps.moves) ──
+var LAMP_MOVE_KIND="in";
+function lampOpenMove(kind){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  LAMP_MOVE_KIND=kind;
+  document.getElementById("lamp-move-title").textContent = kind==="in" ? "📦 Прихід (нова партія)" : "🗑 Списання (брак/зразки/подарунки)";
+  document.getElementById("lamp-m-qty").value=1;
+  document.getElementById("lamp-m-date").value=new Date().toISOString().slice(0,10);
+  document.getElementById("lamp-m-note").value="";
+  document.getElementById("lamp-m-status").textContent="";
+  document.getElementById("lamp-move-modal").style.display="flex";
+}
+function lampDoMove(){
+  var st=document.getElementById("lamp-m-status");
+  var qty=parseInt(document.getElementById("lamp-m-qty").value)||0;
+  if(qty<1){ st.className="pay-status err"; st.textContent="Вкажіть кількість"; return; }
+  var moves=(LAMP_CFG.moves||[]).concat([{id:"lm"+Date.now(), kind:LAMP_MOVE_KIND, qty:qty,
+    date:document.getElementById("lamp-m-date").value||new Date().toISOString().slice(0,10),
+    note:(document.getElementById("lamp-m-note").value||"").trim()}]);
+  lampCfgSave({moves:moves});
+  payClose("lamp-move-modal");
 }
 
 </script>

@@ -12614,6 +12614,7 @@ function lampsRenderList(){
     if(!closedC){
       if(!x.ttn) btns+='<button onclick="lampSetTTN(\''+x._id+'\')">＋ ТТН</button>';
       else btns+='<button onclick="lampTrack(\''+x._id+'\')" title="Вичитати статус посилки з Нової Пошти">🚚 Статус ТТН (НП)</button>';
+      btns+='<button onclick="lampOpenSale(\''+x._id+'\')" title="Виправити будь-які дані відправки (к-ть, ціну, отримувача, ТТН...)">✎ Редагувати</button>';
       btns+='<button style="color:var(--gr);border-color:var(--gr)" onclick="lampMarkDelivered(\''+x._id+'\')" title="Закрити відправку: клієнт отримав посилку">✅ Клієнт отримав — закрити</button>';
       if(adm) btns+='<button style="color:var(--rd)" onclick="lampCancel(\''+x._id+'\')">✕ Скасувати</button>';
     } else {
@@ -12626,14 +12627,23 @@ function lampsRenderList(){
   el.innerHTML = (open.map(card).join("") || '<div class="pay-sub">Відкритих відправок немає</div>') + closed.map(card).join("");
 }
 
-// ── Продаж/відправка ──
-function lampOpenSale(){
-  document.getElementById("lamp-s-qty").value=1;
-  document.getElementById("lamp-s-price").value=LAMP_CFG.priceUAH||9000;
-  document.getElementById("lamp-s-channel").value="instagram";
-  document.getElementById("lamp-s-pay").value="ship500";
-  ["lamp-s-name","lamp-s-phone","lamp-s-city","lamp-s-wh","lamp-s-ttn","lamp-s-note"].forEach(function(id){ document.getElementById(id).value=""; });
-  var b=document.getElementById("lamp-s-bonus"); if(b) b.value=(LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
+// ── Продаж/відправка (створення АБО редагування — lampOpenSale(id)) ──
+var LAMP_EDIT_ID = null;
+function lampOpenSale(editId){
+  var x = editId ? LAMP_SALES.find(function(s){ return s._id===editId; }) : null;
+  LAMP_EDIT_ID = x ? editId : null;
+  document.getElementById("lamp-sale-title").textContent = x ? "Редагувати відправку — Y011" : "Відправка / Продаж — Y011";
+  document.getElementById("lamp-s-qty").value = x ? (x.qty||1) : 1;
+  document.getElementById("lamp-s-price").value = x ? (x.priceUAH||0) : (LAMP_CFG.priceUAH||9000);
+  document.getElementById("lamp-s-channel").value = x ? (x.channel||"instagram") : "instagram";
+  document.getElementById("lamp-s-pay").value = x ? (x.payType||"ship500") : "ship500";
+  document.getElementById("lamp-s-name").value = x ? (x.client||"") : "";
+  document.getElementById("lamp-s-phone").value = x ? (x.phone||"") : "";
+  document.getElementById("lamp-s-city").value = x ? (x.city||"") : "";
+  document.getElementById("lamp-s-wh").value = x ? (x.wh||"") : "";
+  document.getElementById("lamp-s-ttn").value = x ? (x.ttn||"") : "";
+  document.getElementById("lamp-s-note").value = x ? (x.note||"") : "";
+  var b=document.getElementById("lamp-s-bonus"); if(b) b.value = x ? (x.bonusUAH!=null?x.bonusUAH:100) : (LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
   document.getElementById("lamp-s-status").textContent="";
   lampSaleRecalc();
   document.getElementById("lamp-sale-modal").style.display="flex";
@@ -12644,12 +12654,15 @@ function lampSaleRecalc(){
   var pay=document.getElementById("lamp-s-pay").value;
   var sum=Math.round(qty*price);
   var npw=document.getElementById("lamp-s-np-wrap"); if(npw) npw.style.display = pay==="pickup" ? "none" : "";
+  // При редагуванні стара к-ть уже віднята від залишку — повертаємо її в доступне
+  var oldQty=0;
+  if(LAMP_EDIT_ID){ var ox=LAMP_SALES.find(function(s){ return s._id===LAMP_EDIT_ID; }); if(ox && !ox.canceled) oldQty=ox.qty||0; }
   var el=document.getElementById("lamp-s-calc");
   el.className="pay-status";
   el.innerHTML = "Сума: <b>"+lampFmt(sum)+" грн</b>"
     + (pay==="ship500" ? " · аванс <b>500</b> + накладений <b>"+lampFmt(Math.max(0,sum-500))+" грн</b>"
       : pay==="full" ? " · повна передплата на р/р ФОП" : " · готівка при самовивозі")
-    + " · залишок після продажу: <b>"+(lampStock()-qty)+" шт</b>";
+    + " · залишок після: <b>"+(lampStock()+oldQty-qty)+" шт</b>";
 }
 function lampDoSale(){
   var st=document.getElementById("lamp-s-status");
@@ -12657,11 +12670,38 @@ function lampDoSale(){
   var price=parseFloat(document.getElementById("lamp-s-price").value)||0;
   if(qty<1){ st.className="pay-status err"; st.textContent="Вкажіть кількість"; return; }
   if(price<=0){ st.className="pay-status err"; st.textContent="Вкажіть ціну"; return; }
-  if(qty>lampStock()){ st.className="pay-status err"; st.textContent="На складі лише "+lampStock()+" шт"; return; }
   var name=(document.getElementById("lamp-s-name").value||"").trim();
   if(!name){ st.className="pay-status err"; st.textContent="Вкажіть отримувача"; return; }
   var pay=document.getElementById("lamp-s-pay").value;
   var bonus = isAdmin() ? (parseFloat(document.getElementById("lamp-s-bonus").value)||0) : (LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
+
+  // ── Редагування наявної відправки: оновлюємо поля, статуси не чіпаємо
+  if(LAMP_EDIT_ID){
+    var old=LAMP_SALES.find(function(s){ return s._id===LAMP_EDIT_ID; });
+    if(!old){ LAMP_EDIT_ID=null; st.className="pay-status err"; st.textContent="Запис не знайдено"; return; }
+    var avail=lampStock()+((!old.canceled&&old.qty)||0);
+    if(qty>avail){ st.className="pay-status err"; st.textContent="Доступно лише "+avail+" шт"; return; }
+    var newTtn=ttnDigits(document.getElementById("lamp-s-ttn").value);
+    var upd={
+      qty:qty, priceUAH:Math.round(price),
+      channel:document.getElementById("lamp-s-channel").value, payType:pay,
+      client:name, phone:(document.getElementById("lamp-s-phone").value||"").trim(),
+      city:(document.getElementById("lamp-s-city").value||"").trim(), wh:(document.getElementById("lamp-s-wh").value||"").trim(),
+      ttn:newTtn, note:(document.getElementById("lamp-s-note").value||"").trim(),
+      editedAt:new Date().toISOString(), editedBy:currentUserName||""
+    };
+    if(isAdmin()) upd.bonusUAH=Math.round(bonus);
+    if(newTtn!==(old.ttn||"")){ upd.ttnStatus=""; upd.ttnCode=""; }   // нова ТТН — старий статус скидаємо
+    db.collection("lamp_sales").doc(LAMP_EDIT_ID).update(upd).then(function(){
+      LAMP_EDIT_ID=null;
+      payClose("lamp-sale-modal");
+      showToast("✎ Відправку оновлено");
+      lampsInit();
+    }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+    return;
+  }
+
+  if(qty>lampStock()){ st.className="pay-status err"; st.textContent="На складі лише "+lampStock()+" шт"; return; }
   var rec={
     date:new Date().toISOString().slice(0,10), qty:qty, priceUAH:Math.round(price),
     channel:document.getElementById("lamp-s-channel").value, payType:pay,

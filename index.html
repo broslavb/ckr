@@ -520,6 +520,28 @@ tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
 /* Група варіантів (Вар1 + Вар2/Вар3) — фіолетова смуга + фон, щоб пара виділялась у роботі й друці */
 .pt tr.pr-vgroup td{background:rgba(124,58,237,.08)}
 .pt tr.pr-vgroup td:first-child{box-shadow:inset 3px 0 0 0 #7c3aed}
+/* Додаткові послуги/матеріали, НЕ повʼязані з відновленням після ДТП (кнопка «Д») —
+   бірюзова позначка; у клієнтському друці такі рядки йдуть ОКРЕМИМ блоком */
+.pr-x-btn{display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;font-size:9px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;margin-right:3px;font-family:var(--mono)}
+.pr-x-btn.on{background:#00695c;border-color:#004d40;color:#fff}
+.pt tr.pr-xtra td{background:rgba(0,137,123,.10)!important}
+.pt tr.pr-xtra td:nth-child(2){box-shadow:inset 3px 0 0 #00897b}
+.pr-x-tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:bold;color:#fff;background:#00695c;border-radius:2px;padding:1px 4px;flex-shrink:0}
+.ritem-x{display:inline-block;width:16px;height:16px;line-height:15px;text-align:center;font-size:10px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;font-family:var(--mono);flex-shrink:0}
+.ritem-x.on{background:#00695c;border-color:#004d40;color:#fff}
+.pm-extra-print{display:none;margin-top:10px;border:1px solid #00695c;border-radius:4px;overflow:hidden}
+.pm-extra-print .pxp-hdr{background:#00695c;color:#fff;padding:7px 12px;font-family:var(--disp);font-size:11px;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
+.pm-extra-print table{width:100%;border-collapse:collapse}
+.pm-extra-print td{padding:5px 10px;border-bottom:1px solid #d7e3e1;font-family:Verdana,sans-serif;font-size:11px}
+@media print{
+  .pr-x-btn,.ritem-x{display:none!important}
+  /* клієнтський друк: позначені рядки ховаємо зі своїх блоків і показуємо зведений блок;
+     друк для слюсаря/розборок (print-mechanic) — рядки лишаються на місці */
+  body:not(.print-mechanic) .pt tr.pr-xtra{display:none!important}
+  body:not(.print-mechanic) .pm-extra-print{display:block!important}
+  body.print-mechanic .pt tr.pr-xtra td{background:transparent!important;box-shadow:none!important}
+  .pm-extra-print .pxp-hdr{background:#00695c!important;color:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
 /* Докуплено в процесі ремонту (кнопка «N») — зелена позначка, ВИДИМА клієнту і в друці */
 .pr-new-btn{display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;font-size:9px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;margin-right:3px;font-family:var(--mono)}
 .pr-new-btn.on{background:#2e7d32;border-color:#1b5e20;color:#fff}
@@ -1418,6 +1440,16 @@ body.hero-on .hero-pad{margin-right:40vw}
       </div>
     </div>
 
+    <div class="rblock" id="rb-extra" style="display:none">
+      <div class="rblock-hdr" onclick="toggleRBlock('rb-extra')" style="background:#00695c">
+        <span class="rblock-lbl">ДОДАТКОВІ ПОСЛУГИ<span class="rblock-disc-note">не повʼязані з відновленням після ДТП</span></span>
+        <div class="rblock-sums"><span class="rblock-usd" id="rb-extra-usd">—</span><span class="rblock-uah" id="rb-extra-uah"></span><span class="sec-chev" style="color:rgba(255,255,255,.4)">▼</span></div>
+      </div>
+      <div class="rblock-body">
+        <div id="rlist-x-kuz"></div><div id="rlist-x-slu"></div><div id="rlist-x-bez"></div><div id="rlist-x-mal"></div><div id="rlist-x-sto"></div>
+      </div>
+    </div>
+
     <!-- TOTALS -->
     </div><!-- /right-scroll -->
     <div class="grand-tot">
@@ -1426,6 +1458,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="gtrow"><span class="gtlbl">Безпека</span><div><span class="gtval ac" id="gt-bez-usd">—</span><span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px" id="gt-bez-uah"></span></div></div>
       <div class="gtrow"><span class="gtlbl">Малярні</span><div><span class="gtval ac" id="gt-mal-usd">—</span><span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px" id="gt-mal-uah"></span></div></div>
       <div class="gtrow"><span class="gtlbl">Сторонні</span><div><span class="gtval ac" id="gt-sto-usd">—</span><span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px" id="gt-sto-uah"></span></div></div>
+      <div class="gtrow" id="gt-extra-row" style="display:none"><span class="gtlbl" style="color:#00897b;font-weight:600">Додаткові (не ДТП)</span><div><span class="gtval" id="gt-extra-usd" style="color:#00897b">—</span><span style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:8px" id="gt-extra-uah"></span></div></div>
       <div class="gtrow" id="gt-disc-row" style="display:none"><span class="gtlbl">Знижки</span><span class="gtval gr" id="gt-disc">—</span></div>
       <div class="gtrow" style="border-top:1px solid var(--bd);padding-top:8px;margin-top:4px">
         <span class="gtlbl" style="color:var(--tx);font-size:11px">Всього робіт та послуг</span>
@@ -1552,6 +1585,10 @@ body.hero-on .hero-pad{margin-right:40vw}
           <div class="pm-srow" id="pm-new-row" style="display:none">
             <span class="pm-slbl" style="color:#2e7d32;font-weight:bold">Докуплено в процесі ремонту</span>
             <span class="pm-sval" id="pm-new-total" style="color:#2e7d32;font-weight:bold">0 грн</span>
+          </div>
+          <div class="pm-srow" id="pm-extra-row" style="display:none">
+            <span class="pm-slbl" style="color:#00897b;font-weight:bold">Додаткові (не повʼязані з ДТП)</span>
+            <span class="pm-sval" id="pm-extra-total" style="color:#00897b;font-weight:bold">0 грн</span>
           </div>
           <div class="pm-srow" id="pm-profit-row" style="display:none">
             <span class="pm-slbl" style="font-size:11px;color:var(--gr)">Прибуток (після податку 6%)</span>
@@ -3065,7 +3102,7 @@ function worksSnapshot(){
   return JSON.stringify({
     car:_v("w-car"),vin:_v("w-vin"),cl:_v("w-client"),ph:_v("w-phone"),dt:_v("w-date"),st:_v("w-status"),
     dk:_v("disc-kuz"),ds:_v("disc-slu"),db:_v("disc-bez"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
-    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0,x.comment||""];}),
+    w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0,x.extra?1:0,x.comment||""];}),
     org:orgSnap("w"),
     p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -3074,7 +3111,7 @@ function partsSnapshot(){
   return JSON.stringify({
     car:_v("pm-car"),vin:_v("pm-vin"),cl:_v("pm-client"),ph:_v("pm-phone"),dt:_v("pm-date"),st:_v("pm-status"),co:_v("pm-coord"),mp:_v("pm-mgr-pct"),dc:(typeof pmDiscCode==="function"?pmDiscCode():_v("pm-disc")),
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
-      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.manualPrice||0,i.status,!!i.priority,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];});}),
+      return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.manualPrice||0,i.status,!!i.priority,!!i.isNew,!!i.extra,i.fpz||0,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];});}),
     org:orgSnap("pm"),
     p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
   });
@@ -3491,6 +3528,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
     }
     var eye='<span class="ritem-eye" title="'+(it.hidden?'Показати (враховувати й друкувати)':'Приховати (не рахувати, не друкувати)')+'" onclick="toggleWorkHidden(\''+it.uid+'\')">'+(it.hidden?'🙈':'👁')+'</span>';
+    var xbtn='<span class="ritem-x'+(it.extra?' on':'')+'" title="Додаткова послуга — НЕ повʼязана з відновленням після ДТП (у друці йде окремим блоком)" onclick="toggleWorkExtra(\''+it.uid+'\')">Д</span>';
     var cval=(it.comment||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
     var ctext=(it.comment||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     var noteEl='<div class="ritem-note-wrap"><span class="ritem-note-ic">✎</span>'
@@ -3506,6 +3544,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       +'<div style="display:flex;align-items:center;gap:6px">'
       +coeffControl
       +'<div class="ritem-prices">'+priceMain+'</div>'
+      +xbtn
       +eye
       +'<span class="ritem-rm" onclick="delW(\''+it.uid+'\')">×</span>'
       +'</div></div>';
@@ -3618,19 +3657,44 @@ function wRecalc(){
   var pp=paySumUAH(wPayments);
   var cats={};
   Object.keys(wsel).forEach(function(uid){var it=wsel[uid];if(!cats[it.cat])cats[it.cat]=[];cats[it.cat].push(it);});
-  var kuzItems=cats[CAT_KUZ]||[],sluItems=cats[CAT_SLU]||[],bezItems=cats[CAT_BEZ]||[],malItems=cats[CAT_MAL]||[],stoItems=cats[CAT_STO]||[];
+  // Додаткові послуги (не ДТП, it.extra) — виносяться з категорій в окремий блок;
+  // ціна рахується так само (знижка/тариф своєї категорії), лише перегруповано.
+  var xx={};
+  function splitX(cat){ var main=[],x=[]; (cats[cat]||[]).forEach(function(it){ (it.extra?x:main).push(it); }); xx[cat]=x; return main; }
+  var kuzItems=splitX(CAT_KUZ),sluItems=splitX(CAT_SLU),bezItems=splitX(CAT_BEZ),malItems=splitX(CAT_MAL),stoItems=splitX(CAT_STO);
   renderRList("rlist-kuz",kuzItems,"usd",discKuz,false);
   renderRList("rlist-slu",sluItems,"uah",discSlu,false);
   renderRList("rlist-bez",bezItems,"uah",discBez,false);
   renderRList("rlist-mal",malItems,"usd",0,malType==="bud");
   renderRList("rlist-sto",stoItems,"uah",0,false,true);
+  // Блок «Додаткові послуги»: під-списки по категоріях (своя валюта/знижка)
+  var tExtra={usd:0,uah:0,rawUsd:0,rawUah:0,disc:0}, xCount=0;
+  function rX(id,cat,cur,disc,malBud,isSto){
+    var e=document.getElementById(id), arr=xx[cat]||[];
+    if(e){ if(arr.length) renderRList(id,arr,cur,disc,malBud,isSto); else e.innerHTML=""; }
+    if(!arr.length) return;
+    xCount+=arr.length;
+    var t=blockTotal(arr,cur,disc,malBud);
+    tExtra.usd+=t.usd; tExtra.uah+=t.uah; tExtra.rawUsd+=t.rawUsd; tExtra.rawUah+=t.rawUah; tExtra.disc+=t.disc;
+  }
+  rX("rlist-x-kuz",CAT_KUZ,"usd",discKuz,false);
+  rX("rlist-x-slu",CAT_SLU,"uah",discSlu,false);
+  rX("rlist-x-bez",CAT_BEZ,"uah",discBez,false);
+  rX("rlist-x-mal",CAT_MAL,"usd",0,malType==="bud");
+  rX("rlist-x-sto",CAT_STO,"uah",0,false,true);
+  var rbX=document.getElementById("rb-extra"); if(rbX) rbX.style.display=xCount?"":"none";
   var tKuz=blockTotal(kuzItems,"usd",discKuz,false);
   var tSlu=blockTotal(sluItems,"uah",discSlu,false);
   var tBez=blockTotal(bezItems,"uah",discBez,false);
   var tMal=blockTotal(malItems,"usd",0,malType==="bud");
   var tSto=blockTotal(stoItems,"uah",0,false);
-  renderMalCoord(tMal.uah);
-  renderWorksProfit(tKuz,tSlu,tBez,tMal,cats);
+  // Прибуток/малярка — на ПОВНИХ сумах (гроші ті самі, додаткові теж наші роботи)
+  var tKuzF=blockTotal(cats[CAT_KUZ]||[],"usd",discKuz,false);
+  var tSluF=blockTotal(cats[CAT_SLU]||[],"uah",discSlu,false);
+  var tBezF=blockTotal(cats[CAT_BEZ]||[],"uah",discBez,false);
+  var tMalF=blockTotal(cats[CAT_MAL]||[],"usd",0,malType==="bud");
+  renderMalCoord(tMalF.uah);
+  renderWorksProfit(tKuzF,tSluF,tBezF,tMalF,cats);
   function setHead(id,t){
     var hd = t.rawUsd && Math.abs(t.rawUsd - t.usd) > 0.01;   // є знижка → «до знижки → зі знижкою»
     // Порядок подачі: спершу ціна ДО знижки (обидві валюти), потім ЗІ знижкою (обидві валюти)
@@ -3649,9 +3713,11 @@ function wRecalc(){
     if(ga) ga.innerHTML = "";
   }
   setHead("kuz",tKuz);setHead("slu",tSlu);setHead("bez",tBez);setHead("mal",tMal);setHead("sto",tSto);
-  var totalUSD=tKuz.usd+tSlu.usd+tBez.usd+tMal.usd+tSto.usd;
+  setHead("extra",tExtra);
+  var xRow=document.getElementById("gt-extra-row"); if(xRow) xRow.style.display=tExtra.usd?"flex":"none";
+  var totalUSD=tKuz.usd+tSlu.usd+tBez.usd+tMal.usd+tSto.usd+tExtra.usd;
   var totalUAH=Math.round(totalUSD*usdRate);
-  var totalDisc=tKuz.disc+tSlu.disc+tBez.disc;
+  var totalDisc=tKuz.disc+tSlu.disc+tBez.disc+tExtra.disc;
   var allUSD=totalUSD,allUAH=Math.round(allUSD*usdRate);
   document.getElementById("gt-all-usd").textContent=allUSD?allUSD.toFixed(0)+" $":"—";
   document.getElementById("gt-all-uah").textContent=allUAH?allUAH.toLocaleString("uk-UA")+" грн":"";
@@ -3668,6 +3734,13 @@ function wRecalc(){
   wUpdDiscNotes();
 }
 function delW(uid){delete wsel[uid];renderSecs(DB);wRecalc();}
+// Позначка «Додаткова послуга» (не ДТП): рядок переїжджає в окремий блок справа і в друці
+function toggleWorkExtra(uid){
+  if(!wsel[uid]) return;
+  wsel[uid].extra = !wsel[uid].extra;
+  if(!wsel[uid].extra) delete wsel[uid].extra;
+  wRecalc();
+}
 // Приховати/показати рядок роботи (аналог «Приховати варіант» у ЗЧ): не рахується і не друкується
 function toggleWorkHidden(uid){
   if(!wsel[uid]) return;
@@ -5312,37 +5385,50 @@ function buildPrintSummary(){
     return '<span style="display:inline-block;min-width:100px;text-align:right;color:'+(color||"#0d2b6b")+'">'+uah0(uahV)+' грн</span>';
   };
 
-  // ── Запчастини по блоках (назви блоків = b.label)
+  // ── Запчастини по блоках (назви блоків = b.label); додаткові (не ДТП) — окремо
   var disc=pmDiscCode();
-  var partsGrand=0, partRows="";
+  var partsMain=0, partsExtra=0, partRows="";
   PM_BLOCKS.forEach(function(b){
     var bt=0;
-    b.items.forEach(function(i){ bt+=pmFinalWithDisc(pmFinalPrice(i),disc); (i.variants||[]).forEach(function(v){ bt+=pmFinalWithDisc(pmFinalPrice(v),disc); }); });
+    b.items.forEach(function(i){
+      var s=pmFinalWithDisc(pmFinalPrice(i),disc);
+      (i.variants||[]).forEach(function(v){ s+=pmFinalWithDisc(pmFinalPrice(v),disc); });
+      if(i.extra) partsExtra+=s; else bt+=s;
+    });
     if(bt<=0.5) return;
-    partsGrand+=bt;
+    partsMain+=bt;
     partRows+='<div class="sd-row"><span>'+escH(b.label||"Блок")+'</span><span>'+uahCol(bt)+'</span></div>';
   });
-  var partsUSD=usd0(partsGrand/rate);
+  var partsGrand=partsMain+partsExtra;
+  var partsUSD=usd0(partsMain/rate);
 
-  // ── Роботи по категоріях
+  // ── Роботи по категоріях; додаткові (не ДТП, it.extra) — в окремий блок
   var discKuz=parseFloat((document.getElementById("disc-kuz")||{}).value)||0;
   var discSlu=parseFloat((document.getElementById("disc-slu")||{}).value)||0;
   var discBez=parseFloat((document.getElementById("disc-bez")||{}).value)||0;
   var malType=(document.getElementById("mal-type")||{}).value;
-  var cats={}; Object.keys(wsel).forEach(function(u){var it=wsel[u]; (cats[it.cat]=cats[it.cat]||[]).push(it);});
+  var cats={}, xcats={};
+  Object.keys(wsel).forEach(function(u){var it=wsel[u]; var box=it.extra?xcats:cats; (box[it.cat]=box[it.cat]||[]).push(it);});
   var tK=blockTotal(cats[CAT_KUZ]||[],"usd",discKuz,false);
   var tS=blockTotal(cats[CAT_SLU]||[],"uah",discSlu,false);
   var tB=blockTotal(cats[CAT_BEZ]||[],"uah",discBez,false);
   var tM=blockTotal(cats[CAT_MAL]||[],"usd",0,malType==="bud");
   var tO=blockTotal(cats[CAT_STO]||[],"uah",0,false);
+  var xUSD=blockTotal(xcats[CAT_KUZ]||[],"usd",discKuz,false).usd
+         + blockTotal(xcats[CAT_SLU]||[],"uah",discSlu,false).usd
+         + blockTotal(xcats[CAT_BEZ]||[],"uah",discBez,false).usd
+         + blockTotal(xcats[CAT_MAL]||[],"usd",0,malType==="bud").usd
+         + blockTotal(xcats[CAT_STO]||[],"uah",0,false).usd;
+  var worksExtra=Math.round(xUSD*rate);
   var worksUSD=tK.usd+tS.usd+tB.usd+tM.usd+tO.usd;
   var worksUAH=Math.round(worksUSD*rate);
+  var extraAll=partsExtra+worksExtra;
   var discUAH=tK.disc+tS.disc+tB.disc;
   function catRow(lbl,t){ if(!t.usd) return ""; return '<div class="sd-row"><span>'+lbl+'</span><span>'+pair(t.usd,t.uah)+'</span></div>'; }
   var catRows=catRow("Кузовні",tK)+catRow("Слюсарні",tS)+catRow("Безпека",tB)+catRow("Малярні",tM)+catRow("Сторонні",tO);
   if(discUAH>0) catRows+='<div class="sd-row"><span>Знижки</span><span>'+uahCol(-discUAH,"#2e7d32")+'</span></div>';
 
-  var grandBoth=partsGrand+worksUAH;
+  var grandBoth=partsMain+worksUAH+extraAll;
   var paid=paySumUAH(typeof wPayments!=="undefined"?wPayments:[])+paySumUAH(typeof pmPayments!=="undefined"?pmPayments:[]);
   var bal=grandBoth-paid;
 
@@ -5357,17 +5443,29 @@ function buildPrintSummary(){
   H+='<div class="print-car-block"><div><div class="print-car-title">Зведена калькуляція · роботи та запчастини</div><div class="print-car-name">'+escH(car)+'</div></div>'
     +'<div class="print-car-date">'+escH(client||"")+'<br>'+(vin?"VIN: "+escH(vin)+" · ":"")+escH(date)+'<br>РАХУНОК № '+invNum+'</div></div>';
 
-  H+='<div class="sd-sec"><span>ВСЬОГО ЗАПЧАСТИНИ</span><span>'+uah0(partsGrand)+' грн &nbsp; ≈ '+partsUSD+' USD</span></div>';
+  H+='<div class="sd-sec"><span>ЗАПЧАСТИНИ — відновлення після ДТП</span><span>'+uah0(partsMain)+' грн &nbsp; ≈ '+partsUSD+' USD</span></div>';
   H+='<div class="sd-list">'+(partRows||'<div class="sd-row"><span style="color:#888">—</span><span></span></div>')+'</div>';
 
-  H+='<div class="sd-sec"><span>РОБОТИ</span><span>'+uah0(worksUAH)+' грн &nbsp; ≈ '+usd0(worksUSD)+' USD</span></div>';
+  H+='<div class="sd-sec"><span>РОБОТИ — відновлення після ДТП</span><span>'+uah0(worksUAH)+' грн &nbsp; ≈ '+usd0(worksUSD)+' USD</span></div>';
   H+='<div class="sd-list">'+catRows+'</div>';
+
+  // ── Окремий блок: додаткові послуги і матеріали, НЕ повʼязані з відновленням після ДТП
+  if(extraAll>0.5){
+    H+='<div class="sd-sec" style="background:#00695c">'
+      +'<span>ДОДАТКОВІ ПОСЛУГИ І МАТЕРІАЛИ — не повʼязані з відновленням після ДТП</span>'
+      +'<span>'+uah0(extraAll)+' грн &nbsp; ≈ '+usd0(extraAll/rate)+' USD</span></div>';
+    var xr='';
+    if(partsExtra>0.5) xr+='<div class="sd-row"><span>Матеріали та запчастини</span><span>'+uahCol(partsExtra)+'</span></div>';
+    if(worksExtra>0.5) xr+='<div class="sd-row"><span>Послуги та роботи</span><span>'+uahCol(worksExtra)+'</span></div>';
+    H+='<div class="sd-list">'+xr+'</div>';
+  }
 
   // Підсумковий рахунок — як у ТО (розділова лінія + РАХУНОК № + Опис/Сума)
   H+='<div class="sd-invoice"><div class="sd-inv-num">РАХУНОК № '+invNum+'</div>';
   H+='<table class="sd-inv"><tr><th>Опис</th><th style="text-align:right">Сума (грн)</th></tr>';
-  H+='<tr><td>Автозапчастини та матеріали</td><td style="text-align:right">'+uah0(partsGrand)+' грн</td></tr>';
-  H+='<tr><td>Послуги з ремонту / технічного обслуговування</td><td style="text-align:right">'+uah0(worksUAH)+' грн</td></tr>';
+  H+='<tr><td>Автозапчастини та матеріали (відновлення після ДТП)</td><td style="text-align:right">'+uah0(partsMain)+' грн</td></tr>';
+  H+='<tr><td>Послуги з ремонту (відновлення після ДТП)</td><td style="text-align:right">'+uah0(worksUAH)+' грн</td></tr>';
+  if(extraAll>0.5) H+='<tr><td>Додаткові послуги і матеріали (не повʼязані з ДТП)</td><td style="text-align:right">'+uah0(extraAll)+' грн</td></tr>';
   H+='<tr class="tot"><td>ВСЬОГО до сплати</td><td style="text-align:right">'+uah0(grandBoth)+' грн</td></tr>';
   H+='</table>';
   H+='<div class="sd-words">'+numberToWords(grandBoth)+' · ≈ '+usd0(grandBoth/rate)+' USD</div>';
@@ -6139,6 +6237,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(isHidden) tr.classList.add("pr-hidden");
   if(hasVariants||isVariant) tr.classList.add("pr-vgroup");   // Вар1 (з варіантами) + Вар2/Вар3
   if(!isVariant && item.isNew) tr.classList.add("pr-newpart"); // докуплено в процесі ремонту
+  if(!isVariant && item.extra) tr.classList.add("pr-xtra");    // додаткове, не повʼязане з ДТП
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
 
@@ -6245,6 +6344,13 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     ntag.className="pr-new-tag"; ntag.textContent="NEW";
     ntag.title="\u0414\u043e\u043a\u0443\u043f\u043b\u0435\u043d\u043e \u0432 \u043f\u0440\u043e\u0446\u0435\u0441\u0456 \u0440\u0435\u043c\u043e\u043d\u0442\u0443";
     wrap.appendChild(ntag);
+  }
+  // \u041c\u0456\u0442\u043a\u0430 \u0414\u041e\u0414 \u2014 \u0434\u043e\u0434\u0430\u0442\u043a\u043e\u0432\u0435, \u043d\u0435 \u043f\u043e\u0432\u02bc\u044f\u0437\u0430\u043d\u0435 \u0437 \u0432\u0456\u0434\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044f\u043c \u043f\u0456\u0441\u043b\u044f \u0414\u0422\u041f
+  if(!isVariant && item.extra){
+    var xtag=document.createElement("span");
+    xtag.className="pr-x-tag"; xtag.textContent="\u0414\u041e\u0414";
+    xtag.title="\u0414\u043e\u0434\u0430\u0442\u043a\u043e\u0432\u0430 \u043f\u043e\u0441\u043b\u0443\u0433\u0430/\u043c\u0430\u0442\u0435\u0440\u0456\u0430\u043b \u2014 \u043d\u0435 \u043f\u043e\u0432\u02bc\u044f\u0437\u0430\u043d\u043e \u0437 \u0432\u0456\u0434\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044f\u043c \u043f\u0456\u0441\u043b\u044f \u0414\u0422\u041f";
+    wrap.appendChild(xtag);
   }
   wrap.appendChild(availSel); wrap.appendChild(availTxt); wrap.appendChild(nameInp);
   td2.appendChild(wrap); tr.appendChild(td2);
@@ -6377,6 +6483,12 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     newBtn.textContent="N"; newBtn.title="Докуплено в процесі ремонту — виділяється зеленим і в друці для клієнта";
     (function(it){ newBtn.onclick=function(){ it.isNew=!it.isNew; pmRender(); pmUpdateSummary(); }; })(item);
     td12.appendChild(newBtn);
+    // Кнопка «Д» — додаткове, не повʼязане з ДТП (у клієнтському друці — окремий блок)
+    var xBtn=document.createElement("span");
+    xBtn.className="pr-x-btn"+(item.extra?" on":"");
+    xBtn.textContent="Д"; xBtn.title="Додаткова послуга/матеріал — НЕ повʼязано з відновленням після ДТП. У друці йде окремим блоком";
+    (function(it){ xBtn.onclick=function(){ it.extra=!it.extra; if(!it.extra) delete it.extra; pmRender(); pmUpdateSummary(); }; })(item);
+    td12.appendChild(xBtn);
     var varBtn=document.createElement("span");
     varBtn.className="pr-var"; varBtn.textContent="+\u0412";
     varBtn.title="\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0430\u0440\u0456\u0430\u043d\u0442";
@@ -6961,6 +7073,7 @@ function pmRender(){
   PM_BLOCKS.forEach(function(block){
     var blockTotal = 0;
     block.items.forEach(function(item){
+      if(item.extra) return;   // додаткові (не ДТП) — в окремому блоці друку, не в сумі блоку
       blockTotal += pmFinalWithDisc(pmFinalPrice(item), disc);
       (item.variants||[]).forEach(function(v){ blockTotal += pmFinalWithDisc(pmFinalPrice(v), disc); });
     });
@@ -7048,7 +7161,10 @@ function pmRender(){
       if(row && row.nodeType) tbody.appendChild(row);
       (item.variants||[]).forEach(function(v, vi){
         var vrow = pmRowHtml(block.id, v, vi, "\u0412\u0430\u0440"+(vi+2), true, disc, true, item.priority);
-        if(vrow && vrow.nodeType) tbody.appendChild(vrow);
+        if(vrow && vrow.nodeType){
+          if(item.extra) vrow.classList.add("pr-xtra");   // \u0432\u0430\u0440\u0456\u0430\u043d\u0442\u0438 \u0434\u043e\u0434\u0430\u0442\u043a\u043e\u0432\u043e\u0457 \u2014 \u0442\u0435\u0436 \u0432 \u043e\u043a\u0440\u0435\u043c\u0438\u0439 \u0431\u043b\u043e\u043a \u0434\u0440\u0443\u043a\u0443
+          tbody.appendChild(vrow);
+        }
       });
     });
 
@@ -7092,7 +7208,35 @@ function pmRender(){
     wrap.appendChild(outer);
   });
 
+  pmRenderExtraPrint(wrap, disc);   // блок «Додаткові» для клієнтського друку
   pmUpdateSummary();
+}
+
+// Зведений блок «ДОДАТКОВІ ПОСЛУГИ ТА МАТЕРІАЛИ» (не ДТП) — лише для клієнтського
+// друку (.pm-extra-print показується в @media print, крім print-mechanic)
+function pmRenderExtraPrint(wrap, disc){
+  var rows=[], tot=0;
+  PM_BLOCKS.forEach(function(b){ b.items.forEach(function(item){
+    if(!item.extra) return;
+    var add=function(it,varLbl){
+      if(it.status==="hidden") return;
+      var p=pmFinalWithDisc(pmFinalPrice(it), disc);
+      tot+=p;
+      var av=pmAvailLabel(it.avail)||"";
+      rows.push('<tr><td style="width:60%">'+(av?'<b style="color:#0d2b6b;font-size:10px">'+escH(av)+'</b> · ':'')+escH(it.name||"")
+        +(varLbl?' <b style="color:#7c3aed">'+varLbl+'</b>':'')+'</td>'
+        +'<td style="width:10%;text-align:center">'+(it.qty||1)+'</td>'
+        +'<td style="width:22%;text-align:right;font-weight:bold">'+(p?p.toLocaleString("uk-UA")+" грн":"—")+'</td></tr>');
+    };
+    add(item, (item.variants&&item.variants.length)?"Вар1":"");
+    (item.variants||[]).forEach(function(v,vi){ add(v,"Вар"+(vi+2)); });
+  }); });
+  if(!rows.length) return;
+  var d=document.createElement("div");
+  d.className="pm-extra-print";
+  d.innerHTML='<div class="pxp-hdr"><span>ДОДАТКОВІ ПОСЛУГИ ТА МАТЕРІАЛИ — не повʼязані з відновленням після ДТП</span>'
+    +'<span>'+tot.toLocaleString("uk-UA")+' грн</span></div><table>'+rows.join("")+'</table>';
+  wrap.appendChild(d);
 }
 
 // Підсумки по комплектаціях: для кожного рівня Вар1/Вар2/… — усі позиції без варіантів
@@ -7131,9 +7275,17 @@ function pmUpdateSummary(){
   var disc = pmDiscCode();
   var grandTotal = 0;
   var html = "";
+  // Додаткові (не ДТП, item.extra) — окремий підсумок; у суми блоків не входять, у ВСЬОГО — входять
+  var extraTotal = 0;
+  PM_BLOCKS.forEach(function(block){ block.items.forEach(function(item){
+    if(!item.extra) return;
+    extraTotal += pmFinalWithDisc(pmFinalPrice(item), disc);
+    (item.variants||[]).forEach(function(v){ extraTotal += pmFinalWithDisc(pmFinalPrice(v), disc); });
+  }); });
   PM_BLOCKS.forEach(function(block){
     var blockTotal = 0;
     block.items.forEach(function(item){
+      if(item.extra) return;
       blockTotal += pmFinalWithDisc(pmFinalPrice(item), disc);
       (item.variants||[]).forEach(function(v){ blockTotal += pmFinalWithDisc(pmFinalPrice(v), disc); });
     });
@@ -7142,8 +7294,13 @@ function pmUpdateSummary(){
     }
     grandTotal += blockTotal;
   });
+  grandTotal += extraTotal;   // клієнт платить за все — ВСЬОГО включає додаткові
   var totalsEl = document.getElementById("pm-block-totals");
   if(totalsEl) totalsEl.innerHTML = html;
+  var xRowP = document.getElementById("pm-extra-row");
+  var xElP = document.getElementById("pm-extra-total");
+  if(xRowP) xRowP.style.display = extraTotal > 0 ? "flex" : "none";
+  if(xElP) xElP.textContent = extraTotal.toLocaleString("uk-UA") + " грн";
   var gtEl = document.getElementById("pm-grand-total");
   if(gtEl) gtEl.textContent = grandTotal.toLocaleString("uk-UA") + " грн";
 
@@ -7214,6 +7371,7 @@ function pmUpdateSummary(){
   PM_BLOCKS.forEach(function(block){
     var blockTotal = 0;
     block.items.forEach(function(item){
+      if(item.extra) return;   // додаткові — не в сумі блоку
       blockTotal += pmFinalWithDisc(pmFinalPrice(item), disc);
       (item.variants||[]).forEach(function(v){ blockTotal += pmFinalWithDisc(pmFinalPrice(v), disc); });
     });

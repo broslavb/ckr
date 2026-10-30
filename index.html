@@ -12613,11 +12613,12 @@ function lampsRenderList(){
     var btns='<div class="pay-cbtns">';
     if(!closedC){
       if(!x.ttn) btns+='<button onclick="lampSetTTN(\''+x._id+'\')">＋ ТТН</button>';
-      else btns+='<button onclick="lampTrack(\''+x._id+'\')">⟳ Статус НП</button>';
-      btns+='<button style="color:var(--gr);border-color:var(--gr)" onclick="lampMarkDelivered(\''+x._id+'\')">✓ Отримано</button>';
+      else btns+='<button onclick="lampTrack(\''+x._id+'\')" title="Вичитати статус посилки з Нової Пошти">🚚 Статус ТТН (НП)</button>';
+      btns+='<button style="color:var(--gr);border-color:var(--gr)" onclick="lampMarkDelivered(\''+x._id+'\')" title="Закрити відправку: клієнт отримав посилку">✅ Клієнт отримав — закрити</button>';
       if(adm) btns+='<button style="color:var(--rd)" onclick="lampCancel(\''+x._id+'\')">✕ Скасувати</button>';
-    } else if(adm){
-      btns+='<button style="color:var(--rd)" onclick="lampDelete(\''+x._id+'\')">×</button>';
+    } else {
+      if(adm && x.delivered && !x.canceled) btns+='<button onclick="lampReopen(\''+x._id+'\')" title="Повернути відправку у відкриті (бонус сторнується)">↩ Повернути у відкриті</button>';
+      if(adm) btns+='<button style="color:var(--rd)" onclick="lampDelete(\''+x._id+'\')">×</button>';
     }
     btns+='</div>';
     return h+btns+'</div>';
@@ -12695,7 +12696,8 @@ function lampTrack(id){
   npTrack(x.ttn).then(function(s){
     db.collection("lamp_sales").doc(id).update({ttnStatus:s.status||"", ttnCode:s.code||""}).catch(function(){});
     x.ttnStatus=s.status; x.ttnCode=s.code;
-    if(npIsDelivered(s.code)){ lampMarkDelivered(id, true); }
+    // Навіть якщо НП каже «отримано» — закриваємо лише з підтвердженням (без автозакриття)
+    if(npIsDelivered(s.code)){ lampsRenderList(); lampMarkDelivered(id); }
     else { showToast("НП: "+(s.status||"статус невідомий")); lampsRenderList(); }
   }).catch(function(){ showToast("НП недоступна, спробуйте пізніше"); });
 }
@@ -12727,6 +12729,21 @@ function lampAccrueBonus(x){
       lampsInit();
     }).catch(function(e){ showToast("Бонус не записався: "+e.message); lampsInit(); });
   }).catch(function(){ lampsInit(); });
+}
+// Повернути помилково закриту відправку у відкриті + сторнувати нарахований бонус
+function lampReopen(id){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var x=LAMP_SALES.find(function(s){ return s._id===id; }); if(!x||!x.delivered) return;
+  if(!confirm("Повернути відправку у відкриті?"+(x.bonusAccrued?"\nНарахований бонус "+lampFmt(x.bonusUAH||0)+" грн буде сторновано.":""))) return;
+  var fin=function(){
+    db.collection("lamp_sales").doc(id).update({delivered:false, deliveredAt:"", bonusAccrued:false, bonusAccrualId:""})
+      .then(function(){ showToast("↩ Відправка знову відкрита"); lampsInit(); })
+      .catch(function(e){ showToast("Помилка: "+e.message); });
+  };
+  if(x.bonusAccrued && x.bonusAccrualId){
+    db.collection("work_accruals").doc(x.bonusAccrualId).delete().then(fin)
+      .catch(function(){ showToast("⚠ Бонус-запис не видалився — сторнуйте в Зарплаті вручну"); fin(); });
+  } else fin();
 }
 function lampCancel(id){
   if(!isAdmin()) return;

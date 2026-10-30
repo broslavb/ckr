@@ -542,6 +542,10 @@ tr.pr-drop-after td{box-shadow:inset 0 -2px 0 0 var(--bl)!important}
   body.print-mechanic .pt tr.pr-xtra td{background:transparent!important;box-shadow:none!important}
   .pm-extra-print .pxp-hdr{background:#00695c!important;color:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
+/* Лампи Y011: компактна таблиця закритих відправок */
+.lamp-closed{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.lamp-closed th{color:var(--tx3);text-align:left;padding:3px 6px;font-weight:normal;text-transform:uppercase;font-size:9.5px;letter-spacing:.5px}
+.lamp-closed td{padding:4px 6px;border-top:1px solid var(--bd)}
 /* Докуплено в процесі ремонту (кнопка «N») — зелена позначка, ВИДИМА клієнту і в друці */
 .pr-new-btn{display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;font-size:9px;font-weight:bold;border:1px solid var(--bd);border-radius:3px;color:var(--tx3);background:var(--bg);cursor:pointer;margin-right:3px;font-family:var(--mono)}
 .pr-new-btn.on{background:#2e7d32;border-color:#1b5e20;color:#fff}
@@ -12589,21 +12593,24 @@ function lampsRenderList(){
   var el=document.getElementById("lamps-list"); if(!el) return;
   var adm=isAdmin(), cost=LAMP_CFG.costUAH||0;
   var open=LAMP_SALES.filter(function(x){ return !x.canceled && !x.delivered; });
-  var closed=LAMP_SALES.filter(function(x){ return x.canceled || x.delivered; }).slice(0,30);
+  var closed=LAMP_SALES.filter(function(x){ return x.canceled || x.delivered; }).slice(0,60);
+  // Відкриті — плитки
   function card(x){
-    var sum=lampSaleSum(x), closedC=x.canceled||x.delivered;
+    var sum=lampSaleSum(x);
     var payTxt = x.payType==="ship500" ? "аванс 500 · накладений "+lampFmt(Math.max(0,sum-500))+" грн"
                : x.payType==="full" ? "передплата "+lampFmt(sum)+" грн (р/р ФОП)"
                : "самовивіз · готівка "+lampFmt(sum)+" грн";
-    var st = x.canceled ? '<span style="color:var(--rd)">✕ скасовано</span>'
-           : x.delivered ? '<span style="color:var(--gr)">✓ отримано'+(x.deliveredAt?" "+escH(x.deliveredAt):"")+'</span>'
-           : (x.ttn ? '<span style="color:#e67e22">🚚 в дорозі</span>' : '<span style="color:var(--tx3)">● нова</span>');
-    var h='<div class="pay-card"'+(closedC?' style="opacity:.55"':'')+'>'
+    var st = x.ttn ? '<span style="color:#e67e22">🚚 в дорозі</span>' : '<span style="color:var(--tx3)">● нова</span>';
+    var h='<div class="pay-card">'
       +'<div class="pay-nm">'+(x.qty||1)+' шт × '+lampFmt(x.priceUAH||0)+' = '+lampFmt(sum)+' грн</div>'
       +'<div class="pay-rl">'+escH(x.date||"")+' · '+(LAMP_CH_LBL[x.channel]||"")+' · '+st+'</div>'
       +'<div class="pay-sub">'+escH(x.client||"—")+(x.phone?' · '+escH(x.phone):'')+(x.city?' · '+escH(x.city)+(x.wh?', '+escH(x.wh):''):'')+'</div>'
       +'<div class="pay-sub">'+payTxt+'</div>'
-      +(x.ttn?'<div class="pay-sub">ТТН: <b>'+escH(x.ttn)+'</b>'+(x.ttnStatus?' · '+escH(x.ttnStatus):'')+'</div>':'')
+      // ТТН + статус НП — у помітній рамці, щоб не зливалось
+      +(x.ttn?'<div style="margin-top:5px;border:1.5px solid #e67e22;border-radius:5px;padding:4px 8px;background:rgba(230,126,34,.08)">'
+          +'<div style="font-family:var(--mono);font-size:11px;color:var(--tx2)">ТТН: <b style="font-size:12.5px;color:var(--tx)">'+escH(x.ttn)+'</b></div>'
+          +(x.ttnStatus?'<div style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:#b35b00;margin-top:1px">'+escH(x.ttnStatus)+'</div>':'')
+        +'</div>':'')
       +(x.note?'<div class="pay-sub">✎ '+escH(x.note)+'</div>':'');
     if(adm){
       var profit=sum-(x.qty||0)*cost-Math.round(sum*0.06)-(x.bonusUAH||0);
@@ -12611,20 +12618,47 @@ function lampsRenderList(){
         +' · бонус менеджеру: '+lampFmt(x.bonusUAH||0)+' грн'+(x.bonusAccrued?' <span style="color:var(--gr)">✓ нараховано</span>':'')+'</div>';
     }
     var btns='<div class="pay-cbtns">';
-    if(!closedC){
-      if(!x.ttn) btns+='<button onclick="lampSetTTN(\''+x._id+'\')">＋ ТТН</button>';
-      else btns+='<button onclick="lampTrack(\''+x._id+'\')" title="Вичитати статус посилки з Нової Пошти">🚚 Статус ТТН (НП)</button>';
-      btns+='<button onclick="lampOpenSale(\''+x._id+'\')" title="Виправити будь-які дані відправки (к-ть, ціну, отримувача, ТТН...)">✎ Редагувати</button>';
-      btns+='<button style="color:var(--gr);border-color:var(--gr)" onclick="lampMarkDelivered(\''+x._id+'\')" title="Закрити відправку: клієнт отримав посилку">✅ Клієнт отримав — закрити</button>';
-      if(adm) btns+='<button style="color:var(--rd)" onclick="lampCancel(\''+x._id+'\')">✕ Скасувати</button>';
-    } else {
-      if(adm && x.delivered && !x.canceled) btns+='<button onclick="lampReopen(\''+x._id+'\')" title="Повернути відправку у відкриті (бонус сторнується)">↩ Повернути у відкриті</button>';
-      if(adm) btns+='<button style="color:var(--rd)" onclick="lampDelete(\''+x._id+'\')">×</button>';
-    }
+    if(!x.ttn) btns+='<button onclick="lampSetTTN(\''+x._id+'\')">＋ ТТН</button>';
+    else btns+='<button onclick="lampTrack(\''+x._id+'\')" title="Вичитати статус посилки з Нової Пошти">🚚 Статус ТТН (НП)</button>';
+    btns+='<button onclick="lampOpenSale(\''+x._id+'\')" title="Виправити будь-які дані відправки (к-ть, ціну, отримувача, ТТН...)">✎ Редагувати</button>';
+    btns+='<button style="color:var(--gr);border-color:var(--gr)" onclick="lampMarkDelivered(\''+x._id+'\')" title="Закрити відправку: клієнт отримав посилку">✅ Клієнт отримав — закрити</button>';
+    if(adm) btns+='<button style="color:var(--rd)" onclick="lampCancel(\''+x._id+'\')">✕ Скасувати</button>';
     btns+='</div>';
     return h+btns+'</div>';
   }
-  el.innerHTML = (open.map(card).join("") || '<div class="pay-sub">Відкритих відправок немає</div>') + closed.map(card).join("");
+  // Закриті — компактна таблиця (не дрібнить при десятках записів)
+  var closedHtml="";
+  if(closed.length){
+    var rows=closed.map(function(x){
+      var sum=lampSaleSum(x);
+      var st = x.canceled ? '<span style="color:var(--rd);font-weight:600">✕ скас.</span>'
+                          : '<span style="color:var(--gr);font-weight:600">✓ '+escH(x.deliveredAt||"")+'</span>';
+      var profTd="";
+      if(adm){
+        var p=x.canceled?0:(sum-(x.qty||0)*cost-Math.round(sum*0.06)-(x.bonusUAH||0));
+        profTd='<td style="text-align:right;white-space:nowrap;color:'+(p>=0?"var(--gr)":"var(--rd)")+'">'+(x.canceled?"—":lampFmt(p)+" грн")+'</td>';
+      }
+      var acts='';
+      if(adm && x.delivered && !x.canceled) acts+='<span style="cursor:pointer;color:var(--bl)" title="Повернути у відкриті (бонус сторнується)" onclick="lampReopen(\''+x._id+'\')">↩</span> ';
+      if(adm) acts+='<span style="cursor:pointer;color:var(--rd)" title="Видалити назавжди" onclick="lampDelete(\''+x._id+'\')">×</span>';
+      return '<tr style="opacity:.75">'
+        +'<td style="white-space:nowrap">'+escH(x.date||"")+'</td>'
+        +'<td style="white-space:nowrap">'+(x.qty||1)+' × '+lampFmt(x.priceUAH||0)+' = <b>'+lampFmt(sum)+'</b></td>'
+        +'<td>'+escH(x.client||"—")+(x.city?' · '+escH(x.city):'')+'</td>'
+        +'<td style="font-family:var(--mono);white-space:nowrap">'+(x.ttn?escH(x.ttn):"—")+'</td>'
+        +'<td>'+(LAMP_CH_LBL[x.channel]||"")+'</td>'
+        +'<td style="white-space:nowrap">'+st+'</td>'
+        +profTd
+        +'<td style="text-align:right;white-space:nowrap;font-size:14px">'+acts+'</td></tr>';
+    }).join("");
+    closedHtml='<div class="pay-led" style="grid-column:1/-1">'
+      +'<div class="pay-nm" style="margin-bottom:6px">Закриті відправки · '+closed.length+'</div>'
+      +'<table class="lamp-closed">'
+      +'<tr><th>Дата</th><th>Сума, грн</th><th>Отримувач</th><th>ТТН</th><th>Канал</th><th>Статус</th>'
+      +(adm?'<th style="text-align:right">Прибуток</th>':'')+'<th></th></tr>'
+      +rows+'</table></div>';
+  }
+  el.innerHTML = (open.map(card).join("") || '<div class="pay-sub" style="grid-column:1/-1">Відкритих відправок немає</div>') + closedHtml;
 }
 
 // ── Продаж/відправка (створення АБО редагування — lampOpenSale(id)) ──

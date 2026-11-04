@@ -1289,6 +1289,7 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="tab" id="tab-cash-btn" onclick="switchTab('cash',this)">💰 Каса</div>
   <div class="tab" id="tab-parking-btn" onclick="switchTab('parking',this)">🅿 Парковка</div>
   <div class="tab" id="tab-paint-btn" onclick="switchTab('paint',this)">🎨 Малярки</div>
+  <div class="tab" id="tab-plan-btn" onclick="switchTab('plan',this)">📋 План</div>
   <div class="tab" id="tab-lamps-btn" onclick="switchTab('lamps',this)">💡 Лампи</div>
   <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
@@ -2526,6 +2527,24 @@ body.hero-on .hero-pad{margin-right:40vw}
   </div>
 </div>
 
+<!-- ══ ПЛАН РОБІТ ═════════════════════════════════════════════════════════════ -->
+<div id="tab-plan" style="display:none">
+  <div class="pay-wrap">
+    <div class="pay-bar">
+      <div class="pay-h1">📋 ПЛАН РОБІТ</div>
+      <div id="plan-topbtns" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"></div>
+    </div>
+    <div class="pay-hint">
+      Етапи ремонту по кожному авто «В роботі». Клік по статусу: ☐ не почато → 🔵 в роботі → ✅ виконано
+      (дати фіксуються). «Закупівля запчастин» і «Очікування від клієнта» — взаємовиключні.
+      Редагують власник і координатор; решта — перегляд. Малярка проставляється автоматично,
+      коли авто загнали/забрали у вкладці «Малярки».
+    </div>
+    <div id="plan-tiles" class="pay-cards"></div>
+    <div id="plan-detail" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ══ ЛАМПИ Y011 (LED DETAILING) ═════════════════════════════════════════════ -->
 <div id="tab-lamps" style="display:none">
   <div class="pay-wrap">
@@ -2636,13 +2655,15 @@ function isAdmin(){ return currentUser && ADMINS.indexOf(currentUser.email) >= 0
 //        виплати/аванс/розстрочка все одно лише адмін), stats, prices, cash.
 var USER_PERMS = {
   "broslav.b@gmail.com":    {admin:true},
-  "icars.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true, parking:true, paint:true}, // + нарахування робіт; без виплат/статистики/цін
-  "icars.in.ua2@gmail.com": {parts:true, lamps:true}                        // Manager: Запчастини/ТО + Лампи Y011 (без Каси, Парковки, Робіт, Зарплати, Статистики, цін)
+  "icars.in.ua@gmail.com":  {works:true, parts:true, pay:true, cash:true, parking:true, paint:true, plan:true}, // + нарахування робіт; без виплат/статистики/цін
+  "icars.in.ua2@gmail.com": {parts:true, lamps:true, plan:true}             // Manager: Запчастини/ТО + Лампи Y011 + План (читання)
 };
-var DEFAULT_PERMS = {parts:true, cash:true, parking:true}; // невідомий залогінений — мінімум прав
+var DEFAULT_PERMS = {parts:true, cash:true, parking:true, plan:true}; // невідомий залогінений — мінімум прав
+// План редагують лише власник і координатор (акаунт майстра); решта — читання
+function planCanEdit(){ return isAdmin() || (currentUser && currentUser.email==="icars.in.ua@gmail.com"); }
 function userPerms(){
   if(!currentUser) return {};
-  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true, parking:true, paint:true, lamps:true};
+  if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true, parking:true, paint:true, lamps:true, plan:true};
   return USER_PERMS[currentUser.email] || DEFAULT_PERMS;
 }
 function can(cap){ var p=userPerms(); return !!(p.admin || p[cap]); }
@@ -2657,6 +2678,7 @@ function applyPerms(){
   show("tab-parking-btn", can("parking"));
   show("tab-paint-btn", can("paint"));
   show("tab-lamps-btn", can("lamps"));
+  show("tab-plan-btn", can("plan"));
 }
 
 // ── ЮРИДИЧНА ОСОБА (ТОВ/ФОП) — реквізити замовника для рахунку/акту ────────────
@@ -3225,6 +3247,7 @@ function switchTab(t, el) {
   if(t==="parking" && !can("parking")){ showToast("Немає доступу до Парковки"); return; }
   if(t==="paint" && !can("paint")){ showToast("Немає доступу до Малярок"); return; }
   if(t==="lamps" && !can("lamps")){ showToast("Немає доступу до Ламп"); return; }
+  if(t==="plan" && !can("plan")){ showToast("Немає доступу до Плану"); return; }
   if((t==="stats") && !can("stats")){ showToast("Немає доступу до Статистики"); return; }
   if((t==="settings"||t==="svcprices"||t==="presets") && !can("prices")){ showToast("Немає доступу до цін"); return; }
   // Незбережені зміни в поточній калькуляції — попередити
@@ -3235,7 +3258,7 @@ function switchTab(t, el) {
   document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
   el.classList.add("active");
   var editorTab = (t==="works"||t==="parts"||t==="service");
-  ["works","parts","service","cash","parking","paint","lamps","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
+  ["works","parts","service","cash","parking","paint","plan","lamps","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
     var e = document.getElementById("tab-"+id);
     if (!e) return;
     e.style.display = id===t ? (id==="works"||id==="parts"||id==="service"?"grid":"block") : "none";
@@ -3251,6 +3274,7 @@ function switchTab(t, el) {
   if (t === "parking") parkInit();
   if (t === "paint") paintInit();
   if (t === "lamps") lampsInit();
+  if (t === "plan") plansInit();
   if (t === "pay") payInit();
   if (t === "stats") statsInit();
   if (t === "archive") loadArchive();
@@ -12264,6 +12288,7 @@ function paintDoStart(){
     advances:advances, depositUse:0, linked:false,
     createdAt:new Date().toISOString(), author:currentUserName||""
   }).then(function(){
+    planSetStageByKey(vin, "mal", "active", p.name);   // План: малярні роботи — в процесі
     var fin = function(){ payClose("paint-start-modal"); showToast("Авто у маляра"+(adv>0?" · аванс "+paintFmt(adv)+" грн → Каса":"")); paintInit(); };
     if(adv>0) paintCashOp(adv, "Малярка "+p.name+" — аванс · "+(car||vin)+(note?" ("+note+")":""), car, vin, date).then(fin).catch(fin);
     else fin();
@@ -12379,6 +12404,7 @@ function paintDoClose(){
       });
     }
     chain.then(function(){
+      planSetStageByKey(j.vin, "mal", "done", j.painterName||"");   // План: малярні роботи — виконано
       payClose("paint-close-modal");
       showToast("✓ Закрито. Факт "+paintFmt(total+extra)+" грн — відкрийте Роботи цього авто, щоб підтягнути");
       paintInit();
@@ -12440,6 +12466,208 @@ function wPaintMarkLinked(){
   });
   W_PAINT_TO_LINK = [];
   var el = document.getElementById("w-paint-pending"); if(el) el.innerHTML = "";
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ПЛАН РОБІТ ────────────────────────────────────────────────────────────────
+// Плитки авто «В роботі» (тип works) → чек-лист етапів. Статуси ☐→🔵→✅ з датами,
+// перестановка ↑↓, видалення ×, вставка етапу в будь-яке місце. Виконавець —
+// список за типом етапу (слюсарі/рихтувальники/малярки). Редагують власник +
+// координатор (planCanEdit), решта — перегляд. Колекція `plans`, doc id = calcId.
+// Малярка синхронізується з вкладки «Малярки» (planSetStageByKey).
+// ══════════════════════════════════════════════════════════════════════════════
+var PLAN_TEMPLATE = [
+  {key:"buy_parts",    name:"Закупівля запчастин",                        type:"any"},
+  {key:"client_parts", name:"Очікування запчастин від клієнта",           type:"any"},
+  {name:"Підготовка під рихтувальні роботи (слюсарка)",                   type:"slu"},
+  {name:"Демонтаж скла",                                                  type:"slu"},
+  {name:"Демонтаж двигуна/батареї",                                       type:"slu"},
+  {name:"Рихтувальні роботи",                                             type:"kuz"},
+  {name:"Монтаж двигуна/батареї",                                         type:"slu"},
+  {name:"Монтаж скла",                                                    type:"slu"},
+  {name:"Збирання/розбирання під малярку",                                type:"slu"},
+  {key:"mal", name:"Малярні роботи",                                      type:"mal"},
+  {name:"Фінальне збирання",                                              type:"slu"},
+  {name:"Робота електрика, кодування",                                    type:"any"},
+  {name:"Фіналізація (мийка, плівка, хімчистка, вібростенд, фари, підготовка до видачі)", type:"any"}
+];
+var PLAN_CARS=[], PLAN_DOCS={}, PLAN_SEL=null, PLAN_WK=[], PLAN_PNT=[];
+function plansInit(){
+  Promise.all([
+    db.collection("calculations").where("type","==","works").limit(400).get(),
+    db.collection("plans").limit(400).get(),
+    db.collection("workers").get(),
+    db.collection("painters").get()
+  ]).then(function(res){
+    PLAN_CARS=[]; res[0].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, car:r.car||"", vin:r.vin||""}); });
+    PLAN_DOCS={}; res[1].forEach(function(d){ PLAN_DOCS[d.id]=d.data(); });
+    PLAN_WK=[]; res[2].forEach(function(d){ var w=d.data(); if(w.active!==false) PLAN_WK.push(w); });
+    PLAN_PNT=[]; res[3].forEach(function(d){ var p=d.data(); if(p.active!==false) PLAN_PNT.push(p.name); });
+    planRender();
+  }).catch(function(e){ showToast("План: "+e.message+" — перевірте правило plans у Firestore"); });
+}
+function planNewFromTemplate(c){
+  return { calcId:c._id, vin:c.vin, car:c.car, createdAt:new Date().toISOString(),
+    stages:PLAN_TEMPLATE.map(function(t,i){ return {id:"ps"+i+"_"+Math.random().toString(36).substr(2,4),
+      key:t.key||"", name:t.name, type:t.type, status:"todo", executor:"", startDate:"", doneDate:"", changedBy:""}; }) };
+}
+function planOf(c){ return PLAN_DOCS[c._id] || (PLAN_DOCS[c._id]=planNewFromTemplate(c)); }
+function planProgress(p){
+  var tot=0, done=0, act=null;
+  (p.stages||[]).forEach(function(s){ if(s.status==="na") return; tot++;
+    if(s.status==="done") done++; if(s.status==="active" && !act) act=s; });
+  return {tot:tot, done:done, act:act};
+}
+function planRender(){
+  var tiles=document.getElementById("plan-tiles"), det=document.getElementById("plan-detail");
+  var top=document.getElementById("plan-topbtns");
+  if(!tiles) return;
+  if(!PLAN_SEL){
+    det.style.display="none"; tiles.style.display="";
+    if(top) top.innerHTML="";
+    tiles.innerHTML = PLAN_CARS.map(function(c){
+      var p=PLAN_DOCS[c._id], pr=p?planProgress(p):null;
+      var pct=pr&&pr.tot?Math.round(pr.done/pr.tot*100):0;
+      return '<div class="pay-card" style="cursor:pointer" onclick="planOpen(\''+c._id+'\')">'
+        +'<div class="pay-nm">'+escH(c.car||"—")+'</div>'
+        +'<div class="pay-rl" style="font-family:var(--mono)">'+escH(c.vin||"")+'</div>'
+        +(pr?('<div class="pay-bal" style="font-size:15px">'+pr.done+' / '+pr.tot+' етапів'
+            +'<span style="font-size:11px;color:var(--tx3);font-weight:normal"> · '+pct+'%</span></div>'
+          +'<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:4px 0"><div style="height:100%;width:'+pct+'%;background:'+(pct>=100?"#2e7d32":"var(--blue-mid)")+'"></div></div>'
+          +(pr.act?'<div class="pay-sub">🔵 зараз: <b>'+escH(pr.act.name)+'</b>'+(pr.act.executor?' · '+escH(pr.act.executor):'')+'</div>':'<div class="pay-sub" style="color:var(--tx3)">немає активного етапу</div>'))
+          :'<div class="pay-sub" style="color:var(--tx3)">план ще не створено — відкрийте</div>')
+        +'</div>';
+    }).join("") || '<div class="pay-sub">Немає авто у статусі «В роботі»</div>';
+    return;
+  }
+  var c=PLAN_CARS.find(function(x){ return x._id===PLAN_SEL; });
+  if(!c){ PLAN_SEL=null; planRender(); return; }
+  var p=planOf(c), edit=planCanEdit();
+  tiles.style.display="none"; det.style.display="";
+  if(top) top.innerHTML='<button class="btn btn-o" onclick="planBack()">← Усі авто</button>';
+  var h='<div class="pay-led"><div class="pay-nm">'+escH(c.car||"—")+' <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">'+escH(c.vin||"")+'</span></div>';
+  var pr=planProgress(p);
+  h+='<div class="pay-sub" style="margin-bottom:8px">Виконано '+pr.done+' з '+pr.tot+(edit?'':' · <span style="color:var(--tx3)">режим перегляду</span>')+'</div>';
+  h+='<table style="width:100%;border-collapse:collapse">';
+  (p.stages||[]).forEach(function(s,i){
+    var na=s.status==="na";
+    var icon = na?'<span style="opacity:.45">∅</span>' : s.status==="done"?'✅' : s.status==="active"?'🔵' : '☐';
+    var dates='';
+    if(s.startDate) dates+=fmtDMY(s.startDate);
+    if(s.doneDate) dates+=(dates?' → ':'')+fmtDMY(s.doneDate);
+    var exec = edit && !na
+      ? '<select style="max-width:150px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:10px;padding:2px 4px;border-radius:3px;outline:none" onchange="planSetExec('+i+',this.value)">'+planExecOpts(s)+'</select>'
+      : (s.executor?'<span style="font-family:var(--mono);font-size:11px;color:var(--bl)">'+escH(s.executor)+'</span>':'<span style="color:var(--tx3);font-size:10px">—</span>');
+    var ctl='';
+    if(edit){
+      ctl='<span class="pr-drag" style="cursor:pointer" title="Вище" onclick="planMove('+i+',-1)">▲</span>'
+         +'<span class="pr-drag" style="cursor:pointer" title="Нижче" onclick="planMove('+i+',1)">▼</span>'
+         +'<span class="pr-var" title="Вставити етап ПІСЛЯ цього" onclick="planAdd('+i+')">＋</span>'
+         +'<span class="pr-del" title="Видалити етап" onclick="planDel('+i+')">×</span>';
+    }
+    h+='<tr style="border-top:1px solid var(--bd)'+(na?';opacity:.45':'')+(s.status==="done"?';background:rgba(46,125,50,.05)':'')+(s.status==="active"?';background:rgba(25,118,210,.06)':'')+'">'
+      +'<td style="width:30px;text-align:center;font-size:16px;padding:6px 4px;'+(edit?'cursor:pointer':'')+'" '+(edit?'onclick="planCycle('+i+')" title="Змінити статус"':'')+'>'+icon+'</td>'
+      +'<td style="padding:6px 4px;font-family:Verdana,sans-serif;font-size:12px'+(s.status==="done"?';color:var(--tx3)':'')+'">'+(i+1)+'. '+escH(s.name)+(na?' <span style="font-size:9px;color:var(--tx3)">(неактивний — обрано альтернативу)</span>':'')+'</td>'
+      +'<td style="padding:6px 4px;white-space:nowrap">'+exec+'</td>'
+      +'<td style="padding:6px 4px;font-family:var(--mono);font-size:10px;color:var(--tx3);white-space:nowrap" title="'+escH(s.changedBy||"")+'">'+dates+'</td>'
+      +'<td style="padding:6px 4px;white-space:nowrap;text-align:right">'+ctl+'</td></tr>';
+  });
+  h+='</table>';
+  if(edit) h+='<div style="margin-top:8px"><button class="btn btn-o" style="font-size:11px" onclick="planAdd('+((p.stages||[]).length-1)+')">＋ Додати етап у кінець</button></div>';
+  h+='</div>';
+  det.innerHTML=h;
+}
+function planExecOpts(s){
+  var list=[];
+  if(s.type==="slu") list=PLAN_WK.filter(function(w){return w.role==="slu";}).map(function(w){return w.name;});
+  else if(s.type==="kuz") list=PLAN_WK.filter(function(w){return w.role==="kuz";}).map(function(w){return w.name;});
+  else if(s.type==="mal") list=PLAN_PNT.concat(["Стороння малярка"]);
+  else list=PLAN_WK.filter(function(w){return w.role==="slu"||w.role==="kuz";}).map(function(w){return w.name;}).concat(PLAN_PNT).concat(["Стороння малярка"]);
+  var o='<option value="">— виконавець —</option>';
+  list.forEach(function(n){ o+='<option value="'+escH(n)+'"'+(s.executor===n?' selected':'')+'>'+escH(n)+'</option>'; });
+  if(s.executor && list.indexOf(s.executor)<0) o+='<option value="'+escH(s.executor)+'" selected>'+escH(s.executor)+'</option>';
+  return o;
+}
+function planOpen(id){ PLAN_SEL=id; planRender(); }
+function planBack(){ PLAN_SEL=null; planRender(); }
+function planSave(){
+  var c=PLAN_CARS.find(function(x){ return x._id===PLAN_SEL; }); if(!c) return;
+  var p=PLAN_DOCS[c._id]; if(!p) return;
+  p.updatedAt=new Date().toISOString();
+  db.collection("plans").doc(c._id).set(p).catch(function(e){ showToast("План не зберігся: "+e.message); });
+  planRender();
+}
+function planStage(i){
+  var c=PLAN_CARS.find(function(x){ return x._id===PLAN_SEL; }); if(!c) return null;
+  var p=planOf(c); return (p.stages||[])[i] ? {p:p, s:p.stages[i]} : null;
+}
+function planCycle(i){
+  if(!planCanEdit()){ showToast("Редагують власник і координатор"); return; }
+  var x=planStage(i); if(!x) return;
+  var s=x.s, today=new Date().toISOString().slice(0,10);
+  if(s.status==="na"){
+    // Реактивація взаємовиключного: цей — у гру, партнер — у н/д
+    s.status="todo"; s.startDate=""; s.doneDate="";
+    var partnerKey = s.key==="buy_parts" ? "client_parts" : (s.key==="client_parts" ? "buy_parts" : "");
+    if(partnerKey) x.p.stages.forEach(function(o){ if(o.key===partnerKey){ o.status="na"; o.startDate=""; o.doneDate=""; } });
+  } else if(s.status==="todo"){ s.status="active"; s.startDate=today; s.doneDate=""; }
+  else if(s.status==="active"){ s.status="done"; s.doneDate=today; if(!s.startDate) s.startDate=today; }
+  else { s.status="todo"; s.startDate=""; s.doneDate=""; }
+  // Взаємовиключність пари «закупівля ЗЧ» / «очікування від клієнта»
+  if((s.status==="active"||s.status==="done") && (s.key==="buy_parts"||s.key==="client_parts")){
+    var pk = s.key==="buy_parts" ? "client_parts" : "buy_parts";
+    x.p.stages.forEach(function(o){ if(o.key===pk && o.status!=="na"){ o.status="na"; o.startDate=""; o.doneDate=""; } });
+  }
+  s.changedBy=(currentUserName||"")+" · "+today;
+  planSave();
+}
+function planSetExec(i,v){
+  if(!planCanEdit()) return;
+  var x=planStage(i); if(!x) return;
+  x.s.executor=v; x.s.changedBy=(currentUserName||"")+" · "+new Date().toISOString().slice(0,10);
+  planSave();
+}
+function planMove(i,d){
+  if(!planCanEdit()){ showToast("Редагують власник і координатор"); return; }
+  var x=planStage(i); if(!x) return;
+  var arr=x.p.stages, j=i+d;
+  if(j<0||j>=arr.length) return;
+  var t=arr[i]; arr[i]=arr[j]; arr[j]=t;
+  planSave();
+}
+function planAdd(afterI){
+  if(!planCanEdit()){ showToast("Редагують власник і координатор"); return; }
+  var c=PLAN_CARS.find(function(x){ return x._id===PLAN_SEL; }); if(!c) return;
+  var p=planOf(c);
+  var name=prompt("Назва нового етапу:",""); if(!name||!name.trim()) return;
+  p.stages.splice(afterI+1, 0, {id:"ps"+Date.now(), key:"", name:name.trim(), type:"any",
+    status:"todo", executor:"", startDate:"", doneDate:"", changedBy:""});
+  planSave();
+}
+function planDel(i){
+  if(!planCanEdit()){ showToast("Редагують власник і координатор"); return; }
+  var x=planStage(i); if(!x) return;
+  if(!confirm("Видалити етап «"+x.s.name+"» з плану цього авто?")) return;
+  x.p.stages.splice(i,1);
+  planSave();
+}
+// Синхронізація з Малярками: виставити етап за key по VIN (fire-and-forget)
+function planSetStageByKey(vin, key, status, executor){
+  vin=(vin||"").toUpperCase().trim(); if(!vin) return;
+  db.collection("plans").where("vin","==",vin).limit(5).get().then(function(snap){
+    snap.forEach(function(d){
+      var p=d.data(), ch=false, today=new Date().toISOString().slice(0,10);
+      (p.stages||[]).forEach(function(s){
+        if((s.key||"")!==key || s.status==="done") return;
+        s.status=status; ch=true;
+        if(status==="active" && !s.startDate) s.startDate=today;
+        if(status==="done"){ s.doneDate=today; if(!s.startDate) s.startDate=today; }
+        if(executor) s.executor=executor;
+        s.changedBy=(currentUserName||"")+" · "+today+" (малярки)";
+      });
+      if(ch) db.collection("plans").doc(d.id).set(p).catch(function(){});
+    });
+  }).catch(function(){});
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

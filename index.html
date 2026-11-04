@@ -1060,6 +1060,43 @@ body.is-adm .adm-fld{display:block}
 .pay-modal{display:none;position:fixed;z-index:620;inset:0;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 16px}
 .pay-box{background:var(--bg2);border-radius:8px;padding:20px 22px;width:100%;max-width:460px;box-shadow:0 10px 50px rgba(0,0,0,.3)}
 .pay-box-t{font-family:var(--disp);font-size:16px;letter-spacing:1px;color:var(--blue-dark);margin-bottom:14px}
+/* ── Схема авто (Малярки): клікабельні зони малярних елементів ── */
+.ps-views{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;background:#fbfcfe;background-image:radial-gradient(#c9d2e0 1px,transparent 1.4px);background-size:24px 24px;border:1px solid var(--bd);border-radius:10px;padding:10px 4px 4px}
+.ps-vw{margin:0;flex:1 1 170px;min-width:150px;max-width:235px;text-align:center}
+.ps-vw svg{width:100%;height:auto;display:block}
+.ps-cap{font-family:var(--mono);font-size:9.5px;letter-spacing:1.4px;color:var(--tx3);margin:2px 0 6px}
+.ps-zone{fill:#fff;stroke:#8b96a9;stroke-width:.9;cursor:pointer;transition:fill .12s}
+.ps-zone:hover{fill:#dde7f6}
+.ps-zone.st1{fill:#f0922f;fill-opacity:.8;stroke:#a85a10}
+.ps-zone.st2{fill:#d2711a;fill-opacity:.92;stroke:#a85a10}
+.ps-zone.calc{fill:#5b8ad0;fill-opacity:.72;stroke:#1e3f7d;cursor:not-allowed}
+.ps-arc{fill:none;stroke:#fff;stroke-width:8;cursor:pointer;pointer-events:stroke;transition:stroke .12s}
+.ps-arc:hover{stroke:#dde7f6}
+.ps-arc.st1,.ps-arc.st2{stroke:#f0922f}
+.ps-arc.calc{stroke:#5b8ad0;cursor:not-allowed}
+.ps-sil,.ps-seam,.ps-glass,.ps-lamp,.ps-tire,.ps-rim,.ps-spoke,.ps-hub,.ps-pad,.ps-lab{pointer-events:none}
+.ps-sil{fill:none;stroke:#3c4657;stroke-width:1.8;stroke-linejoin:round}
+.ps-seam{fill:none;stroke:#8b96a9;stroke-width:.8;opacity:.75}
+.ps-glass{fill:#d4dce8;stroke:#3c4657;stroke-width:.8}
+.ps-lamp{fill:#d4dce8;stroke:#3c4657;stroke-width:.7}
+.ps-tire{fill:#39404d}.ps-rim{fill:#aeb6c4;stroke:#3c4657;stroke-width:.6}
+.ps-hub{fill:#39404d}.ps-spoke{stroke:#39404d;stroke-width:1.9}
+.ps-pad{fill:#39404d;opacity:.9}
+.ps-lab{font-family:var(--mono);fill:#2a3448}
+.ps-badge rect{fill:#fff;stroke:#a85a10;stroke-width:1}
+.ps-badge.bc rect{stroke:#1e3f7d}
+.ps-badge text{font-family:var(--mono);font-size:8px;fill:#0d1b3e;text-anchor:middle;pointer-events:none}
+.ps-chkgrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ps-chk{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:4px 9px;cursor:pointer;user-select:none}
+.ps-chk.on{background:#fdf1e3;border-color:#a85a10}
+.ps-chk.cc{background:#e8eefb;border-color:#5b8ad0;color:var(--tx3)}
+.ps-chk input{margin:0;accent-color:#d2711a}
+.ps-chips{display:flex;flex-wrap:wrap;gap:5px;min-height:24px;align-items:center;margin-top:4px}
+.ps-chip{font-size:11px;border-radius:14px;padding:3px 9px;display:inline-flex;gap:6px;align-items:center}
+.ps-chip.c{background:#e8eefb;color:#1e3f7d;border:1px solid #5b8ad0}
+.ps-chip.s{background:#fdf1e3;border:1px solid #a85a10}
+.ps-chip.s b{cursor:pointer;color:#d2711a;font-weight:700}
+.ps-sect{font-weight:700;font-size:12px;color:var(--blue-dark);margin-top:10px}
 .pay-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pay-fund{font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--bg3);border-radius:4px;margin:10px 0;color:var(--tx2)}
 .pay-works{max-height:46vh;overflow-y:auto;border:1px solid var(--bd);border-radius:4px}
@@ -1074,6 +1111,7 @@ body.is-adm .adm-fld{display:block}
 .pay-wrow .done{color:var(--gr);font-family:var(--mono);font-size:10px}
 .pay-status{font-family:var(--mono);font-size:11px;color:var(--tx2);margin:10px 0;min-height:16px}
 .pay-status.err{color:var(--rd)}
+.pay-status.ok{color:var(--gr)}
 .pay-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .pay-led{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
 .pay-led table{width:100%;border-collapse:collapse;font-family:Verdana,sans-serif;font-size:12px}
@@ -1341,6 +1379,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div id="w-cash-pending"></div>
     <div id="w-paint-pending"></div>
+    <div id="w-scheme-pending"></div>
     <div class="tpl-bar">
       <span class="tpl-lbl">ШАБЛОН:</span>
       <button class="tpl-btn" onclick="applyTemplate('front')">▲ Передній удар</button>
@@ -2503,6 +2542,32 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="pay-btns">
       <button class="btn btn-p" onclick="paintDoMoney()">Зберегти</button>
       <button class="btn btn-o" onclick="payClose('paint-money-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: схема авто — малярні елементи -->
+<div class="pay-modal" id="paint-scheme-modal">
+  <div class="pay-box" style="max-width:940px">
+    <div class="pay-box-t" id="ps-title">Схема авто</div>
+    <div style="font-size:11px;color:var(--tx3);margin:-8px 0 10px">
+      Сині — вже в калькуляції Робіт. Клік по елементу: 1-й — базовий варіант (одна сторона / частково),
+      2-й — розширений (з двох сторін / повністю / купе), 3-й — зняти. Відмічене підтягнеться в Роботи при відкритті калькуляції.
+    </div>
+    <div class="ps-views" id="ps-views"></div>
+    <div class="ps-sect">Пороги та стійки</div>
+    <div class="ps-chkgrid" id="ps-chk1"></div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--blue-dark)">Дрібні та додаткові елементи (бампери, капот)</summary>
+      <div class="ps-chkgrid" id="ps-chk2"></div>
+    </details>
+    <div class="ps-sect">В калькуляції Робіт</div>
+    <div class="ps-chips" id="ps-chips-calc"></div>
+    <div class="ps-sect">Відмічено — піде в Роботи</div>
+    <div class="ps-chips" id="ps-chips-sel"></div>
+    <div class="pay-status" id="ps-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="psSave()">💾 Зберегти позначки</button>
+      <button class="btn btn-o" onclick="payClose('paint-scheme-modal')">Закрити</button>
     </div>
   </div>
 </div>
@@ -3904,6 +3969,8 @@ function clearW(){
   var bmC=document.getElementById("w-bodyman"); if(bmC) bmC.value="";
   document.querySelectorAll(".tpl-btn").forEach(function(b){b.classList.remove("active");});
   var ppEl=document.getElementById("w-paint-pending"); if(ppEl) ppEl.innerHTML="";
+  var spEl=document.getElementById("w-scheme-pending"); if(spEl) spEl.innerHTML="";
+  W_SCHEME_MARKS=null;
   W_PAINT_TO_LINK=[];
   selectStoDefaults();renderSecs(DB);wRecalc();
   currentDocId = null;
@@ -4870,6 +4937,7 @@ function loadRec(id){
       wPullCashWorks();   // витрати-роботи з каси по цьому авто
       wPullParking(r.vin||"");   // парковка -> СТОРОННІ
       wPullPaint(r.vin||"");     // малярки -> «Малярні — факт» (лише адмін)
+      wPullScheme(r);            // схема авто (Малярки) -> відмічені елементи
       wLoadAccruals();    // скільки вже нараховано працівникам по цих роботах
     } else if(r.type==="parts_v2"){
       pmLoadFromRecord(r, id);
@@ -12367,6 +12435,7 @@ function paintRender(){
         + '<div class="pay-sub">загнали '+escH(j.startDate||"")+'</div>'
         + ((j.advances||[]).map(function(a){ return '<div class="pay-sub">💵 '+paintFmt(a.amount)+' грн · '+escH(a.date||"")+(a.note?' · '+escH(a.note):'')+'</div>'; }).join(""))
         + '<div class="pay-cbtns">'
+        + '<button onclick="psOpen(\''+j._id+'\')" title="Схема авто: що фарбуємо / що відмічено">🚗 Схема</button>'
         + '<button onclick="paintOpenAdvance(\''+j._id+'\')">＋ Аванс</button>'
         + '<button style="color:var(--gr);border-color:var(--gr)" onclick="paintOpenClose(\''+j._id+'\')">✓ Забрати й закрити</button>'
         + (isAdmin()?'<button style="color:var(--rd)" onclick="paintDeleteJob(\''+j._id+'\')">×</button>':'')
@@ -12617,6 +12686,426 @@ function wPaintMarkLinked(){
   });
   W_PAINT_TO_LINK = [];
   var el = document.getElementById("w-paint-pending"); if(el) el.innerHTML = "";
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── СХЕМА АВТО (Малярки) ──────────────────────────────────────────────────────
+// 4 проєкції (лівий бік · зверху · правий бік · днище) + чек-листи. Назви зон —
+// 1:1 з каталогу «МАЛЯРНІ РОБОТИ», тож сині елементи визначаються простим збігом
+// назв робіт калькуляції, а відмічені вручну додаються в Роботи з цінами з БД.
+// Позначки зберігаються полем paintScheme.marks у документі калькуляції Робіт
+// (нових правил Firestore не треба). Цикл кліку: 1-й стан → 2-й стан → зняти.
+var PS_Z = {
+  bump_f:{s:["Бампер передній"]}, guba_f:{s:["Губа бамперу переднього"]},
+  bump_r:{s:["Бампер задній"]},  guba_r:{s:["Губа бамперу заднього"]},
+  krylo_pp:{s:["Крило ПП"]}, krylo_lp:{s:["Крило ЛП"]},
+  krylo_pz:{s:["Крило ПЗ","Крило ПЗ купе"],b:["","купе"]},
+  krylo_lz:{s:["Крило ЛЗ","Крило ЛЗ купе"],b:["","купе"]},
+  arka_pp:{s:["Арка крила ПП"]}, arka_pl:{s:["Арка крила ПЛ"]},
+  arka_zp:{s:["Арка крила ЗП"]}, arka_zl:{s:["Арка крила ЗЛ"]},
+  dveri_pp:{s:["Двері ПП","Двері ПП з двох сторін"],b:["","2 стор."]},
+  dveri_lp:{s:["Двері ЛП","Двері ЛП з двох сторін"],b:["","2 стор."]},
+  dveri_pz:{s:["Двері ПЗ","Двері ПЗ з двох сторін"],b:["","2 стор."]},
+  dveri_lz:{s:["Двері ЛЗ","Двері ЛЗ з двох сторін"],b:["","2 стор."]},
+  nakl_pp:{s:["Накладка двері ПП"]}, nakl_lp:{s:["Накладка двері ЛП"]},
+  nakl_zp:{s:["Накладка двері ЗП"]}, nakl_zl:{s:["Накладка двері ЗЛ"]},
+  ruchka_pp:{s:["Ручка дверей ПП"]}, ruchka_lp:{s:["Ручка дверей ЛП"]},
+  ruchka_zp:{s:["Ручка дверей ЗП"]}, ruchka_zl:{s:["Ручка дверей ЗЛ"]},
+  dzerk_p:{s:["Дзеркало праве"]}, dzerk_l:{s:["Дзеркало ліве"]},
+  baton_pp:{s:["Батон ПП"]}, baton_lp:{s:["Батон ЛП"]},
+  baton_zp:{s:["Батон ЗП"]}, baton_zl:{s:["Батон ЗЛ"]},
+  pplast_p:{s:["Поріг боковий пластиковий правий"]},
+  pplast_l:{s:["Поріг боковий пластиковий лівий"]},
+  kapot:{s:["Капот, з однієї сторони","Капот, з двох сторін"],b:["1 стор.","2 стор."]},
+  dah:{s:["Дах"]}, bagazh:{s:["Кришка багажнику"]},
+  pidkapot:{s:["Підкапотний простір частково","Підкапотний простір повністю"],b:["частково","повністю"]},
+  vnutr:{s:["Внутрішня частина кузову (невеликий обʼєм)","Внутрішня частина кузову"],b:["невел. обʼєм","повністю"]},
+  panel_z:{s:["Панель задня"]},
+  porig_pp:{s:["Поріг ПП"]}, porig_lp:{s:["Поріг ЛП"]},
+  porig_zp:{s:["Поріг ЗП"]}, porig_zl:{s:["Поріг ЗЛ"]},
+  st_cl:{s:["Стійка ЦЛ"]}, st_cp:{s:["Стійка ЦП"]},
+  st_pp:{s:["Стійка ПП"]}, st_pl:{s:["Стійка ПЛ"]},
+  m_nak_n:{s:["Накладка бамперу нижня (губа)"]},
+  m_nak_v:{s:["Накладка бамперу верхня (окремо від бамперу)"]},
+  m_resh_c:{s:["Решітка бамперу центральна"]},
+  m_resh_n:{s:["Решітка бамперу нижня"]},
+  m_resh_b:{s:["Решітка бамперу бокова"]},
+  m_skl_f:{s:["Складові переднього бамперу"]},
+  m_skl_r:{s:["Складові заднього бамперу"]},
+  m_pet_l:{s:["Петля капоту ліва"]}, m_pet_p:{s:["Петля капоту права"]},
+  m_germ:{s:["Герметик капоту прокласти"]},
+  m_pereh:{s:["Перехід на 1 елемент"]}
+};
+var PS_CHK1 = ["porig_pp","porig_lp","porig_zp","porig_zl","st_cl","st_cp","st_pp","st_pl"];
+var PS_CHK2 = ["m_nak_n","m_nak_v","m_resh_c","m_resh_n","m_resh_b","m_skl_f","m_skl_r","m_pet_l","m_pet_p","m_germ","m_pereh"];
+// назва роботи -> {id, st} (для підсвітки «в калькуляції» за збігом назв)
+var PS_NAME2ZONE = {};
+Object.keys(PS_Z).forEach(function(id){ PS_Z[id].s.forEach(function(n,i){ PS_NAME2ZONE[n]={id:id,st:i}; }); });
+
+// ── геометрія: бокова проєкція (ніс ліворуч, 660×230) ──
+var PS_SIL = "M 24 198 C 13 190 9 168 15 146 C 20 131 44 123 86 116 C 120 110 160 105 186 101 "+
+  "C 196 99 206 97 212 94 L 254 56 C 268 49 296 46 330 45 L 408 45 C 424 46 436 49 446 54 "+
+  "L 490 84 C 514 87 536 90 560 94 L 572 92 C 580 93 586 96 590 98 C 622 106 644 124 646 152 "+
+  "C 647 176 641 191 632 198 L 531 198 A 46 46 0 0 1 443 198 L 192 198 A 46 46 0 0 1 104 198 Z";
+var PS_GLASS = [
+  "M 220 88 C 232 72 246 60 262 54 L 354 52 L 354 85 C 310 86 262 87 220 88 Z",
+  "M 362 52 L 436 52 L 446 83 L 362 85 Z",
+  "M 444 53 C 452 54 460 57 466 61 L 486 80 L 452 82 Z"
+];
+var PS_SIDE_SHAPES = [
+  {k:"bump_f", d:"M 15 146 C 20 131 44 123 86 116 L 90 126 L 90 198 L 24 198 C 13 190 9 168 15 146 Z"},
+  {k:"guba_f", r:[20,201,72,10,5]},
+  {k:"fend_f", d:"M 90 117 C 122 111 160 105 186 101 C 196 99 206 97 210 95 L 210 198 L 192 198 A 46 46 0 0 1 104 198 L 90 198 Z"},
+  {k:"door_f", d:"M 210 95 C 224 78 240 63 258 54 L 360 51 L 360 188 L 210 188 Z"},
+  {k:"door_r", d:"M 360 51 L 436 51 L 448 56 L 476 88 L 494 140 L 498 188 L 360 188 Z"},
+  {k:"fend_r", d:"M 476 88 L 448 56 C 456 56 462 58 468 62 L 490 84 C 514 87 536 90 560 94 L 572 92 C 580 93 586 96 590 98 L 590 198 L 531 198 A 46 46 0 0 1 443 198 L 452 150 C 460 120 468 100 476 88 Z"},
+  {k:"bump_r", d:"M 590 98 C 622 106 644 124 646 152 C 647 176 641 191 632 198 L 590 198 Z"},
+  {k:"guba_r", r:[566,201,66,10,5]},
+  {k:"sill",   r:[210,188,233,10,2]},
+  {k:"nakl_f", r:[216,162,138,17,4]},
+  {k:"nakl_r", r:[364,162,126,17,4]},
+  {k:"ruchka_f", r:[296,100,30,7,3.5]},
+  {k:"ruchka_r", r:[420,100,30,7,3.5]},
+  {k:"mirror", e:[218,80,12,7]},
+  {k:"baton_f", p:[[262,50],[360,47.5],[360,54],[264,57]]},
+  {k:"baton_r", p:[[360,47.5],[408,47],[430,50],[446,56],[441,61],[424,54],[360,54]]},
+  {k:"arch_f", a:"M 105 195 A 44.5 44.5 0 0 1 191 195"},
+  {k:"arch_r", a:"M 444 195 A 44.5 44.5 0 0 1 530 195"}
+];
+var PS_SIDE_LABELS = [
+  {k:"bump_f", x:52, y:160, m:"h", fs:7.2, t:"Бампер передній"},
+  {k:"guba_f", x:56, y:207, m:"v", fs:6.5, t:"Губа"},
+  {k:"fend_f", x:138,y:128, m:"v", fs:8.5, name:1},
+  {k:"arch_f", x:148,y:147, m:"v", fs:6.5, t:"Арка"},
+  {k:"door_f", x:285,y:126, m:"v", fs:8.5, name:1},
+  {k:"nakl_f", x:285,y:171, m:"v", fs:6.8, t:"Накладка"},
+  {k:"ruchka_f",x:311,y:95, m:"v", fs:6.2, t:"Ручка"},
+  {k:"mirror", x:218,y:65, m:"v", fs:6.2,  t:"Дзеркало"},
+  {k:"baton_f",x:310,y:41, m:"v", fs:6.8,  name:1},
+  {k:"baton_r",x:398,y:40, m:"v", fs:6.8,  name:1},
+  {k:"door_r", x:420,y:126, m:"v", fs:8.5, name:1},
+  {k:"nakl_r", x:427,y:171, m:"v", fs:6.8, t:"Накладка"},
+  {k:"ruchka_r",x:437,y:94, m:"v", fs:6.2, t:"Ручка"},
+  {k:"sill",   x:326,y:193.5, m:"v", fs:6.6, name:1},
+  {k:"fend_r", x:542,y:138, m:"v", fs:8.5, name:1},
+  {k:"arch_r", x:487,y:147, m:"v", fs:6.5, t:"Арка"},
+  {k:"bump_r", x:620,y:152, m:"h", fs:7.2, t:"Бампер задній"},
+  {k:"guba_r", x:600,y:207, m:"v", fs:6.5, t:"Губа"}
+];
+var PS_SIDE_BADGES = [ {k:"door_f",x:285,y:150},{k:"door_r",x:420,y:150},{k:"fend_r",x:548,y:162} ];
+var PS_SIDE_MAP = {
+  L:{bump_f:"bump_f",guba_f:"guba_f",bump_r:"bump_r",guba_r:"guba_r",
+     fend_f:"krylo_lp",arch_f:"arka_pl",door_f:"dveri_lp",door_r:"dveri_lz",
+     nakl_f:"nakl_lp",nakl_r:"nakl_zl",ruchka_f:"ruchka_lp",ruchka_r:"ruchka_zl",
+     mirror:"dzerk_l",baton_f:"baton_lp",baton_r:"baton_zl",sill:"pplast_l",
+     fend_r:"krylo_lz",arch_r:"arka_zl"},
+  R:{bump_f:"bump_f",guba_f:"guba_f",bump_r:"bump_r",guba_r:"guba_r",
+     fend_f:"krylo_pp",arch_f:"arka_pp",door_f:"dveri_pp",door_r:"dveri_pz",
+     nakl_f:"nakl_pp",nakl_r:"nakl_zp",ruchka_f:"ruchka_pp",ruchka_r:"ruchka_zp",
+     mirror:"dzerk_p",baton_f:"baton_pp",baton_r:"baton_zp",sill:"pplast_p",
+     fend_r:"krylo_pz",arch_r:"arka_zp"}
+};
+function psShapeEl(sh, zid){
+  var attrs = ' class="'+(sh.a?'ps-arc':'ps-zone')+'" data-psz="'+zid+'"';
+  var tt = "<title>"+escH(PS_Z[zid].s[0])+"</title>";
+  if (sh.d) return '<path d="'+sh.d+'"'+attrs+'>'+tt+'</path>';
+  if (sh.a) return '<path d="'+sh.a+'"'+attrs+'>'+tt+'</path>';
+  if (sh.p) return '<polygon points="'+sh.p.map(function(q){return q[0]+','+q[1];}).join(' ')+'"'+attrs+'>'+tt+'</polygon>';
+  if (sh.r) return '<rect x="'+sh.r[0]+'" y="'+sh.r[1]+'" width="'+sh.r[2]+'" height="'+sh.r[3]+'" rx="'+(sh.r[4]||0)+'"'+attrs+'>'+tt+'</rect>';
+  if (sh.e) return '<ellipse cx="'+sh.e[0]+'" cy="'+sh.e[1]+'" rx="'+sh.e[2]+'" ry="'+sh.e[3]+'"'+attrs+'>'+tt+'</ellipse>';
+  return '';
+}
+function psBadgeEl(zid, X, Y){
+  return '<g class="ps-badge" data-psbfor="'+zid+'" transform="translate('+X+' '+Y+')" style="display:none">'+
+    '<rect x="-28" y="-8.5" width="56" height="14" rx="7"/><text y="2.5"></text></g>';
+}
+function psWheel(cx, cy){
+  var h = '<circle class="ps-tire" cx="'+cx+'" cy="'+cy+'" r="35"/><circle class="ps-rim" cx="'+cx+'" cy="'+cy+'" r="21"/>';
+  for (var i=0;i<10;i++){
+    var a = -Math.PI/2 + i*Math.PI/5 + (i%2 ? .18 : -.18);
+    h += '<line class="ps-spoke" x1="'+(cx+Math.cos(a)*5).toFixed(1)+'" y1="'+(cy+Math.sin(a)*5).toFixed(1)+
+         '" x2="'+(cx+Math.cos(a)*18.5).toFixed(1)+'" y2="'+(cy+Math.sin(a)*18.5).toFixed(1)+'"/>';
+  }
+  return h + '<circle class="ps-hub" cx="'+cx+'" cy="'+cy+'" r="4.5"/>';
+}
+function psBuildSide(side){
+  var map = PS_SIDE_MAP[side];
+  var T = side==="L" ? function(x,y){return [230-y, x];} : function(x,y){return [y, x];};
+  var gT = side==="L" ? "matrix(0 1 -1 0 230 0)" : "matrix(0 1 1 0 0 0)";
+  var h = '<svg viewBox="0 0 230 660"><g transform="'+gT+'">';
+  h += PS_SIDE_SHAPES.map(function(sh){ return psShapeEl(sh, map[sh.k]); }).join('');
+  h += '<path class="ps-sil" d="'+PS_SIL+'"/>';
+  h += PS_GLASS.map(function(g){ return '<path class="ps-glass" d="'+g+'"/>'; }).join('');
+  h += '<path class="ps-lamp" d="M 20 140 C 34 133 54 127 72 123 L 75 131 C 56 135 38 141 26 146 Z"/>';
+  h += '<path class="ps-lamp" d="M 592 100 L 612 102 C 621 106 628 111 632 116 L 594 110 Z"/>';
+  h += '<path class="ps-seam" d="M 96 148 C 210 141 380 133 586 126"/>';
+  h += '<path class="ps-seam" d="M 210 90 C 300 87 400 85 498 88"/>';
+  h += psWheel(148,186) + psWheel(487,186);
+  h += '</g>';
+  PS_SIDE_LABELS.forEach(function(L){
+    var zid = map[L.k]; var p = T(L.x, L.y);
+    var txt = L.name ? PS_Z[zid].s[0] : L.t;
+    var tr = L.m==="v" ? ' transform="rotate(-90 '+p[0]+' '+p[1]+')"' : '';
+    h += '<text class="ps-lab" x="'+p[0]+'" y="'+p[1]+'" font-size="'+L.fs+'" text-anchor="middle"'+tr+'>'+escH(txt)+'</text>';
+  });
+  PS_SIDE_BADGES.forEach(function(B){ var p=T(B.x,B.y); h += psBadgeEl(map[B.k], p[0], p[1]); });
+  return h + '</svg>';
+}
+function psBuildTop(){
+  var h = '<svg viewBox="0 0 230 660">';
+  var sh = [
+    {id:"bump_f", d:"M 34 76 C 36 44 44 26 56 22 C 72 13 93 12 115 12 C 137 12 158 13 174 22 C 186 26 194 44 196 76 C 142 68 88 68 34 76 Z"},
+    {id:"kapot",  d:"M 34 78 C 88 70 142 70 196 78 L 198 120 L 199 162 C 143 153 87 153 31 162 L 32 120 Z"},
+    {id:"dah",    d:"M 44 284 C 91 276 139 276 186 284 L 188 330 L 188 400 C 188 430 187 448 185 456 C 140 450 90 450 45 456 C 43 448 42 430 42 400 L 42 330 Z"},
+    {id:"bagazh", d:"M 34 534 C 88 526 142 526 196 534 L 198 560 C 197 584 195 598 193 608 C 141 600 89 600 37 608 C 35 598 33 584 32 560 Z"},
+    {id:"bump_r", d:"M 37 610 C 89 602 141 602 193 610 C 191 622 186 632 178 638 C 166 646 142 648 115 648 C 88 648 64 646 52 638 C 44 632 39 622 37 610 Z"},
+    {id:"baton_lp", r:[32,288,9,80,4.5]},
+    {id:"baton_zl", r:[32,372,9,82,4.5]},
+    {id:"baton_pp", r:[189,288,9,80,4.5]},
+    {id:"baton_zp", r:[189,372,9,82,4.5]},
+    {id:"dzerk_l", d:"M 32 252 C 22 244 12 240 8 244 C 6 248 10 256 18 260 C 24 262 30 260 32 258 Z"},
+    {id:"dzerk_p", d:"M 198 252 C 208 244 218 240 222 244 C 224 248 220 256 212 260 C 206 262 200 260 198 258 Z"}
+  ];
+  h += sh.map(function(s){ return psShapeEl(s, s.id); }).join('');
+  h += '<path class="ps-glass" d="M 33 164 C 88 155 142 155 197 164 C 196 200 192 244 186 282 C 139 274 91 274 44 282 C 38 244 34 200 33 164 Z"/>';
+  h += '<path class="ps-glass" d="M 45 458 C 90 452 140 452 185 458 C 189 476 193 508 196 532 C 142 524 88 524 34 532 C 37 508 41 476 45 458 Z"/>';
+  h += '<rect class="ps-glass" x="78" y="300" width="74" height="76" rx="12"/>';
+  h += '<path class="ps-seam" d="M 58 172 C 78 164 98 162 116 163 M 118 174 C 134 166 148 164 160 164"/>';
+  h += '<path class="ps-seam" d="M 60 92 C 57 115 56 135 55 152 M 170 92 C 173 115 174 135 175 152"/>';
+  h += '<path class="ps-seam" d="M 42 548 C 90 541 140 541 188 548"/>';
+  h += '<path class="ps-seam" d="M 110 526 C 111 518 119 518 120 526 Z"/>';
+  h += '<path class="ps-sil" d="M 115 12 C 78 12 52 20 44 36 C 36 50 31 72 29 100 C 27 140 26 180 26 220 C 26 300 26 380 28 440 C 29 500 32 560 40 592 C 50 630 80 648 115 648 C 150 648 180 630 190 592 C 198 560 201 500 202 440 C 204 380 204 300 204 220 C 204 180 203 140 201 100 C 199 72 194 50 186 36 C 178 20 152 12 115 12 Z"/>';
+  function lab(x,y,t,fs,v){ return '<text class="ps-lab" x="'+x+'" y="'+y+'" font-size="'+(fs||8.5)+'" text-anchor="middle"'+(v?' transform="rotate(-90 '+x+' '+y+')"':'')+'>'+escH(t)+'</text>'; }
+  h += lab(115,46,"Бампер передній",7.5);
+  h += lab(115,122,"Капот",10);
+  h += lab(115,420,"Дах",10);
+  h += lab(115,576,"Кришка багажнику",8);
+  h += lab(115,632,"Бампер задній",7.5);
+  h += lab(40.5,328,"Батон ЛП",6.2,1);  h += lab(40.5,413,"Батон ЗЛ",6.2,1);
+  h += lab(193.5,328,"Батон ПП",6.2,1); h += lab(193.5,413,"Батон ЗП",6.2,1);
+  h += psBadgeEl("kapot",115,142);
+  return h + '</svg>';
+}
+function psBuildBottom(){
+  var h = '<svg viewBox="0 0 230 660">';
+  h += '<path class="ps-sil" d="M 115 16 C 80 16 56 20 46 32 C 36 44 32 64 32 90 L 32 560 C 32 590 36 612 46 624 C 56 638 82 646 115 646 C 148 646 174 638 184 624 C 194 612 198 590 198 560 L 198 90 C 198 64 194 44 184 32 C 174 20 150 16 115 16 Z"/>';
+  h += '<line class="ps-seam" x1="115" y1="165" x2="115" y2="232" stroke-dasharray="4 4"/>';
+  h += '<line class="ps-seam" x1="115" y1="458" x2="115" y2="578" stroke-dasharray="4 4"/>';
+  h += '<path class="ps-seam" d="M 60 160 L 170 160 M 60 235 L 170 235"/>';
+  h += '<path class="ps-seam" d="M 142 455 C 150 500 152 530 152 552"/>';
+  h += '<rect class="ps-seam" x="138" y="554" width="30" height="13" rx="6.5"/>';
+  var sh = [
+    {id:"pidkapot", r:[62,36,106,118,14]},
+    {id:"vnutr",    r:[58,244,114,206,14]},
+    {id:"porig_lp", r:[33,240,13,96,5]},
+    {id:"porig_zl", r:[33,340,13,96,5]},
+    {id:"porig_pp", r:[184,240,13,96,5]},
+    {id:"porig_zp", r:[184,340,13,96,5]},
+    {id:"panel_z",  r:[48,585,134,40,8]}
+  ];
+  h += sh.map(function(s){ return psShapeEl(s, s.id); }).join('');
+  [[34,142],[170,142],[34,432],[170,432]].forEach(function(w){
+    h += '<rect class="ps-pad" x="'+w[0]+'" y="'+w[1]+'" width="26" height="84" rx="11"/>';
+  });
+  function lab(x,y,t,fs,v){ return '<text class="ps-lab" x="'+x+'" y="'+y+'" font-size="'+(fs||8)+'" text-anchor="middle"'+(v?' transform="rotate(-90 '+x+' '+y+')"':'')+'>'+escH(t)+'</text>'; }
+  h += lab(115,92,"Підкапотний простір",7.8);
+  h += '<text class="ps-lab" x="115" y="338" font-size="8" text-anchor="middle">Внутрішня частина<tspan x="115" dy="11">кузову</tspan></text>';
+  h += lab(115,610,"Панель задня",8);
+  h += lab(39.5,288,"Поріг ЛП",6.2,1); h += lab(39.5,388,"Поріг ЗЛ",6.2,1);
+  h += lab(190.5,288,"Поріг ПП",6.2,1); h += lab(190.5,388,"Поріг ЗП",6.2,1);
+  h += psBadgeEl("pidkapot",115,114);
+  h += psBadgeEl("vnutr",115,374);
+  return h + '</svg>';
+}
+
+// ── стан модалки ──
+var PS_CTX = null;      // {calcId, car, vin}
+var PS_CALC = {};       // id -> state (з калькуляції, сині)
+var PS_SEL = {};        // id -> state (відмічено вручну)
+var PS_WIRED = false;
+
+function psCalcFromWorks(works){
+  var m = {};
+  (works||[]).forEach(function(w){
+    if(w.hidden || w.cat!==CAT_MAL) return;
+    var z = PS_NAME2ZONE[w.name];
+    if(z && (m[z.id]===undefined || z.st>m[z.id])) m[z.id]=z.st;
+  });
+  return m;
+}
+function psOpen(jobId){
+  var j = PAINT_JOBS.find(function(x){ return x._id===jobId; }); if(!j) return;
+  var vin = (j.vin||"").toUpperCase();
+  if(!vin){ showToast("У авто немає VIN"); return; }
+  db.collection("calculations").where("type","==","works").where("vin","==",vin).get().then(function(snap){
+    var best=null;
+    snap.forEach(function(d){ var r=Object.assign({_id:d.id}, d.data());
+      if(!best || (r.status==="in_work" && best.status!=="in_work")
+        || (r.status===best.status && (r.date||"")>(best.date||""))) best=r;
+    });
+    if(!best){ showToast("Немає калькуляції Робіт для цього авто — спершу створіть її"); return; }
+    PS_CTX = {calcId:best._id, car:best.car||j.car||vin, vin:vin};
+    PS_CALC = psCalcFromWorks(best.works);
+    PS_SEL = (best.paintScheme && best.paintScheme.marks) ? JSON.parse(JSON.stringify(best.paintScheme.marks)) : {};
+    // позначки, які вже «догнали» калькуляцію, прибираємо з ручних — вони сині
+    Object.keys(PS_SEL).forEach(function(id){ if(PS_CALC[id]!==undefined) delete PS_SEL[id]; });
+    document.getElementById("ps-title").textContent = "Схема авто — "+(PS_CTX.car||"");
+    document.getElementById("ps-status").textContent = "";
+    psBuildModal();
+    psRefresh();
+    document.getElementById("paint-scheme-modal").style.display = "flex";
+  }).catch(function(e){ showToast("Схема: "+e.message); });
+}
+function psBuildModal(){
+  document.getElementById("ps-views").innerHTML =
+    '<div class="ps-vw"><div class="ps-cap">ЛІВИЙ БІК</div>'+psBuildSide("L")+'</div>'
+    +'<div class="ps-vw"><div class="ps-cap">ВИД ЗВЕРХУ</div>'+psBuildTop()+'</div>'
+    +'<div class="ps-vw"><div class="ps-cap">ПРАВИЙ БІК</div>'+psBuildSide("R")+'</div>'
+    +'<div class="ps-vw"><div class="ps-cap">ВИД ЗНИЗУ (ДНИЩЕ)</div>'+psBuildBottom()+'</div>';
+  function chkRow(id){ return '<label class="ps-chk" data-pschkl="'+id+'"><input type="checkbox" data-pschk="'+id+'"> '+escH(PS_Z[id].s[0])+'</label>'; }
+  document.getElementById("ps-chk1").innerHTML = PS_CHK1.map(chkRow).join('');
+  document.getElementById("ps-chk2").innerHTML = PS_CHK2.map(chkRow).join('');
+  if(!PS_WIRED){
+    PS_WIRED = true;
+    document.getElementById("ps-views").addEventListener("click", function(e){
+      var el = e.target.closest ? e.target.closest("[data-psz]") : null;
+      if(el) psCycle(el.getAttribute("data-psz"));
+    });
+    document.getElementById("paint-scheme-modal").addEventListener("change", function(e){
+      var inp = e.target.closest ? e.target.closest("[data-pschk]") : null;
+      if(!inp) return;
+      var id = inp.getAttribute("data-pschk");
+      if(PS_CALC[id]!==undefined){ psRefresh(); return; }
+      if(inp.checked) PS_SEL[id]=0; else delete PS_SEL[id];
+      psRefresh();
+    });
+    document.getElementById("ps-chips-sel").addEventListener("click", function(e){
+      var d = e.target.getAttribute && e.target.getAttribute("data-psdel");
+      if(d){ delete PS_SEL[d]; psRefresh(); }
+    });
+  }
+}
+function psStateOf(id){
+  if(PS_CALC[id]!==undefined) return {st:PS_CALC[id], c:1};
+  if(PS_SEL[id]!==undefined) return {st:PS_SEL[id], c:0};
+  return null;
+}
+function psCycle(id){
+  if(PS_CALC[id]!==undefined) return;
+  if(PS_SEL[id]===undefined) PS_SEL[id]=0;
+  else if(PS_SEL[id]===0 && PS_Z[id].s.length>1) PS_SEL[id]=1;
+  else delete PS_SEL[id];
+  psRefresh();
+}
+function psRefresh(){
+  var modal = document.getElementById("paint-scheme-modal");
+  Object.keys(PS_Z).forEach(function(id){
+    var st = psStateOf(id);
+    modal.querySelectorAll('[data-psz="'+id+'"]').forEach(function(el){
+      el.classList.remove("st1","st2","calc");
+      if(st) el.classList.add(st.c ? "calc" : (st.st===1 ? "st2" : "st1"));
+    });
+  });
+  modal.querySelectorAll('[data-psbfor]').forEach(function(g){
+    var id = g.getAttribute("data-psbfor"), st = psStateOf(id);
+    var txt = st && PS_Z[id].b ? PS_Z[id].b[st.st] : "";
+    if(st && txt){
+      g.style.display = "";
+      g.classList.toggle("bc", !!st.c);
+      var t = g.querySelector("text"); t.textContent = txt;
+      var w = txt.length*5.2+12, r = g.querySelector("rect");
+      r.setAttribute("width", w); r.setAttribute("x", -w/2);
+    } else g.style.display = "none";
+  });
+  modal.querySelectorAll('[data-pschk]').forEach(function(inp){
+    var id = inp.getAttribute("data-pschk"), st = psStateOf(id);
+    inp.checked = !!st; inp.disabled = !!(st && st.c);
+    var l = inp.closest("label");
+    l.classList.toggle("on", !!st && !st.c);
+    l.classList.toggle("cc", !!st && !!st.c);
+  });
+  var a = Object.keys(PS_CALC).map(function(id){ return '<span class="ps-chip c">'+escH(PS_Z[id].s[PS_CALC[id]])+'</span>'; });
+  document.getElementById("ps-chips-calc").innerHTML = a.length ? a.join('') : '<span style="color:var(--tx3);font-size:11px;font-style:italic">малярних робіт у калькуляції поки немає</span>';
+  var b = Object.keys(PS_SEL).map(function(id){ return '<span class="ps-chip s">'+escH(PS_Z[id].s[PS_SEL[id]])+' <b data-psdel="'+id+'">×</b></span>'; });
+  document.getElementById("ps-chips-sel").innerHTML = b.length ? b.join('') : '<span style="color:var(--tx3);font-size:11px;font-style:italic">клікни по елементах на схемі або в списку</span>';
+}
+function psSave(){
+  if(!PS_CTX) return;
+  var st = document.getElementById("ps-status");
+  db.collection("calculations").doc(PS_CTX.calcId).update({
+    paintScheme: { marks: PS_SEL, updatedAt: new Date().toISOString(), by: currentUserName||(currentUser?currentUser.email:"") }
+  }).then(function(){
+    st.className="pay-status ok"; st.textContent="✓ Збережено — позначки підтягнуться в Роботах цього авто";
+    showToast("Схема збережена: "+Object.keys(PS_SEL).length+" елем.");
+  }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+}
+
+// ── Роботи: панель «З малярки відмічено» (pull-on-open, як Каса/Парковка) ──
+var W_SCHEME_MARKS = null;
+function wPullScheme(rec){
+  var el = document.getElementById("w-scheme-pending"); if(el) el.innerHTML = "";
+  W_SCHEME_MARKS = (rec && rec.paintScheme && rec.paintScheme.marks) ? JSON.parse(JSON.stringify(rec.paintScheme.marks)) : null;
+  wSchemeRenderPanel();
+}
+function wSchemeUncovered(){
+  if(!W_SCHEME_MARKS) return [];
+  var inCalc = {};
+  Object.keys(wsel).forEach(function(u){ var it=wsel[u]; if(it.cat===CAT_MAL && !it.hidden) inCalc[it.name]=1; });
+  var out = [];
+  Object.keys(W_SCHEME_MARKS).forEach(function(id){
+    if(!PS_Z[id]) return;
+    var name = PS_Z[id].s[W_SCHEME_MARKS[id]] || PS_Z[id].s[0];
+    if(!inCalc[name]) out.push({id:id, name:name});
+  });
+  return out;
+}
+function wSchemePrice(name){
+  var it = (DB[CAT_MAL] && DB[CAT_MAL].items || []).find(function(x){ return x.n===name; });
+  return it ? (it.p||0) : null;
+}
+function wSchemeRenderPanel(){
+  var el = document.getElementById("w-scheme-pending"); if(!el) return;
+  var list = wSchemeUncovered();
+  if(!list.length){ el.innerHTML = ""; return; }
+  var h = '<div class="no-print" style="margin:8px 0;border:1px solid #e67e22;border-radius:6px;padding:8px 12px;background:rgba(230,126,34,.07);font-size:11px">'
+    + '🚗 <b>З малярки відмічено (схема авто):</b> елементи, яких ще немає в калькуляції'
+    + '<div style="margin-top:6px">';
+  list.forEach(function(z){
+    var p = wSchemePrice(z.name);
+    h += '<div style="display:flex;align-items:center;gap:8px;padding:2px 0">'
+      + '<span style="flex:1">'+escH(z.name)+'</span>'
+      + '<span style="font-family:var(--mono);color:'+(p===null?'var(--rd)':'var(--tx2)')+'">'+(p===null?'немає в Цінах':p+' $')+'</span>'
+      + '<button class="btn btn-p" style="font-size:11px;padding:2px 9px" onclick="wSchemeAdd(\''+z.id+'\')">➕ Додати</button>'
+      + '<button class="btn btn-o" style="font-size:11px;padding:2px 9px;color:var(--rd)" title="Прибрати позначку зі схеми (не додавати в калькуляцію)" onclick="wSchemeDrop(\''+z.id+'\')">✕</button>'
+      + '</div>';
+  });
+  h += '</div>';
+  if(list.length>1) h += '<div style="margin-top:6px"><button class="btn btn-p" style="font-size:11px;padding:3px 10px" onclick="wSchemeAddAll()">➕ Додати всі ('+list.length+')</button></div>';
+  el.innerHTML = h + '</div>';
+}
+function wSchemeAdd(id){
+  if(!W_SCHEME_MARKS || W_SCHEME_MARKS[id]===undefined) return;
+  var name = PS_Z[id].s[W_SCHEME_MARKS[id]] || PS_Z[id].s[0];
+  var p = wSchemePrice(name);
+  addWork(CAT_MAL, name, p===null?0:p, "");
+  if(p===null) showToast("«"+name+"» немає в Цінах — додано з ціною 0, впишіть вручну");
+  wSchemeRenderPanel();
+}
+function wSchemeAddAll(){
+  wSchemeUncovered().forEach(function(z){
+    var p = wSchemePrice(z.name);
+    addWork(CAT_MAL, z.name, p===null?0:p, "");
+  });
+  showToast("Додано в МАЛЯРНІ РОБОТИ — перевірте ціни і збережіть");
+  wSchemeRenderPanel();
+}
+function wSchemeDrop(id){
+  if(!W_SCHEME_MARKS) return;
+  delete W_SCHEME_MARKS[id];
+  if(currentDocId){
+    db.collection("calculations").doc(currentDocId).update({"paintScheme.marks": W_SCHEME_MARKS}).catch(function(){});
+  }
+  wSchemeRenderPanel();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

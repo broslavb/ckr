@@ -1490,9 +1490,11 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="gtrow" style="margin-top:8px"><span class="gtlbl">Сплачено</span><span class="gtval gr" id="gt-paid">—</span></div>
       <div class="gtrow"><span class="gtlbl">Залишок</span><span class="gtval bl" id="gt-bal">—</span></div>
       <div id="w-adm-profit"></div>
+      <div id="w-agree-box" class="no-print" style="display:none"></div>
     </div>
     <div class="acts">
       <button class="btn btn-p" onclick="saveW()">💾 Зберегти</button>
+      <button class="btn btn-o" onclick="wAgreeSave()" title="Зафіксувати узгоджену з клієнтом версію робіт — потім можна порівняти фінал з нею" style="color:#1b7f3a;border-color:#1b7f3a">✅ Узгоджено</button>
       <button class="btn btn-o" onclick="showPrintModal('works')">🖨 Друк</button>
       <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
       <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
@@ -3906,6 +3908,7 @@ function clearW(){
   selectStoDefaults();renderSecs(DB);wRecalc();
   currentDocId = null;
   isSaving = false;
+  W_AGREED = null; wAgreeRender();
   takeSnap("works");
 }
 
@@ -3983,6 +3986,153 @@ function saveW(){
         wSyncCoordExt(currentDocId, rec); showToast("Збережено: "+car); })
       .catch(function(e){ isSaving=false; showToast("Помилка збереження: "+e.message); });
   }
+}
+
+// ── УЗГОДЖЕНО: зафіксована з клієнтом версія РОБІТ ───────────────────────────
+// Знімок зберігається полем `agreed` прямо в документі калькуляції (окремий
+// файл не потрібен). Кнопка «✅ Узгоджено» фіксує поточний збережений список
+// робіт; «⚖ Порівняти» перед видачею авто показує, що додано/вилучено/змінено
+// відносно узгодженого. Запчастини сюди свідомо не входять (докуповуються).
+var W_AGREED = null;
+
+function wAgreeHeader(){
+  return {
+    malType: document.getElementById("mal-type").value,
+    discKuz: parseFloat(document.getElementById("disc-kuz").value)||0,
+    discSlu: parseFloat(document.getElementById("disc-slu").value)||0,
+    discBez: parseFloat(document.getElementById("disc-bez").value)||0
+  };
+}
+// Підсумок списку робіт — ті самі правила, що в ПІДСУМКУ (приховані не рахуються)
+function wAgreeTotal(works, hdr, rate){
+  var usd=0;
+  (works||[]).forEach(function(it){
+    if(it.hidden) return;
+    var cur=DB[it.cat]?DB[it.cat].cur:"usd";
+    var p=(it.price||0)*(it.coeff||1);
+    if(it.cat===CAT_MAL && hdr.malType==="bud") p=p*0.85;
+    var disc=it.cat===CAT_KUZ?hdr.discKuz:it.cat===CAT_SLU?hdr.discSlu:it.cat===CAT_BEZ?hdr.discBez:0;
+    usd += (cur==="uah"?p/rate:p)*(1-disc);
+  });
+  return { usd: Math.round(usd*100)/100, uah: Math.round(usd*rate) };
+}
+function wAgreeLineTxt(it, hdr){ // сума рядка у валюті категорії
+  var cur=DB[it.cat]?DB[it.cat].cur:"usd";
+  var p=(it.price||0)*(it.coeff||1);
+  if(it.cat===CAT_MAL && hdr.malType==="bud") p=Math.round(p*0.85*10)/10;
+  var k=(it.coeff&&it.coeff!==1)?(" ×"+it.coeff):"";
+  return (cur==="uah" ? Math.round(p).toLocaleString("uk-UA")+" грн" : (Math.round(p*100)/100)+" $")+k;
+}
+function wAgreeSave(){
+  if(!currentDocId){ showToast("Спершу збережіть калькуляцію (💾), тоді фіксуйте узгодження"); return; }
+  if(isTabDirty("works")){ showToast("Є незбережені зміни — спершу 💾 Зберегти, потім ✅ Узгоджено"); return; }
+  if(W_AGREED && !confirm("Вже є узгодження від "+(W_AGREED.date||"")+".\nПерезаписати поточною версією робіт?")) return;
+  var hdr=wAgreeHeader();
+  var works=Object.keys(wsel).map(function(uid){
+    var it=wsel[uid];
+    return { uid:it.uid||uid, cat:it.cat||"", name:it.name||"", price:it.price||0,
+             coeff:it.coeff||1, extra:!!it.extra, hidden:!!it.hidden };
+  });
+  var tot=wAgreeTotal(works,hdr,usdRate);
+  var snap={ date:new Date().toISOString().split("T")[0], by:currentUser.email, byName:currentUserName||"",
+    rate:usdRate, malType:hdr.malType, discKuz:hdr.discKuz, discSlu:hdr.discSlu, discBez:hdr.discBez,
+    totalUSD:tot.usd, totalUAH:tot.uah, works:works };
+  db.collection("calculations").doc(currentDocId).update({agreed:snap})
+    .then(function(){ W_AGREED=snap; wAgreeRender(); showToast("✅ Узгоджену версію робіт зафіксовано"); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function wAgreeRender(){
+  var box=document.getElementById("w-agree-box"); if(!box) return;
+  if(!W_AGREED){ box.style.display="none"; box.innerHTML=""; return; }
+  var a=W_AGREED;
+  box.style.display="";
+  box.innerHTML='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 10px;border:1px solid #1b7f3a;border-radius:8px;background:rgba(27,127,58,.08)">'
+    +'<span style="font-size:11px"><b style="color:#1b7f3a">✅ Узгоджено '+(a.date||"")+'</b>'
+    +(a.byName?' · '+a.byName:'')
+    +' · <b>'+(a.totalUSD||0)+' $</b> / '+(a.totalUAH||0).toLocaleString("uk-UA")+' грн'
+    +' <span style="color:var(--tx3)">(курс '+(a.rate||"—")+')</span></span>'
+    +'<button class="btn btn-o" style="padding:3px 10px;font-size:11px" onclick="wAgreeCompare()">⚖ Порівняти з поточною</button>'
+    +'</div>';
+}
+function wAgreeModal(html){
+  var m=document.getElementById("w-agree-modal");
+  if(!m){
+    m=document.createElement("div"); m.id="w-agree-modal"; m.className="no-print";
+    m.style.cssText="position:fixed;inset:0;background:rgba(10,20,40,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:18px";
+    m.addEventListener("click",function(e){ if(e.target===m) m.style.display="none"; });
+    document.body.appendChild(m);
+  }
+  m.innerHTML='<div style="background:var(--bg2);color:var(--tx);max-width:660px;width:100%;max-height:86vh;overflow:auto;border-radius:12px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35);border:1px solid var(--bd)">'+html+'</div>';
+  m.style.display="flex";
+}
+function wAgreeCompare(){
+  if(!W_AGREED){ showToast("Ще немає узгодженої версії"); return; }
+  var a=W_AGREED;
+  var hdrA={malType:a.malType||"std",discKuz:a.discKuz||0,discSlu:a.discSlu||0,discBez:a.discBez||0};
+  var hdrC=wAgreeHeader();
+  var curWorks=Object.keys(wsel).map(function(uid){ return wsel[uid]; });
+  var mapA={}; (a.works||[]).forEach(function(w){ if(w.uid) mapA[w.uid]=w; });
+  var mapC={}; curWorks.forEach(function(w){ if(w.uid) mapC[w.uid]=w; });
+  var added=[], removed=[], changed=[];
+  curWorks.forEach(function(w){
+    if(w.hidden) return;
+    var old=mapA[w.uid];
+    if(!old || old.hidden){ added.push(w); return; }
+    if((old.price||0)!==(w.price||0) || (old.coeff||1)!==(w.coeff||1)) changed.push({o:old,n:w});
+  });
+  (a.works||[]).forEach(function(w){
+    if(w.hidden) return;
+    var c=mapC[w.uid];
+    if(!c || c.hidden) removed.push(w);
+  });
+  var totC=wAgreeTotal(curWorks,hdrC,usdRate);
+  var dUSD=Math.round((totC.usd-(a.totalUSD||0))*100)/100;
+  var dUAH=totC.uah-(a.totalUAH||0);
+  // Зміни шапки (тариф малярки / знижки)
+  var MAL_LBL={std:"SpiesHecker", bud:"Standox|Roberlo"};
+  var hdrNotes=[];
+  if(hdrA.malType!==hdrC.malType) hdrNotes.push("Тариф малярки: "+(MAL_LBL[hdrA.malType]||hdrA.malType)+" → "+(MAL_LBL[hdrC.malType]||hdrC.malType));
+  if(hdrA.discKuz!==hdrC.discKuz) hdrNotes.push("Знижка кузовні: "+(hdrA.discKuz*100)+"% → "+(hdrC.discKuz*100)+"%");
+  if(hdrA.discSlu!==hdrC.discSlu) hdrNotes.push("Знижка слюсарні: "+(hdrA.discSlu*100)+"% → "+(hdrC.discSlu*100)+"%");
+  if(hdrA.discBez!==hdrC.discBez) hdrNotes.push("Знижка безпека: "+(hdrA.discBez*100)+"% → "+(hdrC.discBez*100)+"%");
+  function row(color,mark,txt,sum){
+    return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px dashed var(--bd);font-size:12px">'
+      +'<span style="color:'+color+';font-weight:700;width:16px;flex:none">'+mark+'</span>'
+      +'<span style="flex:1;min-width:0">'+txt+'</span>'
+      +'<span style="font-family:var(--mono);font-size:11px;white-space:nowrap">'+sum+'</span></div>';
+  }
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    +'<b style="font-size:14px">⚖ Порівняння з узгодженою версією</b>'
+    +'<button class="btn btn-o" style="padding:3px 10px" onclick="document.getElementById(\'w-agree-modal\').style.display=\'none\'">✕</button></div>'
+    +'<div style="font-size:11.5px;color:var(--tx2);margin-bottom:10px">Узгоджено '+(a.date||"")+(a.byName?' ('+a.byName+')':'')+' — порівнюємо з тим, що зараз у формі (лише роботи, без запчастин).</div>';
+  if(!added.length && !removed.length && !changed.length && !hdrNotes.length){
+    h+='<div style="padding:14px;border:1px solid #1b7f3a;border-radius:8px;background:rgba(27,127,58,.08);font-size:13px"><b style="color:#1b7f3a">✅ Розбіжностей немає</b> — роботи відповідають узгодженій версії.</div>';
+  } else {
+    if(added.length){
+      h+='<div style="margin:10px 0 4px;font-weight:700;font-size:12px;color:#1b7f3a">Додані роботи ('+added.length+')</div>';
+      added.forEach(function(w){ h+=row("#1b7f3a","+", w.name+(w.cat?' <span style="color:var(--tx3)">· '+w.cat.toLowerCase()+'</span>':""), wAgreeLineTxt(w,hdrC)); });
+    }
+    if(removed.length){
+      h+='<div style="margin:10px 0 4px;font-weight:700;font-size:12px;color:var(--rd)">Вилучені роботи ('+removed.length+')</div>';
+      removed.forEach(function(w){ h+=row("var(--rd)","−", '<s>'+w.name+'</s>'+(w.cat?' <span style="color:var(--tx3)">· '+w.cat.toLowerCase()+'</span>':""), wAgreeLineTxt(w,hdrA)); });
+    }
+    if(changed.length){
+      h+='<div style="margin:10px 0 4px;font-weight:700;font-size:12px;color:#b6690f">Змінені ціни/кількість ('+changed.length+')</div>';
+      changed.forEach(function(c){ h+=row("#b6690f","≠", c.n.name, wAgreeLineTxt(c.o,hdrA)+" → "+wAgreeLineTxt(c.n,hdrC)); });
+    }
+    if(hdrNotes.length){
+      h+='<div style="margin:10px 0 4px;font-weight:700;font-size:12px;color:#b6690f">Параметри калькуляції</div>';
+      hdrNotes.forEach(function(t){ h+=row("#b6690f","≠", t, ""); });
+    }
+  }
+  h+='<div style="margin-top:12px;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:12.5px;background:var(--bg3)">'
+    +'<div style="display:flex;justify-content:space-between"><span>Узгоджено ('+(a.date||"")+'):</span><b>'+(a.totalUSD||0)+' $ / '+(a.totalUAH||0).toLocaleString("uk-UA")+' грн</b></div>'
+    +'<div style="display:flex;justify-content:space-between"><span>Зараз:</span><b>'+totC.usd+' $ / '+totC.uah.toLocaleString("uk-UA")+' грн</b></div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--bd)"><span>Різниця:</span>'
+    +'<b style="color:'+(dUSD>0?"#1b7f3a":dUSD<0?"var(--rd)":"var(--tx2)")+'">'+(dUSD>0?"+":"")+dUSD+' $ / '+(dUAH>0?"+":"")+dUAH.toLocaleString("uk-UA")+' грн</b></div>'
+    +((a.rate||usdRate)!==usdRate?'<div style="font-size:10.5px;color:var(--tx3);margin-top:4px">Курс на момент узгодження '+a.rate+', зараз '+usdRate+' — гривневі суми порівнюються кожна за своїм курсом.</div>':'')
+    +'</div>';
+  wAgreeModal(h);
 }
 
 // ── 20%-БОНУС КООРДИНАТОРА ЗА СТОРОННІ РОБОТИ (coord_ext) ──────────────────────
@@ -4715,6 +4865,7 @@ function loadRec(id){
       var bmSel=document.getElementById("w-bodyman"); if(bmSel){ wFillBodymen(); bmSel.value=r.bodyman||""; }
       switchTab("works",document.getElementById("tab-create-btn"));
       renderSecs(DB);wRecalc();
+      W_AGREED = r.agreed || null; wAgreeRender();
       takeSnap("works");
       wPullCashWorks();   // витрати-роботи з каси по цьому авто
       wPullParking(r.vin||"");   // парковка -> СТОРОННІ

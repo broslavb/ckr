@@ -1782,7 +1782,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
     <!-- Блок РОБОТИ -->
     <div class="so-section-hdr" id="so-works-hdr" onclick="soToggleSection('so-works-body')" style="margin-top:12px">
-      <span>РОБОТИ</span>
+      <span>РОБОТИ <button class="ps-openbtn no-print" onclick="event.stopPropagation();psOpenService()" title="Обрати малярні елементи на схемі авто — відмічене додасться в роботи замовлення (ціни з Цін у грн за курсом)">🚗 Схема</button></span>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="so-section-total" id="so-works-total"></span>
         <span class="pb-chev">▼</span>
@@ -12933,6 +12933,9 @@ function psSetMode(){
   if(PS_MODE==="works"){
     if(hint) hint.textContent = "Сині — вже в калькуляції. Клік по елементу: 1-й — базовий варіант (одна сторона / частково), 2-й — розширений (з двох сторін / повністю / купе), 3-й — зняти. «➕ Додати в калькуляцію» — відмічене одразу стане роботами з цінами з Цін.";
     if(sl) sl.textContent = "Відмічено — додати в калькуляцію";
+  } else if(PS_MODE==="service"){
+    if(hint) hint.textContent = "Сині — вже в роботах замовлення. Клік по елементу: 1-й — базовий варіант (одна сторона / частково), 2-й — розширений (з двох сторін / повністю / купе), 3-й — зняти. «➕ Додати в замовлення» — відмічене стане роботами, ціни з Цін у грн за курсом.";
+    if(sl) sl.textContent = "Відмічено — додати в замовлення";
   } else {
     if(hint) hint.textContent = "Сині — вже в калькуляції Робіт. Клік по елементу: 1-й — базовий варіант (одна сторона / частково), 2-й — розширений (з двох сторін / повністю / купе), 3-й — зняти. Відмічене підтягнеться в Роботи при відкритті калькуляції.";
     if(sl) sl.textContent = "Відмічено — піде в Роботи";
@@ -12960,6 +12963,22 @@ function psOpenWorks(){
     if(PS_Z[id] && PS_CALC[id]===undefined) PS_SEL[id] = W_SCHEME_MARKS[id];
   });
   var car = (document.getElementById("w-car").value||"").trim();
+  document.getElementById("ps-title").textContent = "Схема авто"+(car ? " — "+car : "");
+  document.getElementById("ps-status").textContent = "";
+  psSetMode();
+  psBuildModal();
+  psRefresh();
+  document.getElementById("paint-scheme-modal").style.display = "flex";
+}
+function psOpenService(){
+  // відкриття з форми ТО/Замовлення: відмічене додається в роботи замовлення (грн за курсом)
+  PS_MODE = "service";
+  PS_CTX = null;
+  var arr = soWorks.filter(function(w){ return w && w.name; })
+    .map(function(w){ return {cat:CAT_MAL, name:w.name}; });
+  PS_CALC = psCalcFromWorks(arr);
+  PS_SEL = {};
+  var car = (document.getElementById("so-car").value||"").trim();
   document.getElementById("ps-title").textContent = "Схема авто"+(car ? " — "+car : "");
   document.getElementById("ps-status").textContent = "";
   psSetMode();
@@ -13065,10 +13084,12 @@ function psRefresh(){
   var b = Object.keys(PS_SEL).map(function(id){ return '<span class="ps-chip s">'+escH(PS_Z[id].s[PS_SEL[id]])+' <b data-psdel="'+id+'">×</b></span>'; });
   document.getElementById("ps-chips-sel").innerHTML = b.length ? b.join('') : '<span style="color:var(--tx3);font-size:11px;font-style:italic">клікни по елементах на схемі або в списку</span>';
   var sb = document.getElementById("ps-save-btn");
-  if(sb) sb.textContent = (PS_MODE==="works") ? "➕ Додати в калькуляцію ("+b.length+")" : "💾 Зберегти позначки";
+  if(sb) sb.textContent = (PS_MODE==="works") ? "➕ Додати в калькуляцію ("+b.length+")"
+    : (PS_MODE==="service") ? "➕ Додати в замовлення ("+b.length+")" : "💾 Зберегти позначки";
 }
 function psSave(){
   if(PS_MODE==="works"){ psApplyWorks(); return; }
+  if(PS_MODE==="service"){ psApplyService(); return; }
   if(!PS_CTX) return;
   var st = document.getElementById("ps-status");
   db.collection("calculations").doc(PS_CTX.calcId).update({
@@ -13091,6 +13112,20 @@ function psApplyWorks(){
   payClose("paint-scheme-modal");
   showToast("Додано у МАЛЯРНІ РОБОТИ: "+ids.length+" елем."+(miss.length ? " — "+miss.length+" без ціни в Цінах, впишіть вручну" : ""));
   wSchemeRenderPanel();
+}
+function psApplyService(){
+  var ids = Object.keys(PS_SEL);
+  if(!ids.length){ showToast("Нічого не відмічено — клікніть по елементах на схемі"); return; }
+  var miss = [], rate = usdRate||44.1;
+  ids.forEach(function(id){
+    var name = PS_Z[id].s[PS_SEL[id]] || PS_Z[id].s[0];
+    var p = wSchemePrice(name);               // ціна в $ з каталогу Цін
+    if(p===null) miss.push(name);
+    soWorks.push({id:soUID(), name:name, qty:1, price:p===null?0:Math.round(p*rate), cat:CAT_MAL});
+  });
+  soRenderWorks(); soUpdateSummary();
+  payClose("paint-scheme-modal");
+  showToast("Додано в роботи замовлення: "+ids.length+" елем."+(miss.length ? " — "+miss.length+" без ціни в Цінах, впишіть вручну" : ""));
 }
 
 // ── Роботи: панель «З малярки відмічено» (pull-on-open, як Каса/Парковка) ──

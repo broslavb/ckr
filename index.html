@@ -2693,6 +2693,12 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld adm-fld"><label>Бонус менеджеру, грн</label><input type="number" id="lamp-s-bonus" min="0" step="50" value="100"/></div>
     </div>
     <div class="fld"><label>Коментар</label><input type="text" id="lamp-s-note" placeholder="необовʼязково"/></div>
+    <div class="adm-fld" style="margin:6px 0 2px">
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--tx2)">
+        <input type="checkbox" id="lamp-s-own" style="width:auto;margin:0" onchange="lampOwnToggle()"/>
+        🔒 Моя відправка (зі мого складу) — менеджер бачить лише списання, без деталей; бонус не нараховується
+      </label>
+    </div>
     <div class="pay-status" id="lamp-s-calc" style="font-weight:bold"></div>
     <div class="pay-status" id="lamp-s-status"></div>
     <div class="pay-btns">
@@ -13771,6 +13777,12 @@ function lampsRenderList(){
   var closed=LAMP_SALES.filter(function(x){ return x.canceled || x.delivered; }).slice(0,60);
   // Відкриті — плитки
   function card(x){
+    // Відправка власника: менеджеру — лише факт списання зі складу, без деталей і кнопок
+    if(x.own && !adm){
+      return '<div class="pay-card" style="opacity:.75">'
+        +'<div class="pay-nm">🔒 Відправка власника · '+(x.qty||1)+' шт</div>'
+        +'<div class="pay-rl">'+escH(x.date||"")+' · списано зі складу</div></div>';
+    }
     var sum=lampSaleSum(x);
     var payTxt = x.payType==="ship500" ? "аванс 500 · накладений "+lampFmt(Math.max(0,sum-500))+" грн"
                : x.payType==="full" ? "передплата "+lampFmt(sum)+" грн (р/р ФОП)"
@@ -13778,7 +13790,7 @@ function lampsRenderList(){
     var st = x.ttn ? '<span style="color:#e67e22">🚚 в дорозі</span>' : '<span style="color:var(--tx3)">● нова</span>';
     var h='<div class="pay-card">'
       +'<div class="pay-nm">'+(x.qty||1)+' шт × '+lampFmt(x.priceUAH||0)+' = '+lampFmt(sum)+' грн</div>'
-      +'<div class="pay-rl">'+escH(x.date||"")+' · '+(LAMP_CH_LBL[x.channel]||"")+' · '+st+'</div>'
+      +'<div class="pay-rl">'+escH(x.date||"")+' · '+(LAMP_CH_LBL[x.channel]||"")+' · '+st+(x.own?' · <span style="color:var(--bl);font-weight:600">🔒 моя</span>':'')+'</div>'
       +'<div class="pay-sub">'+escH(x.client||"—")+(x.phone?' · '+escH(x.phone):'')+(x.city?' · '+escH(x.city)+(x.wh?', '+escH(x.wh):''):'')+'</div>'
       +'<div class="pay-sub">'+payTxt+'</div>'
       // ТТН + статус НП — у помітній рамці, щоб не зливалось
@@ -13808,6 +13820,12 @@ function lampsRenderList(){
       var sum=lampSaleSum(x);
       var st = x.canceled ? '<span style="color:var(--rd);font-weight:600">✕ скас.</span>'
                           : '<span style="color:var(--gr);font-weight:600">✓ '+escH(x.deliveredAt||"")+'</span>';
+      if(x.own && !adm){
+        return '<tr style="opacity:.55"><td style="white-space:nowrap">'+escH(x.date||"")+'</td>'
+          +'<td style="white-space:nowrap">'+(x.qty||1)+' шт</td>'
+          +'<td>🔒 Відправка власника</td><td>—</td><td>—</td>'
+          +'<td style="white-space:nowrap">'+st+'</td><td></td></tr>';
+      }
       var profTd="";
       if(adm){
         var p=x.canceled?0:(sum-(x.qty||0)*cost-Math.round(sum*0.06)-(x.bonusUAH||0));
@@ -13819,7 +13837,7 @@ function lampsRenderList(){
       return '<tr style="opacity:.75">'
         +'<td style="white-space:nowrap">'+escH(x.date||"")+'</td>'
         +'<td style="white-space:nowrap">'+(x.qty||1)+' × '+lampFmt(x.priceUAH||0)+' = <b>'+lampFmt(sum)+'</b></td>'
-        +'<td>'+escH(x.client||"—")+(x.city?' · '+escH(x.city):'')+'</td>'
+        +'<td>'+(x.own?'🔒 ':'')+escH(x.client||"—")+(x.city?' · '+escH(x.city):'')+'</td>'
         +'<td style="font-family:var(--mono);white-space:nowrap">'+(x.ttn?escH(x.ttn):"—")+'</td>'
         +'<td>'+(LAMP_CH_LBL[x.channel]||"")+'</td>'
         +'<td style="white-space:nowrap">'+st+'</td>'
@@ -13853,9 +13871,17 @@ function lampOpenSale(editId){
   document.getElementById("lamp-s-ttn").value = x ? (x.ttn||"") : "";
   document.getElementById("lamp-s-note").value = x ? (x.note||"") : "";
   var b=document.getElementById("lamp-s-bonus"); if(b) b.value = x ? (x.bonusUAH!=null?x.bonusUAH:100) : (LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
+  var ow=document.getElementById("lamp-s-own"); if(ow){ ow.checked = x ? !!x.own : false; lampOwnToggle(); }
   document.getElementById("lamp-s-status").textContent="";
   lampSaleRecalc();
   document.getElementById("lamp-sale-modal").style.display="flex";
+}
+// Чекбокс «Моя відправка»: бонус менеджеру авто-нуль (він цю посилку не веде)
+function lampOwnToggle(){
+  var ow=document.getElementById("lamp-s-own"), b=document.getElementById("lamp-s-bonus");
+  if(!ow || !b) return;
+  if(ow.checked){ b.value=0; b.disabled=true; }
+  else { b.disabled=false; if(!(parseFloat(b.value)>0)) b.value=(LAMP_CFG && LAMP_CFG.bonusUAH!=null)?LAMP_CFG.bonusUAH:100; }
 }
 function lampSaleRecalc(){
   var qty=parseInt(document.getElementById("lamp-s-qty").value)||1;
@@ -13882,7 +13908,10 @@ function lampDoSale(){
   var name=(document.getElementById("lamp-s-name").value||"").trim();
   if(!name){ st.className="pay-status err"; st.textContent="Вкажіть отримувача"; return; }
   var pay=document.getElementById("lamp-s-pay").value;
+  var ownEl=document.getElementById("lamp-s-own");
+  var own = isAdmin() && !!(ownEl && ownEl.checked);
   var bonus = isAdmin() ? (parseFloat(document.getElementById("lamp-s-bonus").value)||0) : (LAMP_CFG.bonusUAH!=null?LAMP_CFG.bonusUAH:100);
+  if(own) bonus=0;
 
   // ── Редагування наявної відправки: оновлюємо поля, статуси не чіпаємо
   if(LAMP_EDIT_ID){
@@ -13899,7 +13928,7 @@ function lampDoSale(){
       ttn:newTtn, note:(document.getElementById("lamp-s-note").value||"").trim(),
       editedAt:new Date().toISOString(), editedBy:currentUserName||""
     };
-    if(isAdmin()) upd.bonusUAH=Math.round(bonus);
+    if(isAdmin()){ upd.bonusUAH=Math.round(bonus); upd.own=own; }
     if(newTtn!==(old.ttn||"")){ upd.ttnStatus=""; upd.ttnCode=""; }   // нова ТТН — старий статус скидаємо
     db.collection("lamp_sales").doc(LAMP_EDIT_ID).update(upd).then(function(){
       LAMP_EDIT_ID=null;
@@ -13919,6 +13948,7 @@ function lampDoSale(){
     ttn:ttnDigits(document.getElementById("lamp-s-ttn").value), ttnStatus:"",
     note:(document.getElementById("lamp-s-note").value||"").trim(),
     bonusUAH:Math.round(bonus), bonusAccrued:false,
+    own:own,
     delivered:false, canceled:false,
     author:currentUserName||"", authorEmail:currentUser?currentUser.email:"",
     createdAt:new Date().toISOString()

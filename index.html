@@ -644,6 +644,7 @@ tr.pr-cancelled td input,tr.pr-cancelled td .pr-avail-txt{color:#c62828!importan
 .pm-pay-inp{background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 7px;border-radius:3px;outline:none}
 .pm-pay-inp:focus{border-color:var(--ac)}
 .pm-pay-del{color:var(--tx3);cursor:pointer;font-size:12px;padding:2px}
+.pm-pay-src{font-size:10px;color:var(--tx3);flex:none;align-self:center;white-space:nowrap}
 .pm-pay-del:hover{color:var(--rd)}
 .pm-add-pay{font-family:var(--mono);font-size:10px;color:var(--tx3);cursor:pointer;padding:5px 10px;border:1px dashed var(--bd);border-radius:3px;margin-top:6px;display:inline-block;transition:all .15s}
 .pm-add-pay:hover{color:var(--ac);border-color:var(--ac)}
@@ -3306,7 +3307,7 @@ function worksSnapshot(){
     dk:_v("disc-kuz"),ds:_v("disc-slu"),db:_v("disc-bez"),ml:_v("mal-type"),mc:wMalCoord||"",ma:wMalActual||0,cr:wCredit?1:0,bm:_v("w-bodyman"),
     w:Object.keys(wsel).sort().map(function(u){var x=wsel[u];return [x.cat,x.name,x.price,x.side,x.coeff,x.coord||"",x.actualUAH||0,x.hidden?1:0,x.extra?1:0,x.comment||""];}),
     org:orgSnap("w"),
-    p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
+    p:(wPayments||[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment,p.src||""];})
   });
 }
 function partsSnapshot(){
@@ -3315,7 +3316,7 @@ function partsSnapshot(){
     b:(typeof PM_BLOCKS!=="undefined"?PM_BLOCKS:[]).map(function(bl){return (bl.items||[]).map(function(i){
       return [i.name,i.qty,i.avail,i.code,i.altCode,i.supplierName,i.link,i.ttn,i.buyPrice,i.markupType,i.manualPrice||0,i.status,!!i.priority,!!i.isNew,!!i.extra,i.fpz||0,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];});}),
     org:orgSnap("pm"),
-    p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
+    p:(typeof pmPayments!=="undefined"?pmPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment,p.src||""];})
   });
 }
 function serviceSnapshot(){
@@ -3324,7 +3325,7 @@ function serviceSnapshot(){
     pa:(typeof soParts!=="undefined"?soParts:[]).map(function(i){return [i.name,i.qty,i.buyPrice,i.markupType,i.manualPrice||0,i.avail,i.code,i.altCode,i.link,i.ttn,i.status,(i.variants||[]).map(function(v){return [v.name,v.buyPrice,v.code,v.status,v.markupType,v.manualPrice||0];})];}),
     wo:(typeof soWorks!=="undefined"?soWorks:[]).map(function(w){return [w.name,w.qty,w.price,w.coord||"",w.actualUAH||0,w.cat||""];}),
     org:orgSnap("so"),
-    p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment];})
+    p:(typeof soPayments!=="undefined"?soPayments:[]).map(function(p){return [p.amount,p.cur,p.type,p.date,p.comment,p.src||""];})
   });
 }
 function snapOf(m){ return m==="works"?worksSnapshot():m==="parts"?partsSnapshot():m==="service"?serviceSnapshot():""; }
@@ -3834,7 +3835,7 @@ function blockTotal(items,cur,disc,malBud){
 }
 
 function wAddPayment(){
-  wPayments.push({id:"wp"+(++uidCounter), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
+  wPayments.push({id:"wp"+(++uidCounter), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:"kasa"});
   wRenderPayments(); wRecalc();
 }
 function wRenderPayments(){
@@ -4069,13 +4070,13 @@ function saveW(){
   if (currentDocId) {
     col.doc(currentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
       .then(function(){ wCashMarkLinked(); wParkMarkLinked(); wPaintMarkLinked(); takeSnap("works");
-        wSyncCoordExt(currentDocId, rec); showToast("Оновлено: "+car); })
+        wSyncCoordExt(currentDocId, rec); payPushCashOps(currentDocId, wPayments, car, vin, "Роботи"); showToast("Оновлено: "+car); })
       .catch(function(e){ showToast("Помилка: "+e.message); });
   } else {
     isSaving = true;
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
       .then(function(docRef){ currentDocId=docRef.id; isSaving=false; wCashMarkLinked(); wParkMarkLinked(); wPaintMarkLinked(); takeSnap("works");
-        wSyncCoordExt(currentDocId, rec); showToast("Збережено: "+car); })
+        wSyncCoordExt(currentDocId, rec); payPushCashOps(currentDocId, wPayments, car, vin, "Роботи"); showToast("Збережено: "+car); })
       .catch(function(e){ isSaving=false; showToast("Помилка збереження: "+e.message); });
   }
 }
@@ -7751,7 +7752,7 @@ function pmUpdateSummary(){
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
 function pmAddPayment(){
-  pmPayments.push({id:uid(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
+  pmPayments.push({id:uid(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:"kasa"});
   pmRenderPayments();
 }
 
@@ -7814,6 +7815,64 @@ function recordBalanceUAH(r){
   var paid = Array.isArray(r.payments) ? paySumUAH(r.payments) : (r.pp||0);
   return Math.round(total - paid);
 }
+// ── Оплата клієнта → Каса ────────────────────────────────────────────────────
+// Нова оплата, внесена у формі (Роботи/ЗЧ/ТО), при збереженні створює ПРИХІД у
+// Касі (src:"kasa"). Власник може обрати «Власні» (src:"own") — каса не чіпається.
+// Для всіх, крім власника, нові оплати йдуть у Касу обовʼязково (без вибору).
+// Старі оплати без src не чіпаються; оплати, створені З Каси (fromCashOpId) — теж.
+function payRowSrcHtml(p, i, arrName){
+  if(p.fromCashOpId) return '<span class="pm-pay-src" title="Оплата створена з Каси (прихід уже там)">з Каси</span>';
+  if(p.cashOpId) return '<span class="pm-pay-src" title="Прихід уже в Касі; сума/дата оновляться при збереженні">✓ Каса</span>';
+  if(!isAdmin()){
+    return '<span class="pm-pay-src" title="Оплата буде записана приходом у Касу при збереженні">'+(p.src==="own"?"власні":(p.src?"→ Каса":"—"))+'</span>';
+  }
+  return '<select class="pm-pay-inp" style="width:74px" title="Куди падає оплата при збереженні: прихід у Касу чи власні кошти (каса не чіпається)" onchange="'+arrName+'['+i+'].src=this.value">'
+    + '<option value=""'+(!p.src?" selected":"")+'>—</option>'
+    + '<option value="kasa"'+(p.src==="kasa"?" selected":"")+'>Каса</option>'
+    + '<option value="own"'+(p.src==="own"?" selected":"")+'>Власні</option>'
+    + '</select>';
+}
+function payRowDel(arrName, i){
+  var arr = window[arrName]; if(!arr || !arr[i]) return;
+  var p = arr[i];
+  if(p.cashOpId){
+    if(!confirm("Ця оплата вже записана приходом у Касу.\nВидалити і оплату, і прихід у Касі?")) return;
+    db.collection("cash_operations").doc(p.cashOpId).delete().catch(function(){});
+  } else if(p.fromCashOpId){
+    if(!confirm("Оплата створена з Каси. Видалити її лише тут? (прихід у Касі залишиться)")) return;
+  }
+  arr.splice(i,1);
+  if(arrName==="wPayments"){ wRenderPayments(); wRecalc(); }
+  else if(arrName==="pmPayments"){ pmRenderPayments(); pmUpdateSummary(); }
+  else { soRenderPayments(); soUpdateSummary(); }
+}
+// Після збереження калькуляції: створити приходи для нових оплат src="kasa",
+// оновити суму/дату вже звʼязаних, дописати cashOpId назад у документ.
+function payPushCashOps(docId, payments, car, vin, kindLbl){
+  if(!docId) return;
+  var today = new Date().toISOString().slice(0,10);
+  (payments||[]).forEach(function(p){
+    if(p && p.cashOpId && !p.fromCashOpId){
+      db.collection("cash_operations").doc(p.cashOpId)
+        .update({amount:payAmountUAH(p), date:p.date||today}).catch(function(){});
+    }
+  });
+  var todo = (payments||[]).filter(function(p){ return p && p.src==="kasa" && !p.cashOpId && !p.fromCashOpId && (p.amount||0)>0; });
+  if(!todo.length) return;
+  Promise.all(todo.map(function(p){
+    var op = { type:"+", amount:payAmountUAH(p),
+      desc:"Оплата клієнта · "+kindLbl+(p.cur==="usd"?" · "+p.amount+" $":"")+(p.comment?" · "+p.comment:""),
+      car:car||"", vin:vin||"", dest:"", markup:1, linked:true, isClientPayment:true, payId:p.id||"",
+      date:p.date||today, ts:(p.date||today)+"T"+new Date().toTimeString().substr(0,8),
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" };
+    return db.collection("cash_operations").add(op).then(function(ref){ p.cashOpId = ref.id; });
+  })).then(function(){
+    db.collection("calculations").doc(docId).update({payments:JSON.parse(JSON.stringify(payments))}).catch(function(){});
+    showToast("Оплати записано в Касу: "+todo.length);
+    if(typeof CASH_OPS!=="undefined" && document.getElementById("tab-cash") && document.getElementById("tab-cash").style.display!=="none"){ cashLoadOps(); }
+  }).catch(function(e){ showToast("Каса: "+e.message); });
+}
+
 // Рядок оплати. arrName — назва глобального масиву ("pmPayments"/"soPayments"/"wPayments"),
 // onCh — код перерахунку підсумку ("pmUpdateSummary()"/"soUpdateSummary()"/"wRecalc()").
 function payRowHtml(p, i, arrName, onCh, reRender){
@@ -7827,9 +7886,10 @@ function payRowHtml(p, i, arrName, onCh, reRender){
     + '<option value="cash"'+(p.type==="cash"?" selected":"")+'>Готівка</option>'
     + '<option value="bank"'+(p.type==="bank"?" selected":"")+'>Безготівка</option>'
     + '</select>'
+    + payRowSrcHtml(p, i, arrName)
     + '<input class="pm-pay-inp" style="width:88px" type="date" value="'+(p.date||"")+'" onchange="'+arrName+'['+i+'].date=this.value"/>'
     + '<input class="pm-pay-inp" style="flex:1;min-width:70px" value="'+(p.comment||"").replace(/"/g,"&quot;")+'" placeholder="Коментар" onchange="'+arrName+'['+i+'].comment=this.value"/>'
-    + '<span class="pm-pay-del" onclick="'+arrName+'.splice('+i+',1);'+reRender+';'+onCh+'">×</span>'
+    + '<span class="pm-pay-del" onclick="payRowDel(\''+arrName+'\','+i+')">×</span>'
     + '</div>';
 }
 
@@ -7921,11 +7981,11 @@ function pmSave(){
   var col = db.collection("calculations");
   if(pmCurrentDocId){
     col.doc(pmCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()}, rec))
-      .then(function(){ pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); pmLogSnap=logCalcChange(pmCurrentDocId, rec, pmLogSnap, false)||pmLogSnap; showToast("Оновлено: "+car); })
+      .then(function(){ pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); pmLogSnap=logCalcChange(pmCurrentDocId, rec, pmLogSnap, false)||pmLogSnap; payPushCashOps(pmCurrentDocId, pmPayments, car, vin, "Запчастини"); showToast("Оновлено: "+car); })
       .catch(function(e){ pmIsSaving=false; showToast("Помилка: "+e.message); });
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()}, rec))
-      .then(function(docRef){ pmCurrentDocId=docRef.id; pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); pmLogSnap=logCalcChange(pmCurrentDocId, rec, null, true); showToast("Збережено: "+car); })
+      .then(function(docRef){ pmCurrentDocId=docRef.id; pmIsSaving=false; pmMarkCashLinked(); takeSnap("parts"); pmLogSnap=logCalcChange(pmCurrentDocId, rec, null, true); payPushCashOps(pmCurrentDocId, pmPayments, car, vin, "Запчастини"); showToast("Збережено: "+car); })
       .catch(function(e){ pmIsSaving=false; showToast("Помилка: "+e.message); });
   }
 }
@@ -8906,7 +8966,7 @@ function soPopulateWorkDD(dropdown, query, work, input){
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
 function soAddPayment(){
-  soPayments.push({id:soUID(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash"});
+  soPayments.push({id:soUID(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:"kasa"});
   soRenderPayments();
 }
 
@@ -9022,11 +9082,11 @@ function soSave(){
   var col = db.collection("calculations");
   if(soCurrentDocId){
     col.doc(soCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; showToast("Оновлено: "+car);})
+      .then(function(){takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Оновлено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(ref){soCurrentDocId=ref.id;takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); showToast("Збережено: "+car);})
+      .then(function(ref){soCurrentDocId=ref.id;takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Збережено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   }
 }
@@ -10789,7 +10849,8 @@ function payEnsureCoord(){
 }
 
 // ── КАРТКИ ПРАЦІВНИКІВ ──
-// Акаунт координатора (Анікін) — бачить власну картку зарплати, хоч і не адмін
+// Акаунт координатора — бачить картку координатора в Зарплаті, хоч і не адмін.
+// Логін лишився від Анікіна; з 09.11.2026 ним користується Марченко Артем.
 function isCoordAccount(){ return currentUser && currentUser.email === "icars.in.ua@gmail.com"; }
 function payCanSeeCard(w){
   if(w.active===false) return false;

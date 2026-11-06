@@ -10492,6 +10492,13 @@ function payWorkUSD(w, rec){
 }
 
 function payIsTO(rec){ return rec && rec.type === "service_order"; }
+// Спеціальність для роботи ТО — за «Типом робіт» рядка (cat з каталогу Цін).
+// Без типу (введена вручну) або «ТО · …» з Цін ТО — слюсарна; малярні/сторонні — поза схемою.
+function payRoleOfTOCat(cat){
+  if(cat === CAT_KUZ) return "kuz";
+  if(cat === CAT_MAL || cat === CAT_STO) return "";
+  return "slu";
+}
 
 // Робота ТО: ціна в грн, знижка зі збереженого запису
 function payTOWorkUSD(w, rec){
@@ -10505,8 +10512,11 @@ function payTOWorkUSD(w, rec){
 function payFundFor(rec){
   var f = {slu:0, kuz:0};
   if(payIsTO(rec)){
-    // ТО не має категорій — усі роботи вважаємо слюсарними
-    (rec.works||[]).forEach(function(w){ f.slu += payTOWorkUSD(w, rec); });
+    // ТО: спеціальність за типом робіт рядка (рихтувальні → kuz, решта → slu)
+    (rec.works||[]).forEach(function(w){
+      var r = payRoleOfTOCat(w.cat);
+      if(r) f[r] += payTOWorkUSD(w, rec);
+    });
     f.slu *= PAY_SHARE_SLU; f.kuz *= PAY_SHARE;
     return f;
   }
@@ -11371,14 +11381,14 @@ function payAccrueCarChanged(){
   var toCur = function(usd){ return cur==="usd" ? usd : Math.round(usd*rate); };
   fundEl.innerHTML = 'Фонд ('+(PAY_ROLE_LBL[role]||"")+', розрахунок у '+(cur==="usd"?"$":"грн")+') по авто: <b>'+payFmt(toCur(fund),cur)+'</b> · нараховано '+
     payFmt(toCur(used),cur)+' · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+payFmt(toCur(left),cur)+'</b>';
-  // ТО не має категорій робіт — усі його роботи слюсарні
+  // ТО: спеціальність рядка — за «Типом робіт» (cat); без типу — слюсарна
   var isTO = payIsTO(rec);
-  var works = isTO
-    ? ((role === "slu") ? (rec.works||[]) : [])
-    : (rec.works||[]).filter(function(w){ return payRoleOfCat(w.cat)===role; });
+  var works = (rec.works||[]).filter(function(w){
+    return (isTO ? payRoleOfTOCat(w.cat) : payRoleOfCat(w.cat)) === role;
+  });
   if(!works.length){
     wrap.innerHTML = '<div style="padding:12px" class="pay-sub">'+
-      (isTO ? "ТО — це слюсарні роботи, рихтувальнику тут нараховувати нічого"
+      (isTO ? "У цьому ТО/замовленні немає робіт цієї спеціальності (тип робіт у рядку: Рихтувальні → рихтувальник, решта → слюсар)"
             : "У цього авто немає робіт цієї спеціальності")+'</div>';
     return;
   }

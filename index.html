@@ -942,6 +942,8 @@ input, select, button, .btn, .pp-inp, .cinp,
 /* Адмін-поля на екрані: видимі лише власнику (body.is-adm ставить applyPerms) */
 .adm-fld{display:none}
 body.is-adm .adm-fld{display:block}
+#pay-set-btn{display:none}
+body.is-adm #pay-set-btn{display:inline-block}
 
 /* ── MECHANIC PRINT ── show only: Наявність/Назва, К-ть, Артикул осн., Артикул альт. */
 @media print {
@@ -1569,7 +1571,7 @@ body.hero-on .hero-pad{margin-right:40vw}
         <div class="fld"><label>Координатор ЗЧ</label>
           <select id="pm-coord" class="pm-disc-sel" style="width:100%">
             <option value="">— не вказано —</option>
-            <option value="anikin">Анікін</option>
+            <option value="anikin">Координатор</option>
             <option value="manager">Менеджер</option>
             <option value="broslav">Брослав</option>
           </select>
@@ -1713,7 +1715,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld"><label>Координатор ЗЧ</label>
         <select id="so-coord" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:11px;padding:4px 8px;border-radius:3px;outline:none">
           <option value="">— не вказано —</option>
-          <option value="anikin">Анікін</option>
+          <option value="anikin">Координатор</option>
           <option value="manager">Менеджер</option>
           <option value="broslav">Брослав</option>
         </select>
@@ -2212,6 +2214,7 @@ body.hero-on .hero-pad{margin-right:40vw}
         <button class="btn btn-p" onclick="payOpenAccrue()">+ Нарахувати роботи</button>
         <button class="btn btn-o" onclick="payOpenAttend()">📅 Табель</button>
         <button class="btn btn-o" onclick="payOpenWorkers()">Працівники</button>
+        <button class="btn btn-o" id="pay-set-btn" onclick="payOpenSettings()" data-admin-only title="Ставки координатора: % з праці, % з прибутку, тижнева ставка">⚙ Ставки</button>
       </div>
     </div>
     <div class="pay-hint">
@@ -2327,6 +2330,25 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div class="pay-btns">
       <button class="btn btn-p" onclick="payDoGive()">Видати</button>
       <button class="btn btn-o" onclick="payClose('pay-give-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: ставки координатора (лише власник; пишеться в settings/payroll) -->
+<div class="pay-modal" id="pay-set-modal">
+  <div class="pay-box" style="max-width:420px">
+    <div class="pay-box-t">⚙ Ставки координатора</div>
+    <div style="font-size:11px;color:var(--tx3);margin:-6px 0 10px;line-height:1.5">
+      Діють на НОВІ нарахування (старі не перераховуються). Відсотки — цілим числом, наприклад 15.
+    </div>
+    <div class="fld"><label>% з праці слюсарів (і денних нарахувань)</label><input type="number" id="pay-set-slu" min="0" max="99" step="0.5"/></div>
+    <div class="fld"><label>% з праці рихтувальників</label><input type="number" id="pay-set-kuz" min="0" max="99" step="0.5"/></div>
+    <div class="fld"><label>% з прибутку сторонніх і малярних</label><input type="number" id="pay-set-ext" min="0" max="99" step="0.5"/></div>
+    <div class="fld"><label>Тижнева ставка координатора, грн</label><input type="number" id="pay-set-week" min="0" step="100"/></div>
+    <div class="pay-status" id="pay-set-status"></div>
+    <div class="pay-btns">
+      <button class="btn btn-p" onclick="payDoSaveSettings()">💾 Зберегти</button>
+      <button class="btn btn-o" onclick="payClose('pay-set-modal')">Скасувати</button>
     </div>
   </div>
 </div>
@@ -3083,6 +3105,7 @@ auth.onAuthStateChanged(function(user) {
     }
     applyPerms();   // показати/сховати вкладки й пункти меню за правами акаунта
     loadNBURate();
+    payLoadSettings();   // ставки координатора з settings/payroll (впливають і на підказки прибутку в Роботах)
     loadPricesFromDB();
     loadWorkTemplates();
     loadCustomers();
@@ -3701,13 +3724,13 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       var sel = share ? ('<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
         +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
         +'<option value="broslav"'+(it.coord==="broslav"?" selected":"")+'>Брослав</option>'
-        +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Анікін</option></select>') : '';
+        +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Координатор</option></select>') : '';
       var priceInp='<span class="rc-lbl">клієнту грн</span><input class="rc-act" type="number" min="0" step="50" title="ціна клієнту, грн ($ перерахується сам)" value="'+pUAH+'" onchange="setItemPriceUAH(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
       var act='<span class="rc-lbl">факт грн</span><input class="rc-act" type="number" min="0" step="100" placeholder="факт" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
       var confBtn = it.cashPending
         ? '<button class="rc-chk" onclick="wCashConfirm(\''+it.uid+'\')" title="Підтвердити витрату з каси">Перевірено</button>'
         : (it.cashOpId ? '<span class="rc-ok">✓ з каси</span>' : '');
-      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(isAnik?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
+      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(isAnik?" · Координатору "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
       coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
     }
     var eye='<span class="ritem-eye" title="'+(it.hidden?'Показати (враховувати й друкувати)':'Приховати (не рахувати, не друкувати)')+'" onclick="toggleWorkHidden(\''+it.uid+'\')">'+(it.hidden?'🙈':'👁')+'</span>';
@@ -3734,7 +3757,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
   }).join("");
   if(showCoord){
     html+='<div class="ritem-coord-sum">Прибуток сторонніх: <b>'+Math.round(totProfit).toLocaleString("uk-UA")+' грн</b>'
-      +' · Анікіну 15%: <b style="color:var(--gr)">'+Math.round(anikinBonus).toLocaleString("uk-UA")+' грн</b></div>';
+      +' · Координатору '+Math.round(PAY_COORD_SHARE_EXT*100)+'%: <b style="color:var(--gr)">'+Math.round(anikinBonus).toLocaleString("uk-UA")+' грн</b></div>';
   }
   el.innerHTML=html;
 }
@@ -3787,9 +3810,9 @@ function renderMalCoord(malUAH){
   var sel='<select class="rc-sel" onchange="setMalCoord(this.value)">'
     +'<option value=""'+(!wMalCoord?" selected":"")+'>— координатор —</option>'
     +'<option value="broslav"'+(wMalCoord==="broslav"?" selected":"")+'>Брослав</option>'
-    +'<option value="anikin"'+(wMalCoord==="anikin"?" selected":"")+'>Анікін</option></select>';
+    +'<option value="anikin"'+(wMalCoord==="anikin"?" selected":"")+'>Координатор</option></select>';
   var act='<input class="rc-act" type="number" min="0" step="100" placeholder="факт на блок, грн" value="'+(actual||"")+'" onchange="setMalActual(this.value)"/>';
-  var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">прибуток '+Math.round(prof).toLocaleString("uk-UA")+' грн'+(wMalCoord==="anikin"?" · Анікіну "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
+  var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">прибуток '+Math.round(prof).toLocaleString("uk-UA")+' грн'+(wMalCoord==="anikin"?" · Координатору "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
   el.innerHTML = '<div class="ritem-coord" style="padding:6px 0 2px">'+sel+act+profTxt+'</div>';
 }
 
@@ -4221,10 +4244,16 @@ function wSyncCoordExt(calcId, rec){
     .then(function(){
       if(status!=="done") return null;
       return db.collection("workers").where("role","==","coord").get().then(function(ws){
-        var anikin=null; ws.forEach(function(d){ var w=d.data(); if(w.active!==false && !anikin) anikin={_id:d.id, name:w.name}; });
-        if(!anikin) return null;
-        var r = rate, today=(rec.doneDate||new Date().toISOString().slice(0,10)), batch=[];
-        var mk=function(o){ return Object.assign({ workerId:anikin._id, workerName:anikin.name, role:"coord", type:"coord_ext", rate:r,
+        var today=(rec.doneDate||new Date().toISOString().slice(0,10));
+        // координатор, чинний на дату завершення (coordFrom/coordTo: до 09.11.2026 — Анікін, далі — Марченко)
+        var coordW=null;
+        ws.forEach(function(d){ var w=d.data();
+          if(w.active===false || coordW) return;
+          if((!w.coordFrom || today>=w.coordFrom) && (!w.coordTo || today<w.coordTo)) coordW={_id:d.id, name:w.name};
+        });
+        if(!coordW) return null;
+        var r = rate, batch=[];
+        var mk=function(o){ return Object.assign({ workerId:coordW._id, workerName:coordW.name, role:"coord", type:"coord_ext", rate:r,
           calcId:calcId, carName:car, date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" }, o); };
         // Сторонні роботи (по рядку, координатор = Анікін)
         works.forEach(function(w){
@@ -8822,14 +8851,14 @@ function soRenderWorks(){
       var act=document.createElement("input"); act.className="rc-act"; act.type="number"; act.min="0"; act.step="100"; act.placeholder="факт"; act.value=w.actualUAH||"";
       act.style.cssText="width:80px;background:transparent;border:none;color:var(--tx2);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;text-align:right";
       (function(wk){ act.addEventListener("change",function(){ var n=parseFloat(this.value)||0; if(n>0) wk.actualUAH=n; else delete wk.actualUAH; soRenderWorks(); soUpdateSummary(); }); })(w);
-      act.title = (function(){ var a=parseFloat(w.actualUAH)||0; if(a<=0) return "Фактичні витрати (для сторонніх)"; var m=(w.price||0)*(w.qty||1)-a; return "Маржа "+m.toLocaleString("uk-UA")+" грн"+(w.coord==="anikin"&&m>0?" · Анікіну "+Math.round(m*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):""); })();
+      act.title = (function(){ var a=parseFloat(w.actualUAH)||0; if(a<=0) return "Фактичні витрати (для сторонніх)"; var m=(w.price||0)*(w.qty||1)-a; return "Маржа "+m.toLocaleString("uk-UA")+" грн"+(w.coord==="anikin"&&m>0?" · Координатору "+Math.round(m*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):""); })();
       tdFact.appendChild(act); tr.appendChild(tdFact);
 
       // 7) Координатор
       var tdC = document.createElement("td"); tdC.className="so-wt-coord"; tdC.style.verticalAlign="middle";
       var sel=document.createElement("select"); sel.className="rc-sel";
       sel.style.cssText="background:transparent;border:1px solid var(--bd);border-radius:3px;font-family:Verdana,sans-serif;font-size:10px;padding:2px 3px;cursor:pointer;color:var(--tx2);max-width:100%";
-      [["","— коорд. —"],["broslav","Брослав"],["anikin","Анікін"]].forEach(function(o){ var op=document.createElement("option"); op.value=o[0]; op.textContent=o[1]; if((w.coord||"")===o[0]) op.selected=true; sel.appendChild(op); });
+      [["","— коорд. —"],["broslav","Брослав"],["anikin","Координатор"]].forEach(function(o){ var op=document.createElement("option"); op.value=o[0]; op.textContent=o[1]; if((w.coord||"")===o[0]) op.selected=true; sel.appendChild(op); });
       (function(wk){ sel.addEventListener("change",function(){ wk.coord=this.value; soRenderWorks(); soUpdateSummary(); }); })(w);
       tdC.appendChild(sel); tr.appendChild(tdC);
     }
@@ -10432,10 +10461,114 @@ var PAY_SHARE = 0.5;
 var PAY_SHARE_SLU = 0.45;              // слюсарям 45% — ПОСТІЙНА ставка (враховує податкове навантаження); до 06.10.2026 було 50%
 var PAY_SLU_CHANGE_DATE = "2026-10-06"; // історична межа: нарахування ДО цієї дати звіряються за старими 50%
 function payShareOf(role){ return role==="slu" ? PAY_SHARE_SLU : PAY_SHARE; }
-var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт (праця)
-var PAY_COORD_SHARE_KUZ = 0.15;  // координатору з рихтувальних (кузовних) робіт — 15%
-var PAY_COORD_SHARE_EXT = 0.15;  // координатору з прибутку сторонніх і малярних — 15%
+var PAY_COORD_SHARE = 0.2;       // координатору зі слюсарних робіт (праця); редагується у ⚙ Ставки
+var PAY_COORD_SHARE_KUZ = 0.15;  // координатору з рихтувальних (кузовних) робіт; редагується у ⚙ Ставки
+var PAY_COORD_SHARE_EXT = 0.15;  // координатору з прибутку сторонніх і малярних; редагується у ⚙ Ставки
+var PAY_COORD_WEEK_UAH = 7000;   // тижнева ставка координатора, грн; редагується у ⚙ Ставки
 function payCoordShare(srcRole){ return srcRole==="kuz" ? PAY_COORD_SHARE_KUZ : PAY_COORD_SHARE; }
+
+// ── Налаштування ставок координатора (settings/payroll, пише лише власник) ──
+function payApplySettings(d){
+  if(!d) return;
+  if(d.coordSlu>0 && d.coordSlu<1) PAY_COORD_SHARE = d.coordSlu;
+  if(d.coordKuz>0 && d.coordKuz<1) PAY_COORD_SHARE_KUZ = d.coordKuz;
+  if(d.coordExt>0 && d.coordExt<1) PAY_COORD_SHARE_EXT = d.coordExt;
+  if(d.coordWeekUAH>0) PAY_COORD_WEEK_UAH = d.coordWeekUAH;
+}
+function payLoadSettings(){
+  db.collection("settings").doc("payroll").get()
+    .then(function(doc){ if(doc.exists) payApplySettings(doc.data()); })
+    .catch(function(){});
+}
+function payOpenSettings(){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  document.getElementById("pay-set-slu").value  = Math.round(PAY_COORD_SHARE*1000)/10;
+  document.getElementById("pay-set-kuz").value  = Math.round(PAY_COORD_SHARE_KUZ*1000)/10;
+  document.getElementById("pay-set-ext").value  = Math.round(PAY_COORD_SHARE_EXT*1000)/10;
+  document.getElementById("pay-set-week").value = Math.round(PAY_COORD_WEEK_UAH);
+  document.getElementById("pay-set-status").textContent = "";
+  document.getElementById("pay-set-modal").style.display = "flex";
+}
+function payDoSaveSettings(){
+  var st = document.getElementById("pay-set-status");
+  var p = function(id){ return (parseFloat(document.getElementById(id).value)||0)/100; };
+  var d = { coordSlu:p("pay-set-slu"), coordKuz:p("pay-set-kuz"), coordExt:p("pay-set-ext"),
+            coordWeekUAH:Math.round(parseFloat(document.getElementById("pay-set-week").value)||0),
+            updatedAt:new Date().toISOString(), by:currentUser?currentUser.email:"" };
+  if(d.coordSlu<=0||d.coordSlu>=1||d.coordKuz<=0||d.coordKuz>=1||d.coordExt<=0||d.coordExt>=1){
+    st.className="pay-status err"; st.textContent="Відсотки мають бути від 0 до 100 (наприклад 15)"; return;
+  }
+  st.className="pay-status"; st.textContent="Збереження...";
+  db.collection("settings").doc("payroll").set(d, {merge:true}).then(function(){
+    payApplySettings(d);
+    payClose("pay-set-modal");
+    showToast("Ставки координатора збережено");
+    payRenderCards();
+  }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
+}
+
+// ── Перехід координатора: до 09.11.2026 — Анікін, з 09.11.2026 — Марченко ──
+// Бонуси «з праці» йдуть координатору, чинному НА ДАТУ нарахування (можна заднім числом).
+var PAY_COORD_SWITCH_DATE = "2026-11-09";
+function payCoordsFor(date){
+  var d = date || new Date().toISOString().slice(0,10);
+  return PAY_WORKERS.filter(function(w){
+    if(w.active===false) return false;
+    if(w.coordTo && d < w.coordTo && (!w.coordFrom || d >= w.coordFrom)) return true;  // екс-координатор: дати до переходу
+    if(w.role==="coord" && (!w.coordFrom || d >= w.coordFrom) && (!w.coordTo || d < w.coordTo)) return true;
+    return false;
+  });
+}
+var PAY_MARCH_ENSURED = false;
+function payEnsureMarchenko(){
+  if(PAY_MARCH_ENSURED || !isAdmin()) return false;
+  PAY_MARCH_ENSURED = true;
+  var today = new Date().toISOString().slice(0,10);
+  var needReload = false;
+  if(!PAY_WORKERS.some(function(w){ return w._id==="seed_coord_marchenko"; })){
+    db.collection("workers").doc("seed_coord_marchenko")
+      .set({name:"Марченко Артем", role:"coord", active:true, coordFrom:PAY_COORD_SWITCH_DATE})
+      .then(function(){ payLoadAll(); }).catch(function(){});
+    needReload = true;
+  }
+  PAY_WORKERS.forEach(function(w){
+    if((w.name||"").indexOf("Анікін")!==0) return;
+    var upd = {};
+    if(w.role==="coord" && !w.coordTo) upd.coordTo = PAY_COORD_SWITCH_DATE;   // координатор до 09.11
+    if(w.role==="coord" && today >= PAY_COORD_SWITCH_DATE) upd.role = "slu";  // з 09.11 — слюсар (стандартні 45%, грн); борги/історія лишаються
+    if(Object.keys(upd).length){
+      Object.assign(w, upd);
+      db.collection("workers").doc(w._id).update(upd).catch(function(){});
+    }
+  });
+  return needReload;
+}
+
+// ── Тижнева ставка координатора (Марченко, 7000 грн/тиждень; сума — у ⚙ Ставки) ──
+function payCoordWeek(wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var today = new Date().toISOString().slice(0,10);
+  var dt = new Date(today+"T00:00:00");
+  dt.setDate(dt.getDate() - (dt.getDay()+6)%7);              // понеділок поточного тижня
+  var mon = dt.toISOString().slice(0,10);
+  dt.setDate(dt.getDate()+6);
+  var sun = dt.toISOString().slice(0,10);
+  var fmt = function(s){ return s.slice(8,10)+"."+s.slice(5,7); };
+  var wk = fmt(mon)+"–"+fmt(sun);
+  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===wid && a.type==="coord_week" && !a.void && a.weekKey===mon; });
+  if(dup){ showToast("Тижнева ставка за "+wk+" вже нарахована ("+Math.round(dup.amountUAH||0)+" грн)"); return; }
+  var amt = Math.round(PAY_COORD_WEEK_UAH);
+  if(!confirm("Нарахувати тижневу ставку "+amt.toLocaleString("uk-UA")+" грн за тиждень "+wk+" — "+w.name+"?")) return;
+  var rate = usdRate||44.1;
+  db.collection("work_accruals").add({
+    workerId:wid, workerName:w.name, role:w.role, type:"coord_week", weekKey:mon, rate:rate,
+    amountUAH:amt, amountUSD:Math.round((amt/rate)*100)/100, date:today,
+    workName:"Тижнева ставка ("+wk+")",
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+  }).then(function(){ showToast("Нараховано "+amt.toLocaleString("uk-UA")+" грн — "+w.name+" ("+wk+")"); payLoadAll(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
 var PAY_MIGRATED_COORD = false;
 var PAY_ABSENCE_FINE = 1500; // штраф за прогул, грн
 var PAY_WORKERS = [], PAY_ACCRUALS = [], PAY_PAYMENTS = [], PAY_CARS = [], PAY_CALCS = [], PAY_ATTEND = [];
@@ -10583,6 +10716,7 @@ function payLoadAll(){
     payMigrateCoordShare();
     payAutoDedup();                // тиха чистка дублів без даних (лише адмін, раз за сесію)
     payEnsureDailyWorkers();       // Тютюшкін → денна система (1500/день з 14.10.2026)
+    if(payEnsureMarchenko()) return;   // перехід координатора: Марченко з 09.11.2026, Анікін → слюсар
     payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -10728,6 +10862,12 @@ function payRenderCards(){
         (function(id){ bb.onclick = function(){ payManualBonus(id); }; })(w._id);
         btns2.appendChild(bb);
       }
+      // Тижнева ставка — лише для чинного координатора (Марченко з 09.11.2026)
+      if(w.role==="coord" && !w.coordTo){
+        var bw = document.createElement("button"); bw.textContent = "＋ Тиждень ("+Math.round(PAY_COORD_WEEK_UAH).toLocaleString("uk-UA")+" грн)"; bw.style.cssText="color:var(--bl);border-color:var(--bl)";
+        (function(id){ bw.onclick = function(){ payCoordWeek(id); }; })(w._id);
+        btns2.appendChild(bw);
+      }
       if(w.role==="pmgr"){
         var bs = document.createElement("button"); bs.textContent = "✎ Ставка";
         (function(id){ bs.onclick = function(){ payEditBaseRate(id); }; })(w._id);
@@ -10755,6 +10895,7 @@ function payRenderLedger(){
     else if(a.type==="dailyop"){ t="доплата"; txt=(a.carName?a.carName+" · ":"")+(a.workName||""); }
     else if(a.type==="lamp_bonus"){ t="бонус · лампи Y011"; txt=a.workName||""; }
     else if(a.type==="mgr_parts"){ t=(a.pct!=null?a.pct+"% ":"")+"від прибутку ЗЧ"; txt=(a.carName||"")+" · "+(a.workName||""); }
+    else if(a.type==="coord_week"){ t="тижнева ставка"; txt=a.workName||""; }
     else if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
     rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext"), dkind:"acc"});
@@ -11281,12 +11422,10 @@ function payDailyAccrue(){
       // Координатору 20% з праці — лише зі слюсарів/рихтувальників (рішення власника 16.10);
       // з денної ставки менеджера ЗЧ координаторський бонус НЕ йде
       if(w.role!=="slu" && w.role!=="kuz") return null;
-      var coords = PAY_WORKERS.filter(function(x){ return x.role==="coord" && x.active!==false; });
-      if(!coords.length) return null;
       var extra = [];
       refs.forEach(function(ref, i){
         var a = batch[i];
-        coords.forEach(function(co){
+        payCoordsFor(a.date).forEach(function(co){
           var bUAH = Math.round((a.amountUAH||0)*payCoordShare(a.role));
           extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:a.rate,
             srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
@@ -11456,13 +11595,12 @@ function payDoAccrue(){
   Promise.all(batch.map(function(a){ return db.collection("work_accruals").add(a); }))
     .then(function(refs){
       // 15/20%-бонус координатору(ам) з праці — по кожному нарахуванню 1:1 (крім бонусів поверх фонду)
-      var coords = PAY_WORKERS.filter(function(w){ return w.role==="coord" && w.active!==false; });
-      if(!coords.length) return null;
+      // координатор визначається НА ДАТУ нарахування (до 09.11.2026 — Анікін, далі — Марченко)
       var extra = [];
       refs.forEach(function(ref, i){
         var a = batch[i];
         if(a.type==="bonus") return;   // на бонус поверх фонду координатору не нараховуємо
-        coords.forEach(function(co){
+        payCoordsFor(a.date).forEach(function(co){
           extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:acRate,
             srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
             calcId:a.calcId, carName:a.carName, vin:a.vin, workName:a.workName,

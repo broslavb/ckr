@@ -7822,6 +7822,7 @@ function recordBalanceUAH(r){
 // Старі оплати без src не чіпаються; оплати, створені З Каси (fromCashOpId) — теж.
 function payRowSrcHtml(p, i, arrName){
   if(p.fromCashOpId) return '<span class="pm-pay-src" title="Оплата створена з Каси (прихід уже там)">з Каси</span>';
+  if(p.type==="bank") return '<span class="pm-pay-src" title="Безготівка — одразу на рахунок, у Касу не падає">р/р</span>';
   if(p.cashOpId) return '<span class="pm-pay-src" title="Прихід уже в Касі; сума/дата оновляться при збереженні">✓ Каса</span>';
   if(!isAdmin()){
     return '<span class="pm-pay-src" title="Оплата буде записана приходом у Касу при збереженні">'+(p.src==="own"?"власні":(p.src?"→ Каса":"—"))+'</span>';
@@ -7851,14 +7852,23 @@ function payRowDel(arrName, i){
 function payPushCashOps(docId, payments, car, vin, kindLbl){
   if(!docId) return;
   var today = new Date().toISOString().slice(0,10);
+  var unlinked = false;
   (payments||[]).forEach(function(p){
-    if(p && p.cashOpId && !p.fromCashOpId){
+    if(!p || !p.cashOpId || p.fromCashOpId) return;
+    if(p.type==="bank"){
+      // оплату переключили на безготівку — прихід у Касі зайвий (гроші на рахунку)
+      db.collection("cash_operations").doc(p.cashOpId).delete().catch(function(){});
+      delete p.cashOpId; unlinked = true;
+    } else {
       db.collection("cash_operations").doc(p.cashOpId)
         .update({amount:payAmountUAH(p), date:p.date||today}).catch(function(){});
     }
   });
-  var todo = (payments||[]).filter(function(p){ return p && p.src==="kasa" && !p.cashOpId && !p.fromCashOpId && (p.amount||0)>0; });
-  if(!todo.length) return;
+  var todo = (payments||[]).filter(function(p){ return p && p.src==="kasa" && p.type!=="bank" && !p.cashOpId && !p.fromCashOpId && (p.amount||0)>0; });
+  if(!todo.length){
+    if(unlinked) db.collection("calculations").doc(docId).update({payments:JSON.parse(JSON.stringify(payments))}).catch(function(){});
+    return;
+  }
   Promise.all(todo.map(function(p){
     var op = { type:"+", amount:payAmountUAH(p),
       desc:"Оплата клієнта · "+kindLbl+(p.cur==="usd"?" · "+p.amount+" $":"")+(p.comment?" · "+p.comment:""),
@@ -7882,7 +7892,7 @@ function payRowHtml(p, i, arrName, onCh, reRender){
     + '<option value="uah"'+(p.cur!=="usd"?" selected":"")+'>грн</option>'
     + '<option value="usd"'+(p.cur==="usd"?" selected":"")+'>$</option>'
     + '</select>'
-    + '<select class="pm-pay-inp" style="width:82px" onchange="'+arrName+'['+i+'].type=this.value">'
+    + '<select class="pm-pay-inp" style="width:82px" onchange="'+arrName+'['+i+'].type=this.value;'+reRender+'">'
     + '<option value="cash"'+(p.type==="cash"?" selected":"")+'>Готівка</option>'
     + '<option value="bank"'+(p.type==="bank"?" selected":"")+'>Безготівка</option>'
     + '</select>'

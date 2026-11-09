@@ -1215,6 +1215,27 @@ body.is-adm #pay-set-btn{display:inline-block}
   body.slu-print #slu-doc{display:block !important}
 }
 /* ═══ ГЛОБАЛЬНА ЗАСТАВКА (оглядові вкладки; ховається в редакторах авто) ═══ */
+/* ── ГОЛОВНА — плитки розділів ─────────────────────────────────────────────── */
+.home-wrap{padding:22px 34px 34px;max-width:1750px;margin:0 auto}
+.home-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.home-hi{font-family:'Lora',Georgia,serif;font-weight:700;font-size:26px;color:var(--tx);letter-spacing:.3px}
+.home-date{font-family:var(--mono);font-size:12px;color:var(--tx3);margin-top:3px;text-transform:capitalize}
+#home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;min-height:calc(100vh - 230px);grid-auto-rows:minmax(168px,1fr)}
+#home-grid.dense{grid-template-columns:repeat(auto-fit,minmax(245px,1fr));grid-auto-rows:minmax(148px,1fr);gap:14px}
+.home-tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding:20px 22px 18px;border:1px solid var(--bd);border-radius:14px;cursor:pointer;overflow:hidden;background:linear-gradient(150deg,var(--bg2) 46%,rgba(var(--htr),.10));transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease}
+.home-tile::before{content:"";position:absolute;left:0;top:0;right:0;height:4px;background:linear-gradient(90deg,var(--hta),rgba(var(--htr),.25))}
+.home-tile:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(13,27,62,.14);border-color:var(--hta)}
+.ht-ico{position:absolute;top:18px;left:20px;width:52px;height:52px;border-radius:13px;background:rgba(var(--htr),.13);display:flex;align-items:center;justify-content:center;font-size:27px;line-height:1}
+#home-grid.dense .ht-ico{width:44px;height:44px;font-size:23px;border-radius:11px}
+.ht-tt{font-family:'Lora',Georgia,serif;font-weight:700;font-size:19px;color:var(--tx);letter-spacing:.2px}
+#home-grid.dense .ht-tt{font-size:17px}
+.ht-dd{font-size:11.5px;color:var(--tx3);line-height:1.35}
+.ht-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ht-chip{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--hta);border:1px solid rgba(var(--htr),.45);background:var(--bg2);border-radius:6px;padding:5px 11px;transition:background .12s,color .12s}
+.ht-chip:hover{background:var(--hta);color:#fff}
+@media(max-width:1000px){ .home-wrap{padding:14px} #home-grid{min-height:0;grid-auto-rows:minmax(120px,auto)} }
+@media print{ #tab-home{display:none!important} }
+
 #app-hero{position:fixed;top:93px;right:0;width:40vw;height:calc(100vh - 93px);display:none;overflow:hidden;isolation:isolate;border-left:1px solid var(--bd);z-index:40}
 body.hero-on #app-hero{display:flex;align-items:center;justify-content:center}
 body.hero-on .hero-pad{margin-right:40vw}
@@ -1321,6 +1342,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 </div>
 
 <div class="tabs">
+  <div class="tab" id="tab-home-btn" onclick="switchTab('home',this)" title="Головна">⌂ Головна</div>
   <div class="tab tab-create" id="tab-create-btn" onclick="toggleCreateMenu(event)">
     ＋ Створити калькуляцію ▾
     <div class="create-menu" id="create-menu">
@@ -1336,13 +1358,26 @@ body.hero-on .hero-pad{margin-right:40vw}
   <div class="tab" id="tab-lamps-btn" onclick="switchTab('lamps',this)">💡 Лампи</div>
   <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">👷 Зарплата</div>
   <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
-  <div class="tab" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
-  <div class="tab" onclick="switchTab('receive',this)">📦 Отримання <span id="receive-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
-  <div class="tab" onclick="switchTab('archive',this)">Архів <span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-inwork-btn" onclick="switchTabActive('in_work',this)">В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-receive-btn" onclick="switchTab('receive',this)">📦 Отримання <span id="receive-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-archive-btn" onclick="switchTab('archive',this)">Архів <span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
   <div class="tab" id="tab-stats-btn" onclick="switchTab('stats',this)" style="display:none">📊 Статистика</div>
   <div class="tab" id="tab-settings-btn" onclick="switchTab('settings',this)" style="display:none">⚙ Ціни</div>
   <div class="tab" id="tab-svc-prices-btn" onclick="switchTab('svcprices',this)" style="display:none">⚙ Ціни ТО</div>
   <div class="tab" id="tab-presets-btn" onclick="switchTab('presets',this)" style="display:none">☰ Шаблони ЗЧ</div>
+</div>
+
+<!-- HOME TAB — головна: плитки розділів за правами -->
+<div id="tab-home" style="display:none">
+  <div class="home-wrap">
+    <div class="home-head">
+      <div>
+        <div class="home-hi" id="home-hi">Головна</div>
+        <div class="home-date" id="home-date"></div>
+      </div>
+    </div>
+    <div id="home-grid"></div>
+  </div>
 </div>
 
 <!-- WORKS TAB -->
@@ -2444,6 +2479,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 <div class="pay-modal" id="pay-daily-modal">
   <div class="pay-box" style="max-width:520px">
     <div class="pay-box-t" id="pay-daily-title">Нарахування — денна ставка</div>
+    <div id="pay-daily-calblock">
     <div class="cal-nav">
       <button class="btn btn-o" onclick="payDailyNav(-1)">‹</button>
       <div class="cal-title" id="pay-daily-cal-title"></div>
@@ -2454,6 +2490,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <span><i class="cal-dot" style="background:#2e7d32"></i>Вже нараховано</span>
     </div>
     <div id="pay-daily-grid" class="cal-grid"></div>
+    </div>
     <div id="pay-daily-sum" class="cal-sum"></div>
     <div style="border-top:1px dashed var(--bd);margin-top:10px;padding-top:8px">
       <div class="pay-sub" style="font-weight:600;margin-bottom:6px">Доплати (фіксовані операції — список у «Ціни»)</div>
@@ -3087,8 +3124,8 @@ auth.onAuthStateChanged(function(user) {
     document.getElementById("user-name").textContent = currentUserName;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
-    // Посадка на «Калькуляції» (новий хаб): три форми лише для створення
-    setTimeout(function(){ try{ switchTabActive("calc", document.getElementById("tab-calc-btn")); }catch(e){} }, 100);
+    // Посадка на Головну — плитки розділів за правами
+    setTimeout(function(){ try{ switchTab("home", document.getElementById("tab-home-btn")); }catch(e){} }, 100);
     // Show settings tab and role badge for admin
     if (ADMINS.indexOf(user.email) >= 0) {
       document.getElementById("tab-settings-btn").style.display = "block";
@@ -3357,14 +3394,16 @@ function switchTab(t, el) {
   document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
   el.classList.add("active");
   var editorTab = (t==="works"||t==="parts"||t==="service");
-  ["works","parts","service","cash","parking","paint","plan","lamps","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
+  var fullTab = editorTab || t==="home";   // головна — на всю ширину, без заставки
+  ["home","works","parts","service","cash","parking","paint","plan","lamps","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
     var e = document.getElementById("tab-"+id);
     if (!e) return;
     e.style.display = id===t ? (id==="works"||id==="parts"||id==="service"?"grid":"block") : "none";
-    e.classList.toggle("hero-pad", !editorTab && id===t);
+    e.classList.toggle("hero-pad", !fullTab && id===t);
   });
-  // Заставка (права панель) — на всіх оглядових вкладках, крім редакторів авто
-  document.body.classList.toggle("hero-on", !editorTab);
+  // Заставка (права панель) — на всіх оглядових вкладках, крім редакторів авто і головної
+  document.body.classList.toggle("hero-on", !fullTab);
+  if (t === "home") homeRender();
   if (t === "active") loadActive();
   if (t === "receive") loadReceive();
   if (t === "parts") pmInit();
@@ -4561,8 +4600,55 @@ function switchTabActive(mode, el){
   ACTIVE_MODE = mode; switchTab('active', el);
   var ta=document.getElementById('tab-active'); if(ta) ta.classList.toggle('hub-mode', mode==='calc');
 }
-// Клік по лого → на головну (хаб «Калькуляції»)
-function goHome(){ switchTabActive('calc', document.getElementById('tab-calc-btn')); }
+// Клік по лого → на Головну (плитки)
+function goHome(){ switchTab('home', document.getElementById('tab-home-btn')); }
+
+// ── ГОЛОВНА — плитки розділів за правами користувача ─────────────────────────
+function homeGo(mode, btnId){
+  var el = document.getElementById(btnId);
+  if(!el) return;
+  if(mode==="calc" || mode==="in_work") switchTabActive(mode, el);
+  else switchTab(mode, el);
+}
+var HOME_DAYS=["Неділя","Понеділок","Вівторок","Середа","Четвер","Пʼятниця","Субота"];
+var HOME_MONS=["січня","лютого","березня","квітня","травня","червня","липня","серпня","вересня","жовтня","листопада","грудня"];
+function homeRender(){
+  var g=document.getElementById("home-grid"); if(!g) return;
+  var dEl=document.getElementById("home-date");
+  if(dEl){ var n=new Date(); dEl.textContent = HOME_DAYS[n.getDay()]+", "+n.getDate()+" "+HOME_MONS[n.getMonth()]+" "+n.getFullYear(); }
+  var T=[
+    {i:"➕", t:"Нова калькуляція", d:"Почати розрахунок для авто", a:"#1565C0", r:"21,101,192",
+     chips:[{t:"Роботи",cap:"works",go:"newCalc('works')"},{t:"Запчастини",go:"newCalc('parts')"},{t:"ТО / Замовлення",go:"newCalc('service')"}]},
+    {i:"🗂", t:"Калькуляції", d:"Всі розрахунки по авто — хаб", a:"#0d2b6b", r:"13,43,107", go:"homeGo('calc','tab-calc-btn')"},
+    {i:"🔧", t:"В роботі", d:"Авто, що зараз у цеху", a:"#e67e22", r:"230,126,34", go:"homeGo('in_work','tab-inwork-btn')"},
+    {i:"📋", t:"План", d:"Етапи ремонту по кожному авто", a:"#f39c12", r:"243,156,18", cap:"plan", go:"homeGo('plan','tab-plan-btn')"},
+    {i:"📦", t:"Отримання", d:"Замовлені запчастини в дорозі", a:"#8e44ad", r:"142,68,173", go:"homeGo('receive','tab-receive-btn')"},
+    {i:"💰", t:"Каса", d:"Приходи, витрати, баланс", a:"#2d7a4f", r:"45,122,79", cap:"cash", go:"homeGo('cash','tab-cash-btn')"},
+    {i:"🅿", t:"Парковка", d:"Облік стоянки авто", a:"#16a085", r:"22,160,133", cap:"parking", go:"homeGo('parking','tab-parking-btn')"},
+    {i:"🎨", t:"Малярки", d:"Аванси, депозити, факт робіт", a:"#c2185b", r:"194,24,91", cap:"paint", go:"homeGo('paint','tab-paint-btn')"},
+    {i:"💡", t:"Лампи", d:"LED DETAILING · склад і продажі", a:"#b8860b", r:"184,134,11", cap:"lamps", go:"homeGo('lamps','tab-lamps-btn')"},
+    {i:"👷", t:"Зарплата", d:"Нарахування, виплати, табель", a:"#34495e", r:"52,73,94", cap:"pay", go:"homeGo('pay','tab-pay-btn')"},
+    {i:"📊", t:"Статистика", d:"Прибуток по завершених авто", a:"#c0392b", r:"192,57,43", cap:"stats", go:"homeGo('stats','tab-stats-btn')"},
+    {i:"🗄", t:"Архів", d:"Завершені та видані авто", a:"#607d8b", r:"96,125,139", go:"homeGo('archive','tab-archive-btn')"},
+    {i:"⚙", t:"Ціни й шаблони", d:"Каталоги цін, доплати, шаблони ЗЧ", a:"#455a64", r:"69,90,100", cap:"prices",
+     chips:[{t:"Ціни",go:"homeGo('settings','tab-settings-btn')"},{t:"Ціни ТО",go:"homeGo('svcprices','tab-svc-prices-btn')"},{t:"Шаблони ЗЧ",go:"homeGo('presets','tab-presets-btn')"}]}
+  ];
+  g.innerHTML = T.map(function(o){
+    if(o.cap && !can(o.cap)) return "";
+    var chips = "";
+    if(o.chips){
+      chips = '<div class="ht-chips">'+o.chips.filter(function(c){ return !c.cap || can(c.cap); }).map(function(c){
+        return '<span class="ht-chip" onclick="event.stopPropagation();'+c.go+'">'+c.t+'</span>';
+      }).join("")+'</div>';
+    }
+    return '<div class="home-tile" style="--hta:'+o.a+';--htr:'+o.r+'"'+(o.go?' onclick="'+o.go+'"':'')+'>'
+      +'<div class="ht-ico">'+o.i+'</div>'
+      +'<div class="ht-tt">'+o.t+'</div>'
+      +'<div class="ht-dd">'+o.d+'</div>'+chips+'</div>';
+  }).join("");
+  // Багато плиток (адмін) — щільніша сітка, менші плитки
+  g.classList.toggle("dense", g.children.length>10);
+}
 function setActiveType(t, btn){
   ACTIVE_TYPE = t;
   document.querySelectorAll("#active-type-filter .atf-chip").forEach(function(c){ c.classList.remove("active"); });
@@ -10793,6 +10879,7 @@ function payLoadAll(){
     payAutoDedup();                // тиха чистка дублів без даних (лише адмін, раз за сесію)
     payEnsureDailyWorkers();       // Тютюшкін → денна система (1500/день з 14.10.2026)
     if(payEnsureMarchenko()) return;   // перехід координатора: Марченко з 09.11.2026, Анікін → слюсар
+    if(payEnsureTutWeekly()) return;   // Тютюшкін → тижнева 9000 з 02.11.2026 (перерахунок тижня 02–08.11)
     payRenderCards();
   }).catch(function(e){ showToast("Зарплата — помилка завантаження: "+e.message); });
 }
@@ -10910,12 +10997,28 @@ function payRenderCards(){
         + (isAdmin()?' <span style="cursor:pointer" title="Змінити ставку" onclick="payEditDailyRate(\''+w._id+'\')">✎</span>':'')
         + ' · днів у місяці: <b>'+dCnt+'</b></div>';
     }
+    // Тижнева система (Тютюшкін з 02.11.2026): ставка/тиждень + нараховані тижні в місяці
+    if(payIsWeekly(w)){
+      var wkCnt = PAY_ACCRUALS.filter(function(a){ return a.workerId===w._id && a.type==="weekly" && !a.void && payMonthMatch(a.date); }).length;
+      card.innerHTML += '<div class="pay-sub" style="color:var(--bl);font-weight:600">🗓 Тижнева ставка: '+Math.round(w.weeklyRateUAH||0).toLocaleString("uk-UA")+' грн/тиж'
+        + (isAdmin()?' <span style="cursor:pointer" title="Змінити ставку" onclick="payEditWeeklyRate(\''+w._id+'\')">✎</span>':'')
+        + ' · тижнів у місяці: <b>'+wkCnt+'</b></div>';
+    }
     var btns = document.createElement("div"); btns.className = "pay-cbtns";
     // «+ Нарах.»: слюсарі/рихтувальники — завжди; менеджер ЗЧ — лише на денній системі (календар)
-    if(w.role!=="coord" && (w.role!=="pmgr" || payIsDaily(w))){
-      var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
-      (function(id, daily){ b0.onclick = function(){ daily ? payOpenDaily(id) : payOpenAccrue(id); }; })(w._id, payIsDaily(w));
-      btns.appendChild(b0);
+    if(w.role!=="coord" && (w.role!=="pmgr" || payIsDaily(w) || payIsWeekly(w))){
+      if(payIsWeekly(w)){
+        var bwk = document.createElement("button"); bwk.textContent = "＋ Тиждень ("+Math.round(w.weeklyRateUAH||0).toLocaleString("uk-UA")+" грн)"; bwk.style.cssText="color:var(--ac);border-color:var(--ac)";
+        (function(id){ bwk.onclick = function(){ payWeekAccrue(id); }; })(w._id);
+        btns.appendChild(bwk);
+        var bop = document.createElement("button"); bop.textContent = "＋ Доплата";
+        (function(id){ bop.onclick = function(){ payOpenDaily(id); }; })(w._id);
+        btns.appendChild(bop);
+      } else {
+        var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
+        (function(id, daily){ b0.onclick = function(){ daily ? payOpenDaily(id) : payOpenAccrue(id); }; })(w._id, payIsDaily(w));
+        btns.appendChild(b0);
+      }
     }
     var b1 = document.createElement("button"); b1.textContent = "Історія";
     (function(id){ b1.onclick = function(){ PAY_SEL_WORKER = (PAY_SEL_WORKER===id ? null : id); payRenderCards(); }; })(w._id);
@@ -10969,6 +11072,7 @@ function payRenderLedger(){
     if(a.type==="bonus"){ t="бонус"; txt=(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="bonus_manual"){ t="бонус (корегування)"; txt=a.workName||""; }
     else if(a.type==="daily"){ t="ставка (день)"; txt=(a.amountUAH||0).toLocaleString("uk-UA")+" грн"; }
+    else if(a.type==="weekly"){ t="ставка (тиждень)"; txt=a.workName||""; }
     else if(a.type==="dailyop"){ t="доплата"; txt=(a.carName?a.carName+" · ":"")+(a.workName||""); }
     else if(a.type==="lamp_bonus"){ t="бонус · лампи Y011"; txt=a.workName||""; }
     else if(a.type==="mgr_parts"){ t=(a.pct!=null?a.pct+"% ":"")+"від прибутку ЗЧ"; txt=(a.carName||"")+" · "+(a.workName||""); }
@@ -11093,7 +11197,7 @@ function payRenderAudit(){
   var el = document.getElementById("pay-audit"); if(!el) return;
   var okSet = payAuditOkSet(), groups = {};
   PAY_ACCRUALS.forEach(function(a){
-    if(a.void || a.role==="coord" || a.role==="pmgr" || a.type==="bonus" || a.type==="daily" || a.type==="dailyop") return;   // координатор, менеджер ЗЧ, бонуси і денна система — поза звіркою
+    if(a.void || a.role==="coord" || a.role==="pmgr" || a.type==="bonus" || a.type==="daily" || a.type==="dailyop" || a.type==="weekly") return;   // координатор, менеджер ЗЧ, бонуси, денна/тижнева система — поза звіркою
     var k = a.calcId + "|" + a.role;
     if(!groups[k]) groups[k] = {key:k, calcId:a.calcId, role:a.role, sum:0, car:a.carName||"", works:{}, maxDate:""};
     groups[k].sum += (a.amountUSD||0);
@@ -11377,6 +11481,7 @@ function payEnsureDailyWorkers(){
   });
 }
 function payIsDaily(w){ return !!(w && w.payMode==="daily"); }
+function payIsWeekly(w){ return !!(w && w.payMode==="weekly"); }
 // Мапа «дата → запис» уже нарахованих днів ставки
 function payDailyAccruedMap(wid){
   var m={};
@@ -11388,7 +11493,10 @@ function payOpenDaily(wid){
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
   var n = new Date();
   PAY_DAILY = {wid:wid, month:new Date(n.getFullYear(), n.getMonth(), 1), sel:{}, ops:[]};
-  document.getElementById("pay-daily-title").textContent = w.name+" — "+(w.dailyRateUAH||0)+" грн/день";
+  // Тижневик: та сама модалка лише для доплат (ставка нараховується «＋ Тиждень» на картці)
+  var wkOnly = payIsWeekly(w);
+  var cb = document.getElementById("pay-daily-calblock"); if(cb) cb.style.display = wkOnly ? "none" : "";
+  document.getElementById("pay-daily-title").textContent = wkOnly ? (w.name+" — доплати") : (w.name+" — "+(w.dailyRateUAH||0)+" грн/день");
   // Авто «В роботі» для доплат
   var cs = document.getElementById("pay-daily-car");
   cs.innerHTML = '<option value="">— без авто —</option>' + PAY_CARS.map(function(c){
@@ -11443,6 +11551,12 @@ function payDailySum(){
   var rate = w.dailyRateUAH||0;
   var nd = Object.keys(PAY_DAILY.sel).length;
   var opsSum = PAY_DAILY.ops.reduce(function(s,o){ return s+(o.price||0); }, 0);
+  if(payIsWeekly(w)){
+    document.getElementById("pay-daily-sum").innerHTML = opsSum>0
+      ? 'Доплати: <b style="color:var(--gr)">'+opsSum.toLocaleString("uk-UA")+' грн</b>'
+      : 'Оберіть операцію і додайте доплату';
+    return;
+  }
   document.getElementById("pay-daily-sum").innerHTML =
     'Днів обрано: <b>'+nd+'</b> × '+rate.toLocaleString("uk-UA")+' = <b>'+(nd*rate).toLocaleString("uk-UA")+' грн</b>'
     + (opsSum>0 ? ' · доплати: <b>'+opsSum.toLocaleString("uk-UA")+' грн</b>' : '')
@@ -11532,13 +11646,115 @@ function payEditDailyRate(wid){
     .catch(function(e){ showToast("Помилка: "+e.message); });
 }
 
+// ── ТИЖНЕВА СТАВКА (payMode:"weekly") — Тютюшкін з 02.11.2026: 9000 грн/тиждень ─
+// «＋ Тиждень» на картці (дубль-чек по weekKey), доплати — тим самим каталогом
+// daily_ops (модалка без календаря). Координатору — частка з праці, як із денних.
+// ══════════════════════════════════════════════════════════════════════════════
+var PAY_WEEKLY_MIGRATED = false;
+// Одноразово (адмін): Тютюшкін з денної 1500/день → тижнева 9000. Минулий тиждень
+// 02–08.11.2026, нарахований днями (5×1500=7500), перераховується: денні записи
+// і їх похідні координаторські видаляються, натомість один запис 9000 грн
+// (координатору на дату тижня — його стандартна частка).
+function payEnsureTutWeekly(){
+  if(PAY_WEEKLY_MIGRATED || !isAdmin()) return false;
+  PAY_WEEKLY_MIGRATED = true;
+  var w = PAY_WORKERS.find(function(x){ return (x.name||"").indexOf("Тютюшкін")===0 && x.active!==false; });
+  if(!w || payIsWeekly(w)) return false;
+  var WK="2026-11-02", WK_END="2026-11-08", AMT=9000;
+  w.payMode="weekly"; w.weeklyRateUAH=AMT; w.weeklyFrom=WK;
+  db.collection("workers").doc(w._id).update({payMode:"weekly", weeklyRateUAH:AMT, weeklyFrom:WK}).catch(function(){});
+  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===w._id && a.type==="weekly" && !a.void && a.weekKey===WK; });
+  if(dup) return false;   // тиждень уже перераховано (інша вкладка) — лише режим
+  var olds = PAY_ACCRUALS.filter(function(a){ return a.workerId===w._id && a.type==="daily" && !a.void && a.date>=WK && a.date<=WK_END; });
+  var oldIds={}; olds.forEach(function(a){ oldIds[a._id]=1; });
+  var coords = PAY_ACCRUALS.filter(function(a){ return a.type==="coord_labor" && a.srcAccrualId && oldIds[a.srcAccrualId]; });
+  var rate = usdRate||44.1;
+  Promise.all(olds.concat(coords).map(function(a){ return db.collection("work_accruals").doc(a._id).delete(); }))
+  .then(function(){
+    return db.collection("work_accruals").add({
+      workerId:w._id, workerName:w.name, role:w.role, type:"weekly", weekKey:WK, rate:rate,
+      amountUAH:AMT, amountUSD:Math.round((AMT/rate)*100)/100, date:WK_END,
+      workName:"Тижнева ставка (02.11–08.11)",
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+    });
+  }).then(function(ref){
+    // координатор НА ДАТУ тижня (до 09.11 — Анікін) — частка з праці слюсаря
+    var extra=[];
+    payCoordsFor(WK_END).forEach(function(co){
+      var sh=payCoordShare(w.role);
+      extra.push(db.collection("work_accruals").add({
+        workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:rate,
+        srcAccrualId:ref.id, srcWorkerId:w._id, srcWorkerName:w.name, srcRole:w.role,
+        workName:"Тижнева ставка (02.11–08.11)", baseUSD:Math.round((AMT/rate)*100)/100,
+        amountUAH:Math.round(AMT*sh), amountUSD:Math.round((AMT/rate)*sh*100)/100,
+        date:WK_END, author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+      }));
+    });
+    return extra.length ? Promise.all(extra) : null;
+  }).then(function(){
+    showToast("Тютюшкін → тижнева 9000 грн; тиждень 02–08.11 перераховано (видалено "+olds.length+" денних)");
+    payLoadAll();
+  }).catch(function(e){ showToast("Перерахунок тижня: "+e.message); payLoadAll(); });
+  return true;
+}
+// Нарахувати поточний тиждень працівникові на тижневій ставці
+function payWeekAccrue(wid){
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var amt = Math.round(w.weeklyRateUAH||0);
+  if(!amt){ showToast("Задайте тижневу ставку (✎ на картці)"); return; }
+  var today = new Date().toISOString().slice(0,10);
+  var dt = new Date(today+"T00:00:00");
+  dt.setDate(dt.getDate() - (dt.getDay()+6)%7);              // понеділок поточного тижня
+  var mon = dt.toISOString().slice(0,10);
+  dt.setDate(dt.getDate()+6);
+  var sun = dt.toISOString().slice(0,10);
+  var fmt = function(s){ return s.slice(8,10)+"."+s.slice(5,7); };
+  var wk = fmt(mon)+"–"+fmt(sun);
+  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===wid && a.type==="weekly" && !a.void && a.weekKey===mon; });
+  if(dup){ showToast("Тиждень "+wk+" вже нараховано ("+Math.round(dup.amountUAH||0)+" грн)"); return; }
+  if(!confirm("Нарахувати тижневу ставку "+amt.toLocaleString("uk-UA")+" грн за тиждень "+wk+" — "+w.name+"?")) return;
+  var rate = usdRate||44.1;
+  db.collection("work_accruals").add({
+    workerId:wid, workerName:w.name, role:w.role, type:"weekly", weekKey:mon, rate:rate,
+    amountUAH:amt, amountUSD:Math.round((amt/rate)*100)/100, date:today,
+    workName:"Тижнева ставка ("+wk+")",
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+  }).then(function(ref){
+    if(w.role!=="slu" && w.role!=="kuz") return null;
+    var extra=[];
+    payCoordsFor(today).forEach(function(co){
+      var sh=payCoordShare(w.role);
+      extra.push(db.collection("work_accruals").add({
+        workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:rate,
+        srcAccrualId:ref.id, srcWorkerId:wid, srcWorkerName:w.name, srcRole:w.role,
+        workName:"Тижнева ставка ("+wk+")", baseUSD:Math.round((amt/rate)*100)/100,
+        amountUAH:Math.round(amt*sh), amountUSD:Math.round((amt/rate)*sh*100)/100,
+        date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+      }));
+    });
+    return extra.length ? Promise.all(extra) : null;
+  }).then(function(){ showToast("Нараховано "+amt.toLocaleString("uk-UA")+" грн — "+w.name+" ("+wk+")"); payLoadAll(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Ставка/тиждень — редагує власник
+function payEditWeeklyRate(wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var v = prompt("Тижнева ставка для «"+w.name+"», грн/тиждень:", Math.round(w.weeklyRateUAH||0));
+  if(v===null) return;
+  var uah = parseFloat(String(v).replace(",", "."))||0;
+  db.collection("workers").doc(wid).update({weeklyRateUAH:Math.round(uah)})
+    .then(function(){ showToast("Ставка: "+Math.round(uah).toLocaleString("uk-UA")+" грн/тиждень"); payLoadAll(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
+
 // ── НАРАХУВАННЯ ──
 function payOpenAccrue(preWid){
   if(!PAY_WORKERS.length){ showToast("Спершу додайте працівників"); return; }
   var ws = document.getElementById("pay-ac-worker");
   var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // фіксований порядок
   var rank = function(nm){ for(var i=0;i<order.length;i++){ if((nm||"").indexOf(order[i])===0) return i; } return 99; };
-  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr" && !payIsDaily(w);})
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr" && !payIsDaily(w) && !payIsWeekly(w);})
     .sort(function(a,b){ return rank(a.name)-rank(b.name); })
     .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
   if(preWid){ ws.value = preWid; }   // передвибір з картки
@@ -11760,6 +11976,7 @@ function payBuildReport(wid){
     if(a.type==="coord_labor") lbl="15/20% з праці: "+(a.srcWorkerName||"");
     else if(a.type==="coord_ext") lbl="15% "+(a.src==="mal"?"малярні":"сторонні");
     else if(a.type==="daily") lbl="Ставка за день";
+    else if(a.type==="weekly") lbl=a.workName||"Тижнева ставка";
     else if(a.type==="dailyop") lbl="Доплата: "+(a.workName||"")+(a.carName?" · "+a.carName:"");
     else if(a.type==="lamp_bonus") lbl="Бонус за відправку ламп: "+(a.workName||"");
     else lbl=(a.carName||"")+(a.workName?" · "+a.workName:"")+(a.partPct?" ("+a.partPct+"%)":"");

@@ -1236,6 +1236,21 @@ body.is-adm #pay-set-btn{display:inline-block}
 @media(max-width:1000px){ .home-wrap{padding:14px} #home-grid{min-height:0;grid-auto-rows:minmax(120px,auto)} }
 @media print{ #tab-home{display:none!important} }
 
+/* ── ПЛАН — плитки авто з фото (пропорції bidfax 4:3) ──────────────────────── */
+#plan-tiles{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.plan-tile{border:1px solid var(--bd);border-radius:12px;background:var(--bg2);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease}
+.plan-tile:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(13,27,62,.13);border-color:var(--bda)}
+.plan-ph{position:relative;width:100%;aspect-ratio:4/3;background:var(--bg3);overflow:hidden}
+.plan-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.plan-ph.err img{display:none}
+.plan-ph.err::after{content:"⚠ фото не завантажилось — замініть посилання";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3);padding:10px;text-align:center}
+.plan-ph-btn{position:absolute;right:8px;top:8px;background:rgba(13,27,62,.6);color:#fff;border-radius:6px;padding:4px 9px;font-size:11px;line-height:1.4;cursor:pointer;backdrop-filter:blur(2px)}
+.plan-ph-btn:hover{background:rgba(13,27,62,.85)}
+.plan-noph{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--bg3);border-bottom:1px solid var(--bd);color:var(--tx3);font-size:11px}
+.plan-noph .plan-noph-add{margin-left:auto;color:var(--ac);font-weight:700;cursor:pointer;white-space:nowrap}
+.plan-tbody{padding:12px 14px 13px}
+@media print{ .plan-ph-btn,.plan-noph{display:none!important} }
+
 #app-hero{position:fixed;top:93px;right:0;width:40vw;height:calc(100vh - 93px);display:none;overflow:hidden;isolation:isolate;border-left:1px solid var(--bd);z-index:40}
 body.hero-on #app-hero{display:flex;align-items:center;justify-content:center}
 body.hero-on .hero-pad{margin-right:40vw}
@@ -13669,7 +13684,7 @@ function plansInit(){
     db.collection("workers").get(),
     db.collection("painters").get()
   ]).then(function(res){
-    PLAN_CARS=[]; res[0].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, car:r.car||"", vin:r.vin||""}); });
+    PLAN_CARS=[]; res[0].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""}); });
     PLAN_DOCS={}; res[1].forEach(function(d){ PLAN_DOCS[d.id]=d.data(); });
     PLAN_WK=[]; res[2].forEach(function(d){ var w=d.data(); if(w.active!==false) PLAN_WK.push(w); });
     PLAN_PNT=[]; res[3].forEach(function(d){ var p=d.data(); if(p.active!==false) PLAN_PNT.push(p.name); });
@@ -13695,10 +13710,18 @@ function planRender(){
   if(!PLAN_SEL){
     det.style.display="none"; tiles.style.display="";
     if(top) top.innerHTML="";
+    var canE = planCanEdit();
     tiles.innerHTML = PLAN_CARS.map(function(c){
       var p=PLAN_DOCS[c._id], pr=p?planProgress(p):null;
       var pct=pr&&pr.tot?Math.round(pr.done/pr.tot*100):0;
-      return '<div class="pay-card" style="cursor:pointer" onclick="planOpen(\''+c._id+'\')">'
+      // Фото авто (bidfax 4:3): є — зверху плитки; немає — тонкий рядок із «＋ Фото»
+      var ph = c.photo
+        ? '<div class="plan-ph"><img src="'+escH(c.photo)+'" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.parentNode.classList.add(\'err\')"/>'
+          +(canE?'<span class="plan-ph-btn" onclick="event.stopPropagation();planPhoto(\''+c._id+'\')" title="Замінити/прибрати фото">📷</span>':'')
+          +'</div>'
+        : (canE?'<div class="plan-noph" onclick="event.stopPropagation();planPhoto(\''+c._id+'\')">🚗 без фото<span class="plan-noph-add">＋ Фото за посиланням</span></div>':'');
+      return '<div class="plan-tile" onclick="planOpen(\''+c._id+'\')">'+ph
+        +'<div class="plan-tbody">'
         +'<div class="pay-nm">'+escH(c.car||"—")+'</div>'
         +'<div class="pay-rl" style="font-family:var(--mono)">'+escH(c.vin||"")+'</div>'
         +(pr?('<div class="pay-bal" style="font-size:15px">'+pr.done+' / '+pr.tot+' етапів'
@@ -13706,7 +13729,7 @@ function planRender(){
           +'<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:4px 0"><div style="height:100%;width:'+pct+'%;background:'+(pct>=100?"#2e7d32":"var(--blue-mid)")+'"></div></div>'
           +(pr.act?'<div class="pay-sub">🔵 зараз: <b>'+escH(pr.act.name)+'</b>'+(pr.act.executor?' · '+escH(pr.act.executor):'')+'</div>':'<div class="pay-sub" style="color:var(--tx3)">немає активного етапу</div>'))
           :'<div class="pay-sub" style="color:var(--tx3)">план ще не створено — відкрийте</div>')
-        +'</div>';
+        +'</div></div>';
     }).join("") || '<div class="pay-sub">Немає авто у статусі «В роботі»</div>';
     return;
   }
@@ -13715,7 +13738,9 @@ function planRender(){
   var p=planOf(c), edit=planCanEdit();
   tiles.style.display="none"; det.style.display="";
   if(top) top.innerHTML='<button class="btn btn-o" onclick="planBack()">← Усі авто</button>';
-  var h='<div class="pay-led"><div class="pay-nm">'+escH(c.car||"—")+' <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">'+escH(c.vin||"")+'</span></div>';
+  var h='<div class="pay-led">'
+    +(c.photo?'<img src="'+escH(c.photo)+'" referrerpolicy="no-referrer" alt="" style="float:right;width:150px;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid var(--bd);margin:0 0 8px 12px" onerror="this.style.display=\'none\'"/>':'')
+    +'<div class="pay-nm">'+escH(c.car||"—")+' <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">'+escH(c.vin||"")+'</span></div>';
   var pr=planProgress(p);
   h+='<div class="pay-sub" style="margin-bottom:8px">Виконано '+pr.done+' з '+pr.tot+(edit?'':' · <span style="color:var(--tx3)">режим перегляду</span>')+'</div>';
   h+='<table style="width:100%;border-collapse:collapse">';
@@ -13760,6 +13785,19 @@ function planExecOpts(s){
 }
 function planOpen(id){ PLAN_SEL=id; planRender(); }
 function planBack(){ PLAN_SEL=null; planRender(); }
+// Фото авто на плитці — відкрите посилання на зображення (bidfax.info, bid.cars,
+// Google…). Зберігається полем carPhoto у документі калькуляції Робіт.
+function planPhoto(cid){
+  if(!planCanEdit()){ showToast("Фото міняють власник і координатор"); return; }
+  var c=PLAN_CARS.find(function(x){ return x._id===cid; }); if(!c) return;
+  var v=prompt("Посилання на фото авто (ПКМ по фото на bidfax/bid.cars → «Копіювати адресу зображення»).\nПорожнє поле — прибрати фото.", c.photo||"");
+  if(v===null) return;
+  v=v.trim();
+  if(v && !/^https?:\/\//i.test(v)){ showToast("Посилання має починатися з http:// або https://"); return; }
+  db.collection("calculations").doc(cid).update({carPhoto:v}).then(function(){
+    c.photo=v; planRender(); showToast(v?"📷 Фото збережено":"Фото прибрано");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
 function planSave(){
   var c=PLAN_CARS.find(function(x){ return x._id===PLAN_SEL; }); if(!c) return;
   var p=PLAN_DOCS[c._id]; if(!p) return;

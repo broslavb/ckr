@@ -13799,8 +13799,8 @@ var KZ3D_Z = {
   m_pdr:{s:["ПДР роботи (витяжка без зварних робіт), коефіцієнт"],b:[""]},
   m_gys:{s:["Клепальні операції, з матеріалом GYS, коефіцієнт"],b:[""]}
 };
-// Чек-лист: позиції без окремого тіла на моделі (пороги — в боковині) + дрібні
-var KZ3D_CHK = ["porig_l","porig_p","m_petli_kap_l","m_petli_kap_p","m_petli_bag_l","m_petli_bag_p","m_syd_l","m_syd_p","m_geo_f","m_geo_z","m_spotter","m_pdr","m_gys"];
+// Чек-лист: позиції без окремого тіла на моделі + дрібні/коефіцієнти
+var KZ3D_CHK = ["m_petli_kap_l","m_petli_kap_p","m_petli_bag_l","m_petli_bag_p","m_syd_l","m_syd_p","m_geo_f","m_geo_z","m_spotter","m_pdr","m_gys"];
 var KZ3D_CHK_LBL = {porig_l:"Поріг — лівий",porig_p:"Поріг — правий",m_petli_kap_l:"Петлі капота (лів.)",m_petli_kap_p:"Петлі капота (прав.)",m_petli_bag_l:"Петлі багажника (лів.)",m_petli_bag_p:"Петлі багажника (прав.)",m_syd_l:"Каркас сидіння (лів.)",m_syd_p:"Каркас сидіння (прав.)",m_geo_f:"Геометрія передньої частини",m_geo_z:"Геометрія задньої частини",m_spotter:"Споттер (зовнішня частина)",m_pdr:"ПДР (коефіцієнт)",m_gys:"Клепання GYS (коефіцієнт)"};
 // Правила «тіло моделі → зона» (перше співпадіння виграє). "LR" — сторона з імені.
 var KZ3D_RULES = [
@@ -13912,23 +13912,20 @@ function kz3dInit(){
     var src = [];
     g.scene.traverse(function(o){ if(o.isMesh) src.push(o); });
     src.forEach(function(m){
-      var zone = kz3dZoneOf(m.name||"");
-      var geo = m.geometry; geo.computeVertexNormals();
-      var mat = new THREE.MeshLambertMaterial({color: KZ3D_COL.base, side: THREE.DoubleSide});
-      if(zone==="decor"){ mat.color.setHex(KZ3D_COL.decor); }
-      if(zone==="bumper"){ mat.color.setHex(KZ3D_COL.bumper); mat.transparent=true; mat.opacity=0.35; }
-      if(zone==="mech"){ mat.color.setHex(KZ3D_COL.mech); }
-      var mesh = new THREE.Mesh(geo, mat);
-      mesh.name = m.name; mesh.userData.zone = zone;
-      geo.computeBoundingBox();
-      var bb = geo.boundingBox, c = new THREE.Vector3(); bb.getCenter(c);
-      mesh.userData.c = c;
-      if(zone==="mech") mesh.visible = false;
-      grp.add(mesh);
-      KZ3D.meshes.push(mesh);
-      if(zone!=="decor" && zone!=="mech" && zone!=="bumper"){
-        (KZ3D.groups[zone] = KZ3D.groups[zone] || []).push(mesh);
+      var geo = m.geometry;
+      // Боковина одним тілом → ріжемо по трикутниках: поріг / батон (стійка пер.) /
+      // B-стійка зовнішня (стійка центр.) / крило заднє (чверть)
+      if(/^CH-CBN-OUTER-[LR]$/.test(m.name||"")){
+        var sd = (m.name.slice(-1)==="L") ? "l" : "p";
+        kz3dSplitOuter(geo, sd).forEach(function(part){
+          kz3dAddMesh(grp, part.geo, m.name+"·"+part.zone, part.zone, part.c);
+        });
+        return;
       }
+      var zone = kz3dZoneOf(m.name||"");
+      geo.computeBoundingBox();
+      var c = new THREE.Vector3(); geo.boundingBox.getCenter(c);
+      kz3dAddMesh(grp, geo, m.name, zone, c);
     });
     KZ3D.grp = grp; KZ3D.scene.add(grp);
     // центр моделі (у координатах моделі, мм) — для камери і рознесення
@@ -13951,6 +13948,57 @@ function kz3dInit(){
   }, undefined, function(){ document.getElementById("kz3d-load").textContent = "Помилка завантаження моделі (assets/neon.glb)"; });
   window.addEventListener("resize", kz3dResize);
 }
+// Фабрика меша з матеріалом за типом зони
+function kz3dAddMesh(grp, geo, name, zone, c){
+  geo.computeVertexNormals();
+  var mat = new THREE.MeshLambertMaterial({color: KZ3D_COL.base, side: THREE.DoubleSide});
+  if(zone==="decor"){ mat.color.setHex(KZ3D_COL.decor); }
+  if(zone==="bumper"){ mat.color.setHex(KZ3D_COL.bumper); mat.transparent=true; mat.opacity=0.35; }
+  if(zone==="mech"){ mat.color.setHex(KZ3D_COL.mech); }
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.name = name; mesh.userData.zone = zone; mesh.userData.c = c;
+  if(zone==="mech") mesh.visible = false;
+  grp.add(mesh);
+  KZ3D.meshes.push(mesh);
+  if(zone!=="decor" && zone!=="mech" && zone!=="bumper"){
+    (KZ3D.groups[zone] = KZ3D.groups[zone] || []).push(mesh);
+  }
+}
+// Розбиття CH-CBN-OUTER-L/R на зони по центроїдах трикутників.
+// Координати моделі: X вздовж (ніс = більший X), Z вгору. Межі підібрані по
+// bbox дверей (пер. 2139–3258, зад. 1115–2171, низ 249) і B-стійки (2006–2280).
+function kz3dSplitOuter(geo, sd){
+  var pos = geo.getAttribute("position");
+  var idx = geo.getIndex().array;
+  var buckets = {}, cents = {}, counts = {};
+  function put(k, a, b, c, cx, cy, cz){
+    (buckets[k] = buckets[k] || []).push(a, b, c);
+    var ce = (cents[k] = cents[k] || [0,0,0]);
+    ce[0]+=cx; ce[1]+=cy; ce[2]+=cz; counts[k]=(counts[k]||0)+1;
+  }
+  for(var i=0; i<idx.length; i+=3){
+    var a=idx[i], b=idx[i+1], c=idx[i+2];
+    var cx=(pos.getX(a)+pos.getX(b)+pos.getX(c))/3;
+    var cy=(pos.getY(a)+pos.getY(b)+pos.getY(c))/3;
+    var cz=(pos.getZ(a)+pos.getZ(b)+pos.getZ(c))/3;
+    var k;
+    if(cz<420 && cx>1060) k="porig";                                  // нижня смуга між арками
+    else if(cx>2090 && cx<2300 && cz<1120) k="stiyka_c";              // вертикальна смужка між дверима
+    else if((cz>=1050 && cx>=2290) || (cx>=3240 && cz>=620)) k="stiyka_f"; // батон передній + A-стійка зовні
+    else k="krylo_z";                                                 // чверть задня з аркою і задньою дугою
+    put(k, a, b, c, cx, cy, cz);
+  }
+  var out = [];
+  Object.keys(buckets).forEach(function(k){
+    var g = new THREE.BufferGeometry();
+    g.setAttribute("position", pos);
+    g.setIndex(buckets[k]);
+    var n = counts[k];
+    out.push({zone: k+"_"+sd, geo: g,
+      c: new THREE.Vector3(cents[k][0]/n, cents[k][1]/n, cents[k][2]/n)});
+  });
+  return out;
+}
 function kz3dResize(){
   if(!KZ3D.renderer) return;
   var wrap = document.getElementById("kz3d-wrap");
@@ -13965,7 +14013,7 @@ function kz3dLoop(){
   if(KZ3D.renderer && KZ3D.scene) KZ3D.renderer.render(KZ3D.scene, KZ3D.cam);
 }
 function kz3dExplode(v){
-  var t = (v||0)/100 * 650;   // мм максимального зсуву
+  var t = (v||0)/100 * 1500;   // мм максимального зсуву
   KZ3D.meshes.forEach(function(m){
     if(!m.userData.dir) return;
     m.position.set(m.userData.dir.x*t, m.userData.dir.y*t, m.userData.dir.z*t);

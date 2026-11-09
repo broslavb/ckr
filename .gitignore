@@ -9,3 +9,8 @@ CLAUDE.md
 tools/config.txt
 tools/.state.json
 tools/*.log
+
+# Сирі 3D-моделі (великі) — в репо йде лише готовий assets/neon.glb
+3D models/
+IMG_*.jpeg
+CRM-blok-lampy-*.md

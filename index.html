@@ -1527,7 +1527,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <!-- МАЛЯРНІ -->
     <div class="rblock" id="rb-mal">
       <div class="rblock-hdr" onclick="toggleRBlock('rb-mal')">
-        <span class="rblock-lbl">МАЛЯРНІ РОБОТИ <button class="ps-openbtn no-print" onclick="event.stopPropagation();psOpenWorks()" title="Обрати малярні елементи на схемі авто — відмічене додасться в калькуляцію">🚗 Схема</button></span>
+        <span class="rblock-lbl">МАЛЯРНІ РОБОТИ <button class="ps-openbtn no-print" onclick="event.stopPropagation();ps3dOpenWorks()" title="Обрати малярні елементи на 3D-моделі авто — відмічене додасться в калькуляцію">🚗 Схема</button></span>
         <div class="rblock-sums"><span class="rblock-usd" id="rb-mal-usd">—</span><span class="rblock-uah" id="rb-mal-uah"></span><span class="sec-chev" style="color:rgba(255,255,255,.4)">▼</span></div>
       </div>
       <div class="rblock-body">
@@ -1855,7 +1855,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
     <!-- Блок РОБОТИ -->
     <div class="so-section-hdr" id="so-works-hdr" onclick="soToggleSection('so-works-body')" style="margin-top:12px">
-      <span>РОБОТИ <button class="ps-openbtn no-print" onclick="event.stopPropagation();psOpenService()" title="Обрати малярні елементи на схемі авто — відмічене додасться в роботи замовлення (ціни з Цін у грн за курсом)">🚗 Схема</button></span>
+      <span>РОБОТИ <button class="ps-openbtn no-print" onclick="event.stopPropagation();ps3dOpenService()" title="Обрати малярні елементи на 3D-моделі авто — відмічене додасться в роботи замовлення (ціни з Цін у грн за курсом)">🚗 Схема</button></span>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="so-section-total" id="so-works-total"></span>
         <span class="pb-chev">▼</span>
@@ -2783,8 +2783,8 @@ body.hero-on .hero-pad{margin-right:40vw}
 <!-- Модалка: 3D-схема кузова (рихтувальні роботи) -->
 <div class="pay-modal" id="kz3d-modal">
   <div class="pay-box" style="max-width:1280px;width:96vw;padding:14px 16px">
-    <div class="pay-box-t" style="margin-bottom:4px">🧊 Схема кузова — рихтувальні роботи <span id="kz3d-car" style="font-weight:normal;color:var(--tx3);font-size:12px;font-family:var(--mono)"></span></div>
-    <div class="pay-sub" style="margin-bottom:8px">Обертати — мишею, масштаб — коліщатком. <b>Клік по деталі</b> — відмітити роботу, повторний клік — наступний варіант, після останнього — зняти. <span style="color:#2e6fd8;font-weight:700">Сині</span> — вже в калькуляції, <span style="color:#e67e22;font-weight:700">помаранчеві</span> — відмічені зараз.</div>
+    <div class="pay-box-t" style="margin-bottom:4px"><span id="kz3d-title">🧊 Схема кузова — рихтувальні роботи</span> <span id="kz3d-car" style="font-weight:normal;color:var(--tx3);font-size:12px;font-family:var(--mono)"></span></div>
+    <div class="pay-sub" style="margin-bottom:8px" id="kz3d-hint">Обертати — мишею, масштаб — коліщатком. <b>Клік по деталі</b> — відмітити роботу, повторний клік — наступний варіант, після останнього — зняти. <span style="color:#2e6fd8;font-weight:700">Сині</span> — вже в калькуляції, <span style="color:#e67e22;font-weight:700">помаранчеві</span> — відмічені зараз.</div>
     <div style="display:flex;gap:12px;align-items:stretch">
       <div id="kz3d-wrap" style="flex:1;min-width:0;position:relative;height:64vh;border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:linear-gradient(#e8eef7,#cfdae9)">
         <div id="kz3d-canvas" style="position:absolute;inset:0"></div>
@@ -2802,6 +2802,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div class="pay-btns" style="margin-top:10px">
       <button class="btn btn-p" id="kz3d-apply" onclick="kz3dApply()">➕ Додати в калькуляцію (0)</button>
+      <button class="btn btn-o" id="kz3d-flat" style="display:none" onclick="kz3dFlat()" title="Відкрити стару плоску схему (4 проєкції)">▦ Плоска схема</button>
       <button class="btn btn-o" onclick="kz3dClose()">Закрити</button>
     </div>
   </div>
@@ -13041,7 +13042,7 @@ function paintRender(){
         + '<div class="pay-sub">загнали '+escH(j.startDate||"")+'</div>'
         + ((j.advances||[]).map(function(a){ return '<div class="pay-sub">💵 '+paintFmt(a.amount)+' грн · '+escH(a.date||"")+(a.note?' · '+escH(a.note):'')+'</div>'; }).join(""))
         + '<div class="pay-cbtns">'
-        + '<button onclick="psOpen(\''+j._id+'\')" title="Схема авто: що фарбуємо / що відмічено">🚗 Схема</button>'
+        + '<button onclick="ps3dOpenPaint(\''+j._id+'\')" title="Схема авто (3D): що фарбуємо / що відмічено">🚗 Схема</button>'
         + '<button onclick="paintOpenAdvance(\''+j._id+'\')">＋ Аванс</button>'
         + '<button style="color:var(--gr);border-color:var(--gr)" onclick="paintOpenClose(\''+j._id+'\')">✓ Забрати й закрити</button>'
         + (isAdmin()?'<button style="color:var(--rd)" onclick="paintDeleteJob(\''+j._id+'\')">×</button>':'')
@@ -13860,19 +13861,54 @@ function kz3dZoneOf(name){
   return "decor";
 }
 
-var KZ3D = {inited:false, libs:false, running:false, sel:{}, inCalc:{}, groups:{}, meshes:[],
-  scene:null, grp:null, cam:null, renderer:null, controls:null, ray:null, hoverZone:null, center:null};
-var KZ3D_COL = {base:0xb7c4d6, decor:0xcfd7e2, bumper:0xdde3ec, mech:0x98a4b2, calc:0x2e6fd8, sel:0xe67e22};
+var KZ3D = {inited:false, libs:false, running:false, mode:"kuz", sel:{}, inCalc:{}, groups:{}, groupsMal:{}, meshes:[],
+  scene:null, grp:null, cam:null, renderer:null, controls:null, ray:null, hoverZone:null, center:null, paintJobId:null};
+var KZ3D_COL = {base:0xb7c4d6, decor:0xcfd7e2, bumper:0xdde3ec, mech:0x98a4b2, calc:0x2e6fd8, sel:0xe67e22, sel2:0xc44d00};
 
 function kz3dOpen(){
+  KZ3D.mode = "kuz";
   document.getElementById("kz3d-car").textContent = (document.getElementById("w-car").value||"");
-  document.getElementById("kz3d-modal").style.display="flex";
   KZ3D.sel = {};
+  kz3dSetModeUI();
+  document.getElementById("kz3d-modal").style.display="flex";
   kz3dLoadLibs(function(){
     if(!KZ3D.inited) kz3dInit();
     else { kz3dSyncCalc(); kz3dPaintAll(); kz3dRenderPanel(); kz3dResize(); }
     KZ3D.running = true; kz3dLoop();
   });
+}
+// Відкриття в малярному режимі (PS_MODE/PS_CALC/PS_SEL вже підготовлені викликачем)
+function kz3dOpenMal(carName){
+  KZ3D.mode = "mal";
+  document.getElementById("kz3d-car").textContent = carName||"";
+  kz3dSetModeUI();
+  document.getElementById("kz3d-modal").style.display="flex";
+  kz3dLoadLibs(function(){
+    if(!KZ3D.inited) kz3dInit();
+    else { kz3dPaintAll(); kz3dRenderPanel(); kz3dResize(); }
+    KZ3D.running = true; kz3dLoop();
+  });
+}
+function kz3dSetModeUI(){
+  var t = document.getElementById("kz3d-title"), h = document.getElementById("kz3d-hint"), f = document.getElementById("kz3d-flat");
+  if(KZ3D.mode==="mal"){
+    t.textContent = "🎨 Схема авто — малярні роботи";
+    h.innerHTML = (PS_MODE==="paint"
+      ? "Клік по елементу: 1-й — базовий варіант (одна сторона / частково), 2-й — розширений (дві сторони / повністю), 3-й — зняти. <span style=\"color:#2e6fd8;font-weight:700\">Сині</span> — вже в калькуляції Робіт. Позначки збережуться і підтягнуться в Роботи."
+      : "Клік по елементу: 1-й — базовий варіант, 2-й — розширений (дві сторони / повністю / купе), 3-й — зняти. <span style=\"color:#2e6fd8;font-weight:700\">Сині</span> — вже в "+(PS_MODE==="service"?"замовленні":"калькуляції")+". Дзеркала, ручки, накладки, решітки — у чек-лісті праворуч.");
+    f.style.display = "";
+  } else {
+    t.textContent = "🧊 Схема кузова — рихтувальні роботи";
+    h.innerHTML = "Обертати — мишею, масштаб — коліщатком. <b>Клік по деталі</b> — відмітити роботу, повторний клік — наступний варіант, після останнього — зняти. <span style=\"color:#2e6fd8;font-weight:700\">Сині</span> — вже в калькуляції, <span style=\"color:#e67e22;font-weight:700\">помаранчеві</span> — відмічені зараз.";
+    f.style.display = "none";
+  }
+}
+// «▦ Плоска схема» — відкрити стару SVG-схему в тому ж режимі
+function kz3dFlat(){
+  kz3dClose();
+  if(PS_MODE==="works") psOpenWorks();
+  else if(PS_MODE==="service") psOpenService();
+  else if(KZ3D.paintJobId) psOpen(KZ3D.paintJobId);
 }
 function kz3dClose(){ KZ3D.running=false; payClose("kz3d-modal"); }
 function kz3dLoadLibs(cb){
@@ -13918,14 +13954,14 @@ function kz3dInit(){
       if(/^CH-CBN-OUTER-[LR]$/.test(m.name||"")){
         var sd = (m.name.slice(-1)==="L") ? "l" : "p";
         kz3dSplitOuter(geo, sd).forEach(function(part){
-          kz3dAddMesh(grp, part.geo, m.name+"·"+part.zone, part.zone, part.c);
+          kz3dAddMesh(grp, part.geo, m.name+"·"+(part.pz||part.zone), part.zone, part.pz, part.c);
         });
         return;
       }
       var zone = kz3dZoneOf(m.name||"");
       geo.computeBoundingBox();
       var c = new THREE.Vector3(); geo.boundingBox.getCenter(c);
-      kz3dAddMesh(grp, geo, m.name, zone, c);
+      kz3dAddMesh(grp, geo, m.name, zone, kz3dMalZoneOf(m.name||""), c);
     });
     KZ3D.grp = grp; KZ3D.scene.add(grp);
     // центр моделі (у координатах моделі, мм) — для камери і рознесення
@@ -13948,45 +13984,58 @@ function kz3dInit(){
   }, undefined, function(){ document.getElementById("kz3d-load").textContent = "Помилка завантаження моделі (assets/neon.glb)"; });
   window.addEventListener("resize", kz3dResize);
 }
-// Фабрика меша з матеріалом за типом зони
-function kz3dAddMesh(grp, geo, name, zone, c){
+// Фабрика меша: zone — кузовна зона (KZ3D_Z), pz — малярна зона (PS_Z)
+function kz3dAddMesh(grp, geo, name, zone, pz, c){
   geo.computeVertexNormals();
   var mat = new THREE.MeshLambertMaterial({color: KZ3D_COL.base, side: THREE.DoubleSide});
-  if(zone==="decor"){ mat.color.setHex(KZ3D_COL.decor); }
-  if(zone==="bumper"){ mat.color.setHex(KZ3D_COL.bumper); mat.transparent=true; mat.opacity=0.35; }
-  if(zone==="mech"){ mat.color.setHex(KZ3D_COL.mech); }
   var mesh = new THREE.Mesh(geo, mat);
-  mesh.name = name; mesh.userData.zone = zone; mesh.userData.c = c;
+  mesh.name = name; mesh.userData.zone = zone; mesh.userData.pz = pz; mesh.userData.c = c;
   if(zone==="mech") mesh.visible = false;
   grp.add(mesh);
   KZ3D.meshes.push(mesh);
-  if(zone!=="decor" && zone!=="mech" && zone!=="bumper"){
+  if(zone!=="decor" && zone!=="mech" && zone!=="bumper" && KZ3D_Z[zone]){
     (KZ3D.groups[zone] = KZ3D.groups[zone] || []).push(mesh);
   }
+  if(pz && PS_Z[pz]){
+    (KZ3D.groupsMal[pz] = KZ3D.groupsMal[pz] || []).push(mesh);
+  }
+  kz3dPaintMesh(mesh);
 }
 // Розбиття CH-CBN-OUTER-L/R на зони по центроїдах трикутників.
 // Координати моделі: X вздовж (ніс = більший X), Z вгору. Межі підібрані по
 // bbox дверей (пер. 2139–3258, зад. 1115–2171, низ 249) і B-стійки (2006–2280).
+// Кожен шматок несе ДВІ зони: кузовну (kz) і малярну (ps). Батони і зовнішня
+// A-стійка у рихтовці некликабельні (decor) — то малярні елементи.
 function kz3dSplitOuter(geo, sd){
   var pos = geo.getAttribute("position");
   var idx = geo.getIndex().array;
-  var buckets = {}, cents = {}, counts = {};
-  function put(k, a, b, c, cx, cy, cz){
+  var L = (sd==="l");
+  var buckets = {}, cents = {}, counts = {}, meta = {};
+  function put(kz, ps, a, b, c, cx, cy, cz){
+    var k = kz+"|"+ps;
     (buckets[k] = buckets[k] || []).push(a, b, c);
     var ce = (cents[k] = cents[k] || [0,0,0]);
     ce[0]+=cx; ce[1]+=cy; ce[2]+=cz; counts[k]=(counts[k]||0)+1;
+    meta[k] = [kz, ps];
   }
   for(var i=0; i<idx.length; i+=3){
     var a=idx[i], b=idx[i+1], c=idx[i+2];
     var cx=(pos.getX(a)+pos.getX(b)+pos.getX(c))/3;
     var cy=(pos.getY(a)+pos.getY(b)+pos.getY(c))/3;
     var cz=(pos.getZ(a)+pos.getZ(b)+pos.getZ(c))/3;
-    var k;
-    if(cz<420 && cx>1060) k="porig";                                  // нижня смуга між арками
-    else if(cx>2090 && cx<2300 && cz<1120) k="stiyka_c";              // вертикальна смужка між дверима
-    else if((cz>=1050 && cx>=2290) || (cx>=3240 && cz>=620)) k="stiyka_f"; // батон передній + A-стійка зовні
-    else k="krylo_z";                                                 // чверть задня з аркою і задньою дугою
-    put(k, a, b, c, cx, cy, cz);
+    if(cz<420 && cx>1060){                         // нижня смуга між арками — поріг (перед/зад по межі дверей)
+      put("porig_"+sd, cx>2155 ? (L?"porig_lp":"porig_pp") : (L?"porig_zl":"porig_zp"), a,b,c,cx,cy,cz);
+    } else if(cx>2090 && cx<2300 && cz<1120){      // вертикальна смужка між дверима — стійка центральна
+      put("stiyka_c_"+sd, L?"st_cl":"st_cp", a,b,c,cx,cy,cz);
+    } else if(cz>=1050 && cx>=2290){               // батон передній (дуга над передніми дверима)
+      put("decor", L?"baton_lp":"baton_pp", a,b,c,cx,cy,cz);
+    } else if(cx>=3240 && cz>=620){                // зовнішня частина A-стійки
+      put("decor", L?"st_pl":"st_pp", a,b,c,cx,cy,cz);
+    } else if(cz>=1050 && cx>=1115){               // батон задній (дуга над задніми дверима)
+      put("decor", L?"baton_zl":"baton_zp", a,b,c,cx,cy,cz);
+    } else {                                       // чверть задня з аркою і задньою дугою
+      put("krylo_z_"+sd, L?"krylo_lz":"krylo_pz", a,b,c,cx,cy,cz);
+    }
   }
   var out = [];
   Object.keys(buckets).forEach(function(k){
@@ -13994,11 +14043,35 @@ function kz3dSplitOuter(geo, sd){
     g.setAttribute("position", pos);
     g.setIndex(buckets[k]);
     var n = counts[k];
-    out.push({zone: k+"_"+sd, geo: g,
+    out.push({zone: meta[k][0], pz: meta[k][1], geo: g,
       c: new THREE.Vector3(cents[k][0]/n, cents[k][1]/n, cents[k][2]/n)});
   });
   return out;
 }
+// Малярна зона (PS_Z id) для цілого тіла моделі
+function kz3dMalZoneOf(name){
+  var sd = kz3dSideOf(name);        // "l" | "p" | ""
+  var L = (sd==="l");
+  if(/^OB-HOOD/.test(name)) return "kapot";
+  if(/^OB-TRUNKLID/.test(name)) return "bagazh";
+  if(/^CH-ROOF$/.test(name)) return "dah";
+  if(/^OB-DOOR-FT/.test(name)) return L?"dveri_lp":"dveri_pp";
+  if(/^OB-DOOR-RR/.test(name)) return L?"dveri_lz":"dveri_pz";
+  if(/^OB-FENDER/.test(name)) return L?"krylo_lp":"krylo_pp";
+  if(/^OB-BUMPER-FT/.test(name)) return "bump_f";
+  if(/^OB-BUMPER-RR/.test(name)) return "bump_r";
+  if(/^CH-TRUNK-SUPP|^CH-TRUNK-TAILLIGHT/.test(name)) return "panel_z";
+  if(/^MC-|^ACCELEROMETER|^ENGINE-MT|^material/.test(name)) return "";
+  // передній відсік → «Підкапотний простір», решта каркаса/салону → «Внутрішня частина»
+  if(/^CH-RAD-SUPPORT|^CH-RAILS-FT|^CH-RAILS-REINFT|^CH-RAILS-BRKT-FT|^CH-RAILS-ENG-MNT|^CH-RAILS-SUSP-BRKT|^CH-SHOCKHOUSE-FT|^CH-SHOCKHOUSE-REIN|^CH-HEADLIGHT|^CH-FENDER-FT-[LR]-I1|^CH-FENDER-RAIL-ATT|^CH-BUMPER-FT-I|^CH-BUMPER-CONN|^CH-SUSP?FRM|^CH-SUSFRM|^CH-WHEEL-ARCH-FT|^CH-CBN-FIREWALL|^CH-CBN-SILL/.test(name)) return "pidkapot";
+  if(/^CH-/.test(name)) return "vnutr";
+  return "";
+}
+// Чек-лист малярного режиму: елементи без власних тіл на моделі
+var KZ3D_MAL_CHK = ["guba_f","guba_r","arka_pp","arka_pl","arka_zp","arka_zl",
+  "nakl_pp","nakl_lp","nakl_zp","nakl_zl","ruchka_pp","ruchka_lp","ruchka_zp","ruchka_zl",
+  "dzerk_p","dzerk_l","pplast_p","pplast_l",
+  "m_nak_n","m_nak_v","m_resh_c","m_resh_n","m_resh_b","m_skl_f","m_skl_r","m_pet_l","m_pet_p","m_germ","m_pereh"];
 function kz3dResize(){
   if(!KZ3D.renderer) return;
   var wrap = document.getElementById("kz3d-wrap");
@@ -14033,31 +14106,65 @@ function kz3dSyncCalc(){
     });
   });
 }
-function kz3dPaintZone(z){
-  var ms = KZ3D.groups[z]; if(!ms) return;
-  var col = KZ3D.inCalc[z] ? KZ3D_COL.calc : (KZ3D.sel[z]!==undefined ? KZ3D_COL.sel : KZ3D_COL.base);
-  ms.forEach(function(m){ m.material.color.setHex(col); });
+// Активна зона меша залежно від режиму
+function kz3dMeshZone(m){
+  if(KZ3D.mode==="mal"){ var pz=m.userData.pz; return (pz && PS_Z[pz]) ? pz : ""; }
+  var z=m.userData.zone; return KZ3D_Z[z] ? z : "";
 }
-function kz3dPaintAll(){ Object.keys(KZ3D.groups).forEach(kz3dPaintZone); }
+function kz3dPaintMesh(m){
+  var mat = m.material, kz = m.userData.zone;
+  var isBump = (kz==="bumper");
+  // пластикові бампери: у рихтовці прозорі-некликабельні, у малярці — звичайні зони
+  var ghost = isBump && KZ3D.mode!=="mal";
+  mat.transparent = ghost; mat.opacity = ghost ? 0.35 : 1;
+  var z = kz3dMeshZone(m), col;
+  if(kz==="mech") col = KZ3D_COL.mech;
+  else if(!z) col = ghost ? KZ3D_COL.bumper : KZ3D_COL.decor;
+  else if(KZ3D.mode==="mal"){
+    if(PS_CALC[z]!==undefined) col = KZ3D_COL.calc;
+    else if(PS_SEL[z]!==undefined) col = (PS_SEL[z]>=1 ? KZ3D_COL.sel2 : KZ3D_COL.sel);
+    else col = KZ3D_COL.base;
+  } else {
+    if(KZ3D.inCalc[z]) col = KZ3D_COL.calc;
+    else if(KZ3D.sel[z]!==undefined) col = KZ3D_COL.sel;
+    else col = KZ3D_COL.base;
+  }
+  mat.color.setHex(col);
+}
+function kz3dPaintZone(z){
+  var g = (KZ3D.mode==="mal" ? KZ3D.groupsMal : KZ3D.groups)[z];
+  if(g) g.forEach(kz3dPaintMesh);
+}
+function kz3dPaintAll(){ KZ3D.meshes.forEach(kz3dPaintMesh); }
 function kz3dBindPicking(){
   var el = KZ3D.renderer.domElement, dx=0, dy=0;
   el.addEventListener("pointerdown", function(e){ dx=e.clientX; dy=e.clientY; });
   el.addEventListener("pointerup", function(e){
     if(Math.abs(e.clientX-dx)>6 || Math.abs(e.clientY-dy)>6) return;
     var m = kz3dPick(e); if(!m) return;
-    var z = m.userData.zone;
-    if(z==="decor"||z==="bumper"||z==="mech"){ showToast(z==="bumper"?"Бампер пластиковий — не рихтується (малярна схема)":"Цей елемент не з каталогу кузовних"); return; }
-    if(KZ3D.inCalc[z]){ showToast("Вже в калькуляції: "+(KZ3D_Z[z].s[0])+(KZ3D_Z[z].side?" ("+KZ3D_Z[z].side+")":"")); return; }
-    var Z = KZ3D_Z[z];
-    if(KZ3D.sel[z]===undefined) KZ3D.sel[z]=0;
-    else if(KZ3D.sel[z] < Z.s.length-1) KZ3D.sel[z]++;
-    else delete KZ3D.sel[z];
+    var z = kz3dMeshZone(m);
+    if(!z){
+      if(m.userData.zone==="bumper") showToast("Бампер пластиковий — не рихтується (він у малярній схемі)");
+      else if(m.userData.zone!=="mech") showToast(KZ3D.mode==="mal" ? "Цей елемент не фарбується окремо" : "Цей елемент не з каталогу кузовних");
+      return;
+    }
+    if(KZ3D.mode==="mal"){
+      if(PS_CALC[z]!==undefined){ showToast("Вже в калькуляції: "+PS_Z[z].s[PS_CALC[z]]); return; }
+      if(PS_SEL[z]===undefined) PS_SEL[z]=0;
+      else if(PS_SEL[z]===0 && PS_Z[z].s.length>1) PS_SEL[z]=1;
+      else delete PS_SEL[z];
+    } else {
+      if(KZ3D.inCalc[z]){ showToast("Вже в калькуляції: "+(KZ3D_Z[z].s[0])+(KZ3D_Z[z].side?" ("+KZ3D_Z[z].side+")":"")); return; }
+      var Z = KZ3D_Z[z];
+      if(KZ3D.sel[z]===undefined) KZ3D.sel[z]=0;
+      else if(KZ3D.sel[z] < Z.s.length-1) KZ3D.sel[z]++;
+      else delete KZ3D.sel[z];
+    }
     kz3dPaintZone(z); kz3dRenderPanel(); kz3dTip(z);
   });
   el.addEventListener("mousemove", function(e){
     var m = kz3dPick(e);
-    var z = m ? m.userData.zone : null;
-    if(z==="decor"||z==="mech") z=null;
+    var z = m ? kz3dMeshZone(m) : null;
     if(z===KZ3D.hoverZone) return;
     KZ3D.hoverZone = z;
     kz3dTip(z);
@@ -14073,41 +14180,93 @@ function kz3dPick(e){
 }
 function kz3dTip(z){
   var el = document.getElementById("kz3d-tip");
+  if(KZ3D.mode==="mal"){
+    if(!z || !PS_Z[z]){ el.style.display="none"; return; }
+    var P = PS_Z[z], txt;
+    if(PS_CALC[z]!==undefined) txt = "✓ в калькуляції: "+P.s[PS_CALC[z]];
+    else if(PS_SEL[z]!==undefined) txt = "● "+P.s[PS_SEL[z]];
+    else txt = P.s[0];
+    el.textContent = txt;
+    el.style.display = "block";
+    return;
+  }
   if(!z || !KZ3D_Z[z]){ el.style.display="none"; return; }
   var Z = KZ3D_Z[z], cur = KZ3D.sel[z];
-  var txt;
-  if(z==="bumper"){ el.style.display="none"; return; }
-  if(KZ3D.inCalc[z]) txt = "✓ в калькуляції: "+Z.s[0];
-  else if(cur!==undefined) txt = "● "+Z.s[cur]+(Z.b[cur]?" · "+Z.b[cur]:"");
-  else txt = Z.s[0];
-  el.textContent = txt + (Z.side ? " — "+Z.side : "");
+  var t2;
+  if(KZ3D.inCalc[z]) t2 = "✓ в калькуляції: "+Z.s[0];
+  else if(cur!==undefined) t2 = "● "+Z.s[cur]+(Z.b[cur]?" · "+Z.b[cur]:"");
+  else t2 = Z.s[0];
+  el.textContent = t2 + (Z.side ? " — "+Z.side : "");
   el.style.display = "block";
 }
 function kz3dRenderPanel(){
-  var ids = Object.keys(KZ3D.sel);
   var chips = document.getElementById("kz3d-chips");
+  var chk = document.getElementById("kz3d-chk");
+  var ab = document.getElementById("kz3d-apply");
+  if(KZ3D.mode==="mal"){
+    var ids2 = Object.keys(PS_SEL);
+    chips.innerHTML = ids2.length ? ids2.map(function(z){
+      var P = PS_Z[z], i = PS_SEL[z];
+      return '<div style="display:flex;gap:6px;align-items:flex-start;padding:3px 0;border-bottom:1px dashed var(--bd)">'
+        +'<span style="flex:1">'+escH(P.s[i]||P.s[0])+(P.b&&P.b[i]?' <span style="color:#e67e22">'+P.b[i]+'</span>':'')+'</span>'
+        +'<span style="color:var(--rd);cursor:pointer;font-weight:700" onclick="kz3dUnsel(\''+z+'\')">×</span></div>';
+    }).join("") : '<span style="color:var(--tx3)">клікніть по елементах на моделі або в чек-листі</span>';
+    chk.innerHTML = KZ3D_MAL_CHK.map(function(z){
+      var P = PS_Z[z], on = PS_SEL[z]!==undefined, inC = PS_CALC[z]!==undefined;
+      return '<label style="display:flex;gap:6px;align-items:center;padding:2px 0;cursor:pointer;color:'+(inC?'#2e6fd8':'inherit')+'">'
+        +'<input type="checkbox" style="width:auto;margin:0" '+(on?'checked':'')+(inC?' disabled':'')
+        +' onchange="kz3dChk(\''+z+'\',this.checked)"/>'+escH(P.s[0])+(inC?' ✓':'')+'</label>';
+    }).join("");
+    ab.textContent = PS_MODE==="works" ? "➕ Додати в калькуляцію ("+ids2.length+")"
+      : PS_MODE==="service" ? "➕ Додати в замовлення ("+ids2.length+")"
+      : "💾 Зберегти позначки ("+ids2.length+")";
+    return;
+  }
+  var ids = Object.keys(KZ3D.sel);
   chips.innerHTML = ids.length ? ids.map(function(z){
     var Z = KZ3D_Z[z], i = KZ3D.sel[z];
     return '<div style="display:flex;gap:6px;align-items:flex-start;padding:3px 0;border-bottom:1px dashed var(--bd)">'
       +'<span style="flex:1">'+escH(Z.s[i])+(Z.side?' <b>('+Z.side+')</b>':'')+(Z.b[i]?' <span style="color:#e67e22">'+Z.b[i]+'</span>':'')+'</span>'
       +'<span style="color:var(--rd);cursor:pointer;font-weight:700" onclick="kz3dUnsel(\''+z+'\')">×</span></div>';
   }).join("") : '<span style="color:var(--tx3)">клікніть по деталях на моделі або в чек-листі</span>';
-  var chk = document.getElementById("kz3d-chk");
   chk.innerHTML = KZ3D_CHK.map(function(z){
     var Z = KZ3D_Z[z], on = KZ3D.sel[z]!==undefined, inC = KZ3D.inCalc[z];
     return '<label style="display:flex;gap:6px;align-items:center;padding:2px 0;cursor:pointer;color:'+(inC?'#2e6fd8':'inherit')+'">'
       +'<input type="checkbox" style="width:auto;margin:0" '+(on?'checked':'')+(inC?' disabled':'')
       +' onchange="kz3dChk(\''+z+'\',this.checked)"/>'+escH(KZ3D_CHK_LBL[z]||Z.s[0])+(inC?' ✓':'')+'</label>';
   }).join("");
-  document.getElementById("kz3d-apply").textContent = "➕ Додати в калькуляцію ("+ids.length+")";
+  ab.textContent = "➕ Додати в калькуляцію ("+ids.length+")";
 }
-function kz3dUnsel(z){ delete KZ3D.sel[z]; kz3dPaintZone(z); kz3dRenderPanel(); }
-function kz3dChk(z, on){ if(on) KZ3D.sel[z]=0; else delete KZ3D.sel[z]; kz3dRenderPanel(); }
+function kz3dUnsel(z){
+  if(KZ3D.mode==="mal") delete PS_SEL[z]; else delete KZ3D.sel[z];
+  kz3dPaintZone(z); kz3dRenderPanel();
+}
+function kz3dChk(z, on){
+  if(KZ3D.mode==="mal"){
+    if(PS_CALC[z]!==undefined){ kz3dRenderPanel(); return; }
+    if(on) PS_SEL[z]=0; else delete PS_SEL[z];
+  } else {
+    if(on) KZ3D.sel[z]=0; else delete KZ3D.sel[z];
+  }
+  kz3dPaintZone(z); kz3dRenderPanel();
+}
 function kz3dPrice(name){
   var it = (DB[CAT_KUZ] && DB[CAT_KUZ].items || []).find(function(x){ return x.n===name; });
   return it ? (it.p||0) : null;
 }
 function kz3dApply(){
+  if(KZ3D.mode==="mal"){
+    if(PS_MODE==="paint"){
+      // Збереження позначок маляра — та сама логіка/формат, що у плоскої схеми
+      psSave();
+      kz3dClose();
+      return;
+    }
+    if(!Object.keys(PS_SEL).length){ showToast("Нічого не відмічено — клікніть по елементах на моделі"); return; }
+    if(PS_MODE==="works") psApplyWorks(); else psApplyService();
+    kz3dClose();
+    return;
+  }
   var ids = Object.keys(KZ3D.sel);
   if(!ids.length){ showToast("Нічого не відмічено — клікніть по деталях на моделі"); return; }
   var miss = [];
@@ -14121,6 +14280,46 @@ function kz3dApply(){
   kz3dSyncCalc(); kz3dPaintAll(); kz3dRenderPanel();
   kz3dClose();
   showToast("Додано у КУЗОВНІ РОБОТИ: "+ids.length+" поз."+(miss.length ? " — "+miss.length+" без ціни в Цінах, впишіть вручну" : ""));
+}
+
+// ── Відкривачі малярного 3D-режиму (готують PS_MODE/PS_CALC/PS_SEL, як плоска схема) ──
+function ps3dOpenWorks(){
+  PS_MODE = "works"; PS_CTX = null;
+  PS_CALC = psCalcFromWorks(Object.keys(wsel).map(function(u){ return wsel[u]; }));
+  PS_SEL = {};
+  if(W_SCHEME_MARKS) Object.keys(W_SCHEME_MARKS).forEach(function(id){
+    if(PS_Z[id] && PS_CALC[id]===undefined) PS_SEL[id] = W_SCHEME_MARKS[id];
+  });
+  KZ3D.paintJobId = null;
+  kz3dOpenMal((document.getElementById("w-car").value||"").trim());
+}
+function ps3dOpenService(){
+  PS_MODE = "service"; PS_CTX = null;
+  PS_CALC = psCalcFromWorks(soWorks.filter(function(w){ return w && w.name; })
+    .map(function(w){ return {cat:CAT_MAL, name:w.name}; }));
+  PS_SEL = {};
+  KZ3D.paintJobId = null;
+  kz3dOpenMal((document.getElementById("so-car").value||"").trim());
+}
+function ps3dOpenPaint(jobId){
+  PS_MODE = "paint";
+  var j = PAINT_JOBS.find(function(x){ return x._id===jobId; }); if(!j) return;
+  var vin = (j.vin||"").toUpperCase();
+  if(!vin){ showToast("У авто немає VIN"); return; }
+  db.collection("calculations").where("type","==","works").where("vin","==",vin).get().then(function(snap){
+    var best=null;
+    snap.forEach(function(d){ var r=Object.assign({_id:d.id}, d.data());
+      if(!best || (r.status==="in_work" && best.status!=="in_work")
+        || (r.status===best.status && (r.date||"")>(best.date||""))) best=r;
+    });
+    if(!best){ showToast("Немає калькуляції Робіт для цього авто — спершу створіть її"); return; }
+    PS_CTX = {calcId:best._id, car:best.car||j.car||vin, vin:vin};
+    PS_CALC = psCalcFromWorks(best.works);
+    PS_SEL = (best.paintScheme && best.paintScheme.marks) ? JSON.parse(JSON.stringify(best.paintScheme.marks)) : {};
+    Object.keys(PS_SEL).forEach(function(id){ if(PS_CALC[id]!==undefined) delete PS_SEL[id]; });
+    KZ3D.paintJobId = jobId;
+    kz3dOpenMal(PS_CTX.car||"");
+  }).catch(function(e){ showToast("Схема: "+e.message); });
 }
 
 // ── Роботи: панель «З малярки відмічено» (pull-on-open, як Каса/Парковка) ──

@@ -13778,8 +13778,8 @@ function planRender(){
   if(top) top.innerHTML='<button class="btn btn-o" onclick="planBack()">← Усі авто</button>';
   var phSrc=planPhotoOf(c);
   var h='<div class="pay-led">'
-    +(phSrc?'<img src="'+escH(phSrc)+'" referrerpolicy="no-referrer" alt="" style="float:right;width:150px;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid var(--bd);margin:0 0 8px 12px" onerror="this.style.display=\'none\'"/>':'')
-    +'<div class="pay-nm">'+escH(c.car||"—")+' <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">'+escH(c.vin||"")+'</span></div>';
+    +'<div class="pay-nm">'+escH(c.car||"—")+' <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">'+escH(c.vin||"")+'</span></div>'
+    +(phSrc?'<img src="'+escH(phSrc)+'" referrerpolicy="no-referrer" alt="" style="display:block;width:100%;max-width:460px;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid var(--bd);margin:8px 0 10px" onerror="this.style.display=\'none\'"/>':'');
   var pr=planProgress(p);
   h+='<div class="pay-sub" style="margin-bottom:8px">Виконано '+pr.done+' з '+pr.tot+(edit?'':' · <span style="color:var(--tx3)">режим перегляду</span>')+'</div>';
   h+='<table style="width:100%;border-collapse:collapse">';

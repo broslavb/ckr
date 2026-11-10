@@ -303,12 +303,13 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .tri-row{display:grid;gap:0 14px;align-items:start}
 .tri-hrow{margin-bottom:10px}
 .tri-vinrow{border-bottom:1px dashed var(--bd);margin-bottom:10px}
+.tri-main{min-width:0}
 .tri-cell{min-width:0}
 .tri-col-h{font-family:var(--disp);font-size:13px;letter-spacing:1px;color:var(--blue-dark);background:var(--bg2);border:1px solid var(--bd);border-left:4px solid var(--blue-mid);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
 .tri-col-h .cnt{font-family:var(--mono);font-size:11px;color:var(--tx3)}
 .tri-empty{font-family:var(--mono);font-size:11px;color:var(--tx3);padding:10px 4px}
 .tri-cell .hist-ph{max-width:150px;min-width:80px}
-@media(max-width:1250px){ .tri-row{grid-template-columns:1fr!important} .tri-hrow{display:none} .tri-cell .hist-ph{max-width:190px} }
+@media(max-width:1250px){ .tri-row{grid-template-columns:1fr!important} .tri-main{grid-column:auto!important} .tri-hrow{display:none} .tri-cell .hist-ph{max-width:190px} }
 .hist-plan{display:flex;align-items:center;gap:8px;margin-top:6px;min-width:0}
 .hist-plan-bar{flex:0 0 150px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .hist-plan-bar>div{height:100%}
@@ -4691,51 +4692,74 @@ function triColsRender(list, docs, showMoveBtn){
     {lbl:"🧰 ТО / ЗАМОВЛЕННЯ", test:function(t){ return t==="service_order"; },          show:true}
   ].filter(function(c){ return c.show; });
   var nc=cols.length, total=0;
-  function vinOf(d){ var v=(d.data().vin||"").trim().toUpperCase(); return v; }
+  var hasWorks = cols.length===3;   // без прав на Роботи пар не буває
+  function vinOf(d){ return (d.data().vin||"").trim().toUpperCase(); }
   // Доки по колонках
   var colDocs = cols.map(function(c){ return docs.filter(function(d){ return c.test(d.data().type||"works"); }); });
-  // VIN, присутні більш ніж в одній колонці — у порядку появи (docs уже за датою desc)
-  var vinIn={};
-  colDocs.forEach(function(arr,ci){ arr.forEach(function(d){ var v=vinOf(d); if(!v) return; (vinIn[v]=vinIn[v]||{})[ci]=1; }); });
-  var multiVins=[];
-  docs.forEach(function(d){ var v=vinOf(d);
-    if(v && Object.keys(vinIn[v]||{}).length>1 && multiVins.indexOf(v)<0) multiVins.push(v);
-  });
-  function row(cls){ var r=document.createElement("div"); r.className="tri-row "+cls; r.style.gridTemplateColumns="repeat("+nc+",minmax(0,1fr))"; return r; }
   function addCards(cell, arr){
     arr.forEach(function(doc){
       try { var card=buildCard(doc, showMoveBtn); if(card){ cell.appendChild(card); total++; } }
       catch(err){ console.error("buildCard error:", err, doc.id); }
     });
   }
+  function emptyMark(cell){ var e=document.createElement("div"); e.className="tri-empty"; e.textContent="— порожньо —"; cell.appendChild(e); }
   // Заголовки колонок
-  var hr=row("tri-hrow");
+  var hr=document.createElement("div"); hr.className="tri-row tri-hrow";
+  hr.style.gridTemplateColumns="repeat("+nc+",minmax(0,1fr))";
   cols.forEach(function(c,ci){
     var h=document.createElement("div"); h.className="tri-col-h";
     h.innerHTML='<span>'+c.lbl+'</span><span class="cnt">'+colDocs[ci].length+'</span>';
     hr.appendChild(h);
   });
   list.appendChild(hr);
-  // Рядки спільних VIN (навпроти по горизонталі)
-  multiVins.forEach(function(v){
-    var r=row("tri-vinrow");
-    cols.forEach(function(c,ci){
-      var cell=document.createElement("div"); cell.className="tri-cell";
-      addCards(cell, colDocs[ci].filter(function(d){ return vinOf(d)===v; }));
-      r.appendChild(cell);
+  // Контент: зона Роботи+ЗЧ (пари VIN вирівнюються) + НЕЗАЛЕЖНА колонка ТО
+  var body=document.createElement("div"); body.className="tri-row tri-body";
+  body.style.gridTemplateColumns="repeat("+nc+",minmax(0,1fr))";
+  var main=document.createElement("div"); main.className="tri-main";
+  if(hasWorks) main.style.gridColumn="span 2";
+  body.appendChild(main);
+  var tCell=document.createElement("div"); tCell.className="tri-cell";
+  var tDocs=colDocs[nc-1];
+  if(tDocs.length) addCards(tCell, tDocs); else emptyMark(tCell);
+  body.appendChild(tCell);
+  if(hasWorks){
+    var wDocs=colDocs[0], pDocs=colDocs[1];
+    // VIN, що є і в Роботах, і в Запчастинах — угорі, навпроти по горизонталі
+    var inW={}, inP={};
+    wDocs.forEach(function(d){ var v=vinOf(d); if(v) inW[v]=1; });
+    pDocs.forEach(function(d){ var v=vinOf(d); if(v) inP[v]=1; });
+    var multiVins=[];
+    docs.forEach(function(d){ var v=vinOf(d);
+      if(v && inW[v] && inP[v] && multiVins.indexOf(v)<0) multiVins.push(v);
     });
-    list.appendChild(r);
-  });
-  // Решта — звичайні незалежні колонки
-  var r2=row("tri-restrow"), any=false;
-  cols.forEach(function(c,ci){
-    var rest=colDocs[ci].filter(function(d){ var v=vinOf(d); return !(v && multiVins.indexOf(v)>=0); });
+    multiVins.forEach(function(v){
+      var r=document.createElement("div"); r.className="tri-row tri-vinrow";
+      r.style.gridTemplateColumns="repeat(2,minmax(0,1fr))";
+      [wDocs,pDocs].forEach(function(arr){
+        var cell=document.createElement("div"); cell.className="tri-cell";
+        addCards(cell, arr.filter(function(d){ return vinOf(d)===v; }));
+        r.appendChild(cell);
+      });
+      main.appendChild(r);
+    });
+    // Решта Робіт і ЗЧ — незалежні колонки
+    var r2=document.createElement("div"); r2.className="tri-row";
+    r2.style.gridTemplateColumns="repeat(2,minmax(0,1fr))";
+    [wDocs,pDocs].forEach(function(arr){
+      var rest=arr.filter(function(d){ var v=vinOf(d); return !(v && inW[v] && inP[v]); });
+      var cell=document.createElement("div"); cell.className="tri-cell";
+      if(rest.length) addCards(cell, rest);
+      else if(!multiVins.length) emptyMark(cell);
+      r2.appendChild(cell);
+    });
+    main.appendChild(r2);
+  } else {
+    // Лише ЗЧ + ТО: ЗЧ простою колонкою
     var cell=document.createElement("div"); cell.className="tri-cell";
-    if(!rest.length && !multiVins.length){ var e=document.createElement("div"); e.className="tri-empty"; e.textContent="— порожньо —"; cell.appendChild(e); }
-    else { addCards(cell, rest); if(rest.length) any=true; }
-    r2.appendChild(cell);
-  });
-  if(any || !multiVins.length) list.appendChild(r2);
+    if(colDocs[0].length) addCards(cell, colDocs[0]); else emptyMark(cell);
+    main.appendChild(cell);
+  }
+  list.appendChild(body);
   return total;
 }
 

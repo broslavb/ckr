@@ -666,6 +666,9 @@ tr.pr-cancelled td input,tr.pr-cancelled td .pr-avail-txt{color:#c62828!importan
 .pm-srow:last-child{border-bottom:none}
 .pm-slbl{font-family:var(--mono);font-size:11px;color:var(--tx2)}
 .pm-sval{font-family:var(--mono);font-size:12px;color:var(--tx);font-weight:500}
+/* «Залишок оплати» — помітніший (Роботи/ЗЧ/ТО) */
+.pay-due .pm-slbl, .pay-due .gtlbl{font-weight:bold;color:var(--tx)}
+.pay-due .pm-sval, .pay-due .gtval{font-weight:bold;font-size:14.5px}
 .pm-sval.total{color:var(--blue-dark);font-size:15px}
 .pm-srow.main{border-top:2px solid var(--blue-dark);padding-top:8px;margin-top:4px;height:auto}
 
@@ -1621,7 +1624,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       </div>
       <div class="w-pay-print" id="w-pay-print"></div>
       <div class="gtrow" style="margin-top:8px"><span class="gtlbl">Сплачено</span><span class="gtval gr" id="gt-paid">—</span></div>
-      <div class="gtrow"><span class="gtlbl">Залишок</span><span class="gtval bl" id="gt-bal">—</span></div>
+      <div class="gtrow pay-due"><span class="gtlbl">Залишок</span><span class="gtval bl" id="gt-bal">—</span></div>
       <div id="w-adm-profit"></div>
       <div id="w-agree-box" class="no-print" style="display:none"></div>
     </div>
@@ -1764,7 +1767,7 @@ body.hero-on .hero-pad{margin-right:40vw}
             <span class="pm-slbl">Сплачено</span>
             <span class="pm-sval" id="pm-paid-total" style="color:var(--gr)">0 грн</span>
           </div>
-          <div class="pm-srow">
+          <div class="pm-srow pay-due">
             <span class="pm-slbl">Залишок оплати</span>
             <span class="pm-sval" id="pm-balance" style="color:var(--bl)">0 грн</span>
           </div>
@@ -1924,7 +1927,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <span class="pm-slbl">Сплачено</span>
           <span class="pm-sval" id="so-paid-total" style="color:var(--gr)">0 грн</span>
         </div>
-        <div class="pm-srow">
+        <div class="pm-srow pay-due">
           <span class="pm-slbl">Залишок оплати</span>
           <span class="pm-sval" id="so-balance" style="color:var(--bl)">0 грн</span>
         </div>

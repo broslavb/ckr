@@ -44,8 +44,8 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 /* ── HEADER ── */
 #app-screen{display:none}
 .hdr{background:var(--blue-dark);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;font-family:Verdana,sans-serif}
-.logo{font-family:'Lora',Georgia,serif;font-size:22px;letter-spacing:2px;color:#fff;font-weight:700}
-.logo span{color:rgba(255,255,255,.55);font-size:11px;font-family:'Lora',Georgia,serif;font-weight:600;letter-spacing:.5px;margin-left:10px}
+.logo{display:flex;align-items:center;font-family:'Lora',Georgia,serif;font-size:22px;letter-spacing:2px;color:#fff;font-weight:700}
+.logo span{color:rgba(255,255,255,.55);font-size:11px;line-height:1;font-family:'Lora',Georgia,serif;font-weight:600;letter-spacing:.5px;margin-left:10px}
 .hdr-right{display:flex;align-items:center;gap:14px}
 .rate-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.6)}
 .rate-dot{width:6px;height:6px;border-radius:50%;background:var(--rd)}
@@ -2883,6 +2883,10 @@ var USER_PERMS = {
 var DEFAULT_PERMS = {parts:true, cash:true, parking:true, plan:true}; // невідомий залогінений — мінімум прав
 // План редагують лише власник і координатор (акаунт майстра); решта — читання
 function planCanEdit(){ return isAdmin() || (currentUser && currentUser.email==="icars.in.ua@gmail.com"); }
+// ФПЗ (фактична закупка) — власник + менеджер ЗЧ; прибуток/маржа лишаються лише власнику
+function canFpz(){ return isAdmin() || (currentUser && currentUser.email==="icars.in.ua2@gmail.com"); }
+// Фактичні витрати в Роботах (малярка/сторонні) — власник + координатор; маржа/прибуток — лише власник
+function canFact(){ return isAdmin() || (currentUser && currentUser.email==="icars.in.ua@gmail.com"); }
 function userPerms(){
   if(!currentUser) return {};
   if(ADMINS.indexOf(currentUser.email) >= 0) return {admin:true, works:true, parts:true, pay:true, stats:true, prices:true, cash:true, parking:true, paint:true, lamps:true, plan:true};
@@ -3826,7 +3830,7 @@ function setItemComment(uid,val){ if(wsel[uid]){ var v=(val||"").trim(); if(v) w
 function renderRList(elId,items,cur,disc,malBud,isSto){
   var el=document.getElementById(elId);
   if(!items||!items.length){el.innerHTML='<div class="empty"><div class="empty-tx">Не обрано</div></div>';return;}
-  var showCoord = isSto && isAdmin();
+  var showCoord = isSto && canFact();
   var totProfit=0, anikinBonus=0;
   var html=items.map(function(it){
     var itemCoeff=it.coeff||1;
@@ -3853,17 +3857,18 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       var share=stoCoordShare(it.name);   // чи можливе нарахування координатору для цієї операції
       var isAnik = share && it.coord==="anikin";
       if(!it.hidden && actual>0){ totProfit+=prof; if(isAnik) anikinBonus+=prof*PAY_COORD_SHARE_EXT; }
-      // Вибір координатора — лише де нарахування можливе; для винятків селект не показуємо
-      var sel = share ? ('<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
+      // Вибір координатора — лише де нарахування можливе; для винятків селект не показуємо.
+      // Координатору (не адмін) — лише поле «факт»: без селекта, ціни клієнту і маржі.
+      var sel = (share && isAdmin()) ? ('<select class="rc-sel" onchange="setItemCoord(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()">'
         +'<option value=""'+(!it.coord?" selected":"")+'>— координатор —</option>'
         +'<option value="broslav"'+(it.coord==="broslav"?" selected":"")+'>Брослав</option>'
         +'<option value="anikin"'+(it.coord==="anikin"?" selected":"")+'>Координатор</option></select>') : '';
-      var priceInp='<span class="rc-lbl">клієнту грн</span><input class="rc-act" type="number" min="0" step="50" title="ціна клієнту, грн ($ перерахується сам)" value="'+pUAH+'" onchange="setItemPriceUAH(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
+      var priceInp=isAdmin()?'<span class="rc-lbl">клієнту грн</span><input class="rc-act" type="number" min="0" step="50" title="ціна клієнту, грн ($ перерахується сам)" value="'+pUAH+'" onchange="setItemPriceUAH(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>':'';
       var act='<span class="rc-lbl">факт грн</span><input class="rc-act" type="number" min="0" step="100" placeholder="факт" value="'+(actual||"")+'" onchange="setItemActual(\''+it.uid+'\',this.value)" onclick="event.stopPropagation()"/>';
-      var confBtn = it.cashPending
+      var confBtn = !isAdmin() ? '' : (it.cashPending
         ? '<button class="rc-chk" onclick="wCashConfirm(\''+it.uid+'\')" title="Підтвердити витрату з каси">Перевірено</button>'
-        : (it.cashOpId ? '<span class="rc-ok">✓ з каси</span>' : '');
-      var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(isAnik?" · Координатору "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
+        : (it.cashOpId ? '<span class="rc-ok">✓ з каси</span>' : ''));
+      var profTxt = (actual>0 && isAdmin()) ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">маржа '+prof.toLocaleString("uk-UA")+' грн'+(isAnik?" · Координатору "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
       coordLine='<div class="ritem-coord">'+sel+priceInp+act+confBtn+profTxt+'</div>';
     }
     var eye='<span class="ritem-eye" title="'+(it.hidden?'Показати (враховувати й друкувати)':'Приховати (не рахувати, не друкувати)')+'" onclick="toggleWorkHidden(\''+it.uid+'\')">'+(it.hidden?'🙈':'👁')+'</span>';
@@ -3888,7 +3893,7 @@ function renderRList(elId,items,cur,disc,malBud,isSto){
       +'<span class="ritem-rm" onclick="delW(\''+it.uid+'\')">×</span>'
       +'</div></div>';
   }).join("");
-  if(showCoord){
+  if(showCoord && isAdmin()){
     html+='<div class="ritem-coord-sum">Прибуток сторонніх: <b>'+Math.round(totProfit).toLocaleString("uk-UA")+' грн</b>'
       +' · Координатору '+Math.round(PAY_COORD_SHARE_EXT*100)+'%: <b style="color:var(--gr)">'+Math.round(anikinBonus).toLocaleString("uk-UA")+' грн</b></div>';
   }
@@ -3937,15 +3942,15 @@ function setMalCoord(v){ wMalCoord = v; wRecalc(); }
 function setMalActual(v){ var n=parseFloat(v)||0; wMalActual = n>0?n:0; wRecalc(); }
 function renderMalCoord(malUAH){
   var el = document.getElementById("mal-coord"); if(!el) return;
-  if(!isAdmin() || !malUAH){ el.innerHTML=""; return; }
+  if(!canFact() || !malUAH){ el.innerHTML=""; return; }
   var actual = wMalActual||0;
   var prof = malUAH - actual;
-  var sel='<select class="rc-sel" onchange="setMalCoord(this.value)">'
+  var sel=isAdmin()?('<select class="rc-sel" onchange="setMalCoord(this.value)">'
     +'<option value=""'+(!wMalCoord?" selected":"")+'>— координатор —</option>'
     +'<option value="broslav"'+(wMalCoord==="broslav"?" selected":"")+'>Брослав</option>'
-    +'<option value="anikin"'+(wMalCoord==="anikin"?" selected":"")+'>Координатор</option></select>';
+    +'<option value="anikin"'+(wMalCoord==="anikin"?" selected":"")+'>Координатор</option></select>'):'';
   var act='<input class="rc-act" type="number" min="0" step="100" placeholder="факт на блок, грн" value="'+(actual||"")+'" onchange="setMalActual(this.value)"/>';
-  var profTxt = actual>0 ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">прибуток '+Math.round(prof).toLocaleString("uk-UA")+' грн'+(wMalCoord==="anikin"?" · Координатору "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
+  var profTxt = (actual>0 && isAdmin()) ? '<span class="rc-prof" style="color:'+(prof>=0?"var(--gr)":"var(--rd)")+'">прибуток '+Math.round(prof).toLocaleString("uk-UA")+' грн'+(wMalCoord==="anikin"?" · Координатору "+Math.round(prof*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):"")+'</span>' : '';
   el.innerHTML = '<div class="ritem-coord" style="padding:6px 0 2px">'+sel+act+profTxt+'</div>';
 }
 
@@ -7122,8 +7127,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   (function(bid,iid,isV){ delBtn.onclick=function(){ pmDelItem(bid,iid,isV); }; })(blockId,item.id,isVariant);
   td12.appendChild(delBtn); tr.appendChild(td12);
 
-  // Col 13: ФПЗ (фактично понесені затрати) + Profit — admin only
-  if(isAdmin()){
+  // Col 13: ФПЗ (фактично понесені затрати) — власник + менеджер ЗЧ
+  if(canFpz()){
     var tdF = mkTd("width:6%;vertical-align:middle");
     tdF.className = "pt-fpz";
     if(!isClientItem && !isHidden){
@@ -7136,6 +7141,8 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
       tdF.appendChild(fpzInp);
     }
     tr.appendChild(tdF);
+  }
+  if(isAdmin()){
     var disc = pmDiscCode();
     var profit = pmProfit(item, disc);
     var td13 = mkTd("width:8%;vertical-align:middle;text-align:right;white-space:nowrap;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold");
@@ -7756,7 +7763,7 @@ function pmRender(){
       th.textContent = h[1];
       hrow.appendChild(th);
     });
-    if(isAdmin()){
+    if(canFpz()){
       var thFpz = document.createElement("th");
       thFpz.className = "pt-fpz";
       thFpz.style.width = "6%";
@@ -7764,6 +7771,8 @@ function pmRender(){
       thFpz.textContent = "ФПЗ,грн";
       thFpz.title = "Фактично понесені затрати (товар + доставка). Порожньо = закупка за розрахунком";
       hrow.appendChild(thFpz);
+    }
+    if(isAdmin()){
       var thProfit = document.createElement("th");
       thProfit.className = "pt-profit";
       thProfit.style.width = "8%";
@@ -8824,7 +8833,7 @@ function soRenderParts(){
   ].forEach(function(h){
     var th=document.createElement("th"); th.style.width=h[0]; th.textContent=h[1]; hrow.appendChild(th);
   });
-  if(isAdmin()){
+  if(canFpz()){
     var thF=document.createElement("th"); thF.className="pt-fpz"; thF.style.width="6%"; thF.style.color="var(--bl)";
     thF.textContent="ФПЗ,грн"; thF.title="Фактично понесені затрати (товар + доставка). Порожньо = закупка за розрахунком";
     hrow.appendChild(thF);
@@ -9067,8 +9076,8 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   (function(iid,isV){ delBtn.onclick=function(){ soDelPart(iid,isV); }; })(item.id,isVariant);
   td12.appendChild(delBtn); tr.appendChild(td12);
 
-  // ФПЗ (фактично понесені затрати) — лише адмін, не друкується
-  if(isAdmin()){
+  // ФПЗ (фактично понесені затрати) — власник + менеджер ЗЧ, не друкується
+  if(canFpz()){
     var tdF=mkTd("width:6%;vertical-align:middle");
     tdF.className="pt-fpz";
     if(!isClient && !isHidden){

@@ -326,11 +326,12 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .hist-vin{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:1px}
 .hist-tot{font-family:var(--mono);font-size:14px;color:var(--blue-dark);font-weight:500}
 /* Праві дії картки — фіксовані колонки, щоб суми/статуси вирівнювались по вертикалі */
-.card-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
-.card-actions .ca-status{width:118px;display:flex;justify-content:flex-end;flex-shrink:0}
-.card-actions .ca-del{width:20px;display:flex;justify-content:center;flex-shrink:0}
-.card-actions .ca-sum{width:150px;flex-shrink:0;text-align:right}
+/* Компактно: сума зверху, під нею кнопка «Завершено» + корзина — назві авто лишається ширина */
+.card-actions{display:grid;grid-template-columns:auto auto;gap:6px 10px;align-items:center;justify-items:end;flex-shrink:0}
+.card-actions .ca-sum{grid-row:1;grid-column:1/-1;text-align:right}
 .card-actions .ca-sum > div{text-align:right}
+.card-actions .ca-status{grid-row:2;grid-column:1;display:flex;justify-content:flex-end}
+.card-actions .ca-del{grid-row:2;grid-column:2;display:flex;justify-content:center;min-width:20px}
 .hist-meta{font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:3px}
 .hist-tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
 .hist-tag{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:2px;background:var(--bg3);color:var(--tx2)}

@@ -298,7 +298,11 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .hist-row{display:flex;gap:12px;align-items:stretch}
 .hist-body{flex:1;min-width:0;display:flex;flex-direction:column}
 .hist-ph{flex:none;align-self:stretch;width:auto;height:auto;aspect-ratio:4/3;min-width:100px;max-width:190px;object-fit:cover;border-radius:7px;border:1px solid var(--bd);background:var(--bg3)}
-@media print{ .hist-ph{display:none!important} }
+.hist-plan{display:flex;align-items:center;gap:8px;margin-top:6px;min-width:0}
+.hist-plan-bar{flex:0 0 150px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.hist-plan-bar>div{height:100%}
+.hist-plan-txt{font-family:var(--mono);font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media print{ .hist-ph,.hist-plan{display:none!important} }
 /* Фото авто в шапці форм калькуляцій (Роботи/ЗЧ/ТО) — висота = висота шапки */
 .ci-wrap{display:flex;gap:10px;align-items:stretch}
 .ci-wrap>.car-info,.ci-wrap>.pm-header,.ci-wrap>.so-header{flex:1;min-width:0}
@@ -4527,13 +4531,20 @@ var _cardDocs = {};
 var CAR_PH_DEF="data:image/jpeg;base64,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";
 var CAR_PHOTOS=null;        // calcId(works) -> plans.photo
 var CAR_VIN_PHOTOS={};      // VIN -> фото (накопичується при рендерах списків)
+var CAR_PLANS=null;   // calcId → {done,tot,act} — прогрес плану для списків авто
 function carPhotosLoad(){
   if(CAR_PHOTOS) return Promise.resolve(CAR_PHOTOS);
   return db.collection("plans").limit(400).get().then(function(s){
-    CAR_PHOTOS={};
-    s.forEach(function(d){ var p=d.data(); if(p.photo) CAR_PHOTOS[d.id]=p.photo; });
+    CAR_PHOTOS={}; CAR_PLANS={};
+    s.forEach(function(d){ var p=d.data();
+      if(p.photo) CAR_PHOTOS[d.id]=p.photo;
+      if(p.stages && p.stages.length){
+        var pr=planProgress(p);
+        if(pr.tot) CAR_PLANS[d.id]={done:pr.done, tot:pr.tot, act:pr.act?pr.act.name:""};
+      }
+    });
     return CAR_PHOTOS;
-  }).catch(function(){ CAR_PHOTOS={}; return CAR_PHOTOS; });
+  }).catch(function(){ CAR_PHOTOS={}; CAR_PLANS={}; return CAR_PHOTOS; });
 }
 function carPhotoFor(r, id){
   var p=(CAR_PHOTOS && CAR_PHOTOS[id]) || r.carPhoto || "";
@@ -4640,6 +4651,15 @@ function buildCard(doc, showMoveBtn) {
     + '</div>'
     + '</div></div>'
     + '<div class="hist-tags">'+tagsHtml+'</div>'
+    + (function(){
+        // Прогрес-бар плану робіт (вкладка План) — для авто «В роботі», в яких план уже ведеться
+        var pp = CAR_PLANS && CAR_PLANS[id];
+        if(!pp || !pp.tot || r.status!=="in_work") return '';
+        var pct = Math.round(pp.done/pp.tot*100);
+        return '<div class="hist-plan" title="План робіт: виконано '+pp.done+' з '+pp.tot+(pp.act?' · зараз: '+escH(pp.act):'')+'">'
+          + '<div class="hist-plan-bar"><div style="width:'+pct+'%;background:'+(pct>=100?"#2e7d32":"var(--blue-mid)")+'"></div></div>'
+          + '<span class="hist-plan-txt">'+pp.done+'/'+pp.tot+(pp.act?' · 🔵 '+escH(pp.act):'')+'</span></div>';
+      })()
     + '</div></div>';
 
   if (showMoveBtn) card.querySelector(".ca-status").appendChild(moveBtn);
@@ -4695,6 +4715,8 @@ function doneConfirm(){
       else wSyncCoordExt(id, Object.assign({}, r, {status:"draft"}));  // прибрати старі, якщо були
       // Менеджер ЗЧ (п.3/п.5): при завершенні питаємо про (до)нарахування різниці
       if(!shelved && isAdmin() && (r.type==="parts_v2" || r.type==="service_order")) payMgrAccrueFor(id, r, {silent:true});
+      // Авто з Робіт пішло в архів → завершені записи парковки по VIN теж в архів
+      if(r.type==="works" && r.vin) parkArchiveByVin(r.vin);
       payClose("done-modal");
       showToast(shelved ? ("В архів як чернетку ("+dd+") — поза статистикою") : ("Завершено ("+dd+") → архів"));
       loadActive();
@@ -12828,30 +12850,65 @@ function parkLoad(){
   }).catch(function(e){ showToast("Парковка — помилка: "+e.message); });
 }
 
+var PARK_SHOW_ARCH = false;
 function parkRenderList(){
   var el = document.getElementById("park-list"); if(!el) return;
-  var active = PARK_OPS.filter(function(p){ return p.status !== "done"; });
-  var done   = PARK_OPS.filter(function(p){ return p.status === "done"; }).slice(-12);
-  if(!active.length && !done.length){ el.innerHTML = '<div class="pay-sub">Немає авто на парковці</div>'; return; }
-  function card(p){
+  var live   = PARK_OPS.filter(function(p){ return !p.archived; });
+  var arch   = PARK_OPS.filter(function(p){ return p.archived; });
+  var active = live.filter(function(p){ return p.status !== "done"; });
+  var done   = live.filter(function(p){ return p.status === "done"; }).slice(-12);
+  if(!active.length && !done.length && !arch.length){ el.innerHTML = '<div class="pay-sub">Немає авто на парковці</div>'; return; }
+  function card(p, isArch){
     var days = parkBillableDays(p), cost = days * (p.dailyRate || 0);
     var st = p.status==="active" ? '<span style="color:var(--gr)">● на парковці</span>'
            : p.status==="paused" ? '<span style="color:var(--rd)">⏸ пауза</span>'
            : '<span style="color:var(--tx3)">✓ завершено</span>';
-    var h = '<div class="pay-card">'
-      + '<div class="pay-nm">'+escH(p.car || "—")+'</div>'
+    var h = '<div class="pay-card"'+(isArch?' style="opacity:.6"':'')+'>'
+      + '<div class="pay-nm">'+escH(p.car || "—")+(isArch?' <span class="hist-tag" style="font-size:9px">АРХІВ</span>':'')+'</div>'
       + '<div class="pay-rl" style="font-family:var(--mono)">'+escH(p.vin||"")+'</div>'
       + '<div class="pay-bal" style="font-size:16px">'+days+' дн · '+cost.toLocaleString("uk-UA")+' грн</div>'
       + '<div class="pay-sub">старт '+escH(p.startDate||"")+' · '+(p.dailyRate||0)+' грн/добу · '+st+'</div>';
     var btns = '<div class="pay-cbtns">';
-    if(p.status === "active") btns += '<button onclick="parkPause(\''+p._id+'\')">Пауза</button>';
-    if(p.status === "paused") btns += '<button onclick="parkResume(\''+p._id+'\')">Зняти з паузи</button>';
-    if(p.status !== "done")   btns += '<button onclick="parkFinish(\''+p._id+'\')">Завершити</button>';
-    if(p.status === "done" && isAdmin()) btns += '<button onclick="parkDelete(\''+p._id+'\')">×</button>';
+    if(isArch){
+      if(isAdmin()) btns += '<button onclick="parkUnarchive(\''+p._id+'\')">↩ Повернути</button>';
+    } else {
+      if(p.status === "active") btns += '<button onclick="parkPause(\''+p._id+'\')">Пауза</button>';
+      if(p.status === "paused") btns += '<button onclick="parkResume(\''+p._id+'\')">Зняти з паузи</button>';
+      if(p.status !== "done")   btns += '<button onclick="parkFinish(\''+p._id+'\')">Завершити</button>';
+      if(p.status === "done"){
+        btns += '<button onclick="parkArchive(\''+p._id+'\')" title="Запис лишається, але ховається в архів парковки">📁 В архів</button>';
+        if(isAdmin()) btns += '<button onclick="parkDelete(\''+p._id+'\')">×</button>';
+      }
+    }
     btns += '</div>';
     return h + btns + '</div>';
   }
-  el.innerHTML = active.map(card).join("") + done.map(card).join("");
+  var html = active.map(function(p){return card(p,false);}).join("") + done.map(function(p){return card(p,false);}).join("");
+  if(arch.length){
+    html += '<div style="margin:14px 0 8px"><button class="btn btn-o" style="font-size:11px" onclick="PARK_SHOW_ARCH=!PARK_SHOW_ARCH;parkRenderList()">'
+      + (PARK_SHOW_ARCH?'▴ Сховати архів':'▾ Архів парковки ('+arch.length+')')+'</button></div>';
+    if(PARK_SHOW_ARCH) html += arch.map(function(p){return card(p,true);}).join("");
+  }
+  el.innerHTML = html;
+}
+function parkArchive(id){
+  db.collection("parking").doc(id).update({archived:true, archivedAt:new Date().toISOString()})
+    .then(function(){ showToast("Запис парковки в архіві"); parkLoad(); }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function parkUnarchive(id){
+  db.collection("parking").doc(id).update({archived:false})
+    .then(function(){ parkLoad(); }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+// Авто пішло в архів у Роботах → завершені записи парковки по VIN теж в архів
+function parkArchiveByVin(vin){
+  vin=(vin||"").toUpperCase().trim(); if(!vin) return;
+  db.collection("parking").where("vin","==",vin).limit(50).get().then(function(snap){
+    snap.forEach(function(d){
+      var p=d.data();
+      if(p.status==="done" && !p.archived)
+        db.collection("parking").doc(d.id).update({archived:true, archivedAt:new Date().toISOString()}).catch(function(){});
+    });
+  }).catch(function(){});
 }
 
 // ── СТАРТ ──
@@ -12935,7 +12992,7 @@ function wPullParking(vin){
     Object.keys(wsel).forEach(function(u){ if(wsel[u].parkingId) already[wsel[u].parkingId]=1; });
     var added = 0;
     snap.forEach(function(doc){
-      var p = doc.data(); if(p.linked || already[doc.id]) return;
+      var p = doc.data(); if(p.linked || p.archived || already[doc.id]) return;
       var uid = "u"+(++uidCounter);
       wsel[uid] = {cat:CAT_STO, name:"Парковка, "+(p.days||0)+" дн × "+(p.dailyRate||0)+" грн",
         price:(p.cost||0), side:"", coeff:1, uid:uid, fromParking:true, parkingId:doc.id};
@@ -14428,25 +14485,82 @@ var PLAN_TEMPLATE = [
   {name:"Робота електрика, кодування",                                    type:"any"},
   {name:"Фіналізація (мийка, плівка, хімчистка, вібростенд, фари, підготовка до видачі)", type:"any"}
 ];
+// Скорочений шаблон для авто з ТО/Замовлень; решту етапів можна додати чіпами
+var PLAN_TEMPLATE_TO = [
+  {key:"buy_parts", name:"Закупівля запчастин", type:"any"},
+  {key:"to_work",   name:"Виконання ТО",        type:"slu"}
+];
 var PLAN_CARS=[], PLAN_DOCS={}, PLAN_SEL=null, PLAN_WK=[], PLAN_PNT=[];
+var PLAN_ORDERED={};   // "VIN" і "docId" → true: є хоч одна ЗЧ у статусі Замовлено/Отримано
+function planHasOrdered(items){
+  var hit=false;
+  (items||[]).forEach(function(it){
+    if(it.status==="ordered"||it.status==="received") hit=true;
+    (it.variants||[]).forEach(function(v){ if(v.status==="ordered"||v.status==="received") hit=true; });
+  });
+  return hit;
+}
 function plansInit(){
   Promise.all([
     db.collection("calculations").where("type","==","works").limit(400).get(),
     db.collection("plans").limit(400).get(),
     db.collection("workers").get(),
-    db.collection("painters").get()
+    db.collection("painters").get(),
+    db.collection("calculations").where("type","==","service_order").limit(400).get(),
+    db.collection("calculations").where("type","==","parts_v2").limit(400).get()
   ]).then(function(res){
     PLAN_CARS=[]; res[0].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""}); });
+    res[4].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, kind:"to", car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""}); });
     PLAN_DOCS={}; res[1].forEach(function(d){ PLAN_DOCS[d.id]=d.data(); });
     PLAN_WK=[]; res[2].forEach(function(d){ var w=d.data(); if(w.active!==false) PLAN_WK.push(w); });
     PLAN_PNT=[]; res[3].forEach(function(d){ var p=d.data(); if(p.active!==false) PLAN_PNT.push(p.name); });
+    // Авто-відмітка «Закупівля запчастин»: ЗЧ-калькуляції по VIN (для Робіт),
+    // для ТО — запчастини в самому замовленні
+    PLAN_ORDERED={};
+    res[5].forEach(function(d){ var r=d.data();
+      var vk=(r.vin||"").trim().toUpperCase(); if(!vk) return;
+      var items=[]; (r.blocks||[]).forEach(function(b){ items=items.concat(b.items||[]); });
+      if(planHasOrdered(items)) PLAN_ORDERED[vk]=true;
+    });
+    res[4].forEach(function(d){ var r=d.data();
+      if(planHasOrdered(r.parts)) PLAN_ORDERED[d.id]=true;
+    });
+    planAutoBuy();
     planRender();
   }).catch(function(e){ showToast("План: "+e.message+" — перевірте правило plans у Firestore"); });
 }
+// Якщо по авто є замовлені/отримані ЗЧ — етап «Закупівля запчастин» стає ✅ сам
+function planOrderedFor(c){
+  if(!c) return false;
+  if(PLAN_ORDERED[c._id]) return true;
+  var vk=(c.vin||"").trim().toUpperCase();
+  return !!(c.kind!=="to" && vk && PLAN_ORDERED[vk]);
+}
+function planApplyBuy(p, c){
+  if(!planOrderedFor(c)) return false;
+  var ch=false, today=new Date().toISOString().slice(0,10);
+  (p.stages||[]).forEach(function(s){
+    if(s.key!=="buy_parts" || s.status==="done" || s.status==="na") return;
+    s.status="done"; s.doneDate=today; if(!s.startDate) s.startDate=today;
+    s.changedBy="авто · "+today+" (є замовлені ЗЧ)"; ch=true;
+  });
+  return ch;
+}
+function planAutoBuy(){
+  if(!planCanEdit()) return;
+  PLAN_CARS.forEach(function(c){
+    var p=PLAN_DOCS[c._id];
+    if(!p || !p.stages || !p.stages.length) return;   // план ще не створено — відмітиться при створенні
+    if(planApplyBuy(p, c)) db.collection("plans").doc(c._id).set(p).catch(function(){});
+  });
+}
 function planNewFromTemplate(c){
-  return { calcId:c._id, vin:c.vin, car:c.car, createdAt:new Date().toISOString(),
-    stages:PLAN_TEMPLATE.map(function(t,i){ return {id:"ps"+i+"_"+Math.random().toString(36).substr(2,4),
+  var tpl = c.kind==="to" ? PLAN_TEMPLATE_TO : PLAN_TEMPLATE;
+  var p = { calcId:c._id, vin:c.vin, car:c.car, kind:c.kind||"", createdAt:new Date().toISOString(),
+    stages:tpl.map(function(t,i){ return {id:"ps"+i+"_"+Math.random().toString(36).substr(2,4),
       key:t.key||"", name:t.name, type:t.type, status:"todo", executor:"", startDate:"", doneDate:"", changedBy:""}; }) };
+  planApplyBuy(p, c);
+  return p;
 }
 function planOf(c){
   var p = PLAN_DOCS[c._id];
@@ -14492,7 +14606,7 @@ function planRender(){
         : (canE?'<div class="plan-noph" onclick="event.stopPropagation();planPhoto(\''+c._id+'\')">🚗 без фото<span class="plan-noph-add">＋ Фото</span></div>':'');
       return '<div class="plan-tile" onclick="planOpen(\''+c._id+'\')">'+ph
         +'<div class="plan-tbody">'
-        +'<div class="pay-nm">'+escH(c.car||"—")+'</div>'
+        +'<div class="pay-nm">'+escH(c.car||"—")+(c.kind==="to"?' <span class="hist-tag" style="font-size:9px;vertical-align:2px">ТО</span>':'')+'</div>'
         +'<div class="pay-rl" style="font-family:var(--mono)">'+escH(c.vin||"")+'</div>'
         +(pr?('<div class="pay-bal" style="font-size:15px">'+pr.done+' / '+pr.tot+' етапів'
             +'<span style="font-size:11px;color:var(--tx3);font-weight:normal"> · '+pct+'%</span></div>'
@@ -14539,9 +14653,27 @@ function planRender(){
       +'<td style="padding:6px 4px;white-space:nowrap;text-align:right">'+ctl+'</td></tr>';
   });
   h+='</table>';
-  if(edit) h+='<div style="margin-top:8px"><button class="btn btn-o" style="font-size:11px" onclick="planAdd('+((p.stages||[]).length-1)+')">＋ Додати етап у кінець</button></div>';
+  if(edit){
+    h+='<div style="margin-top:8px"><button class="btn btn-o" style="font-size:11px" onclick="planAdd('+((p.stages||[]).length-1)+')">＋ Додати етап у кінець</button></div>';
+    // Етапи з повного шаблону, яких немає в цьому плані — додаються одним кліком
+    var have={}; (p.stages||[]).forEach(function(s){ have[s.name]=1; });
+    var miss=PLAN_TEMPLATE.map(function(t,ti){ return have[t.name]?null:'<span class="ht-chip" style="cursor:pointer" onclick="planAddTpl('+ti+')">＋ '+escH(t.name)+'</span>'; }).filter(Boolean);
+    if(miss.length){
+      h+='<div style="margin-top:12px"><div class="pay-sub" style="margin-bottom:6px;color:var(--tx3)">Додати етап із шаблону:</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+miss.join("")+'</div></div>';
+    }
+  }
   h+='</div>';
   det.innerHTML=h;
+}
+function planAddTpl(ti){
+  if(!planCanEdit()){ showToast("Редагують власник і координатор"); return; }
+  var c=PLAN_CARS.find(function(x){ return x._id===PLAN_SEL; }); if(!c) return;
+  var t=PLAN_TEMPLATE[ti]; if(!t) return;
+  var p=planOf(c);
+  p.stages.push({id:"ps"+Date.now(), key:t.key||"", name:t.name, type:t.type,
+    status:"todo", executor:"", startDate:"", doneDate:"", changedBy:""});
+  planSave();
 }
 function planExecOpts(s){
   var list=[];
@@ -14725,6 +14857,15 @@ function planSetStageByKey(vin, key, status, executor){
         if(executor) s.executor=executor;
         s.changedBy=(currentUserName||"")+" · "+today+" (малярки)";
       });
+      // Авто пішло на малярку → всі етапи до «Малярні роботи» вважаються виконаними
+      if(key==="mal"){
+        var mi=-1; (p.stages||[]).forEach(function(s,i){ if(mi<0 && (s.key||"")==="mal") mi=i; });
+        for(var i=0;i<mi;i++){ var s=p.stages[i];
+          if(s.status==="done"||s.status==="na") continue;
+          s.status="done"; s.doneDate=today; if(!s.startDate) s.startDate=today;
+          s.changedBy="авто · "+today+" (авто на малярці)"; ch=true;
+        }
+      }
       if(ch) db.collection("plans").doc(d.id).set(p).catch(function(){});
     });
   }).catch(function(){});

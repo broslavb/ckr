@@ -14561,10 +14561,6 @@ var PLAN_TEMPLATE_TO = [
   {key:"buy_parts", name:"Закупівля запчастин", type:"any"},
   {key:"to_work",   name:"Виконання ТО",        type:"slu"}
 ];
-// Шаблон для ЗЧ-калькуляції «В роботі» без калькуляції робіт (лише закупівля)
-var PLAN_TEMPLATE_PARTS = [
-  {key:"buy_parts", name:"Закупівля запчастин", type:"any"}
-];
 var PLAN_CARS=[], PLAN_DOCS={}, PLAN_SEL=null, PLAN_WK=[], PLAN_PNT=[];
 var PLAN_ORDERED={};   // "VIN" і "docId" → true: є хоч одна ЗЧ у статусі Замовлено/Отримано
 function planHasOrdered(items){
@@ -14584,16 +14580,8 @@ function plansInit(){
     db.collection("calculations").where("type","==","service_order").limit(400).get(),
     db.collection("calculations").where("type","==","parts_v2").limit(400).get()
   ]).then(function(res){
-    PLAN_CARS=[]; var worksVins={};
-    res[0].forEach(function(d){ var r=d.data(); if(r.status==="in_work"){ PLAN_CARS.push({_id:d.id, car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""}); var vk=(r.vin||"").trim().toUpperCase(); if(vk) worksVins[vk]=1; } });
+    PLAN_CARS=[]; res[0].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""}); });
     res[4].forEach(function(d){ var r=d.data(); if(r.status==="in_work") PLAN_CARS.push({_id:d.id, kind:"to", car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""}); });
-    // ЗЧ «В роботі» без калькуляції робіт того ж VIN — теж у План (закупівля)
-    res[5].forEach(function(d){ var r=d.data();
-      if(r.status!=="in_work") return;
-      var vk=(r.vin||"").trim().toUpperCase();
-      if(vk && worksVins[vk]) return;
-      PLAN_CARS.push({_id:d.id, kind:"parts", car:r.car||"", vin:r.vin||"", photo:r.carPhoto||""});
-    });
     PLAN_DOCS={}; res[1].forEach(function(d){ PLAN_DOCS[d.id]=d.data(); });
     PLAN_WK=[]; res[2].forEach(function(d){ var w=d.data(); if(w.active!==false) PLAN_WK.push(w); });
     PLAN_PNT=[]; res[3].forEach(function(d){ var p=d.data(); if(p.active!==false) PLAN_PNT.push(p.name); });
@@ -14638,7 +14626,7 @@ function planAutoBuy(){
   });
 }
 function planNewFromTemplate(c){
-  var tpl = c.kind==="to" ? PLAN_TEMPLATE_TO : c.kind==="parts" ? PLAN_TEMPLATE_PARTS : PLAN_TEMPLATE;
+  var tpl = c.kind==="to" ? PLAN_TEMPLATE_TO : PLAN_TEMPLATE;
   var p = { calcId:c._id, vin:c.vin, car:c.car, kind:c.kind||"", createdAt:new Date().toISOString(),
     stages:tpl.map(function(t,i){ return {id:"ps"+i+"_"+Math.random().toString(36).substr(2,4),
       key:t.key||"", name:t.name, type:t.type, status:"todo", executor:"", startDate:"", doneDate:"", changedBy:""}; }) };
@@ -14689,7 +14677,7 @@ function planRender(){
         : (canE?'<div class="plan-noph" onclick="event.stopPropagation();planPhoto(\''+c._id+'\')">🚗 без фото<span class="plan-noph-add">＋ Фото</span></div>':'');
       return '<div class="plan-tile" onclick="planOpen(\''+c._id+'\')">'+ph
         +'<div class="plan-tbody">'
-        +'<div class="pay-nm">'+escH(c.car||"—")+(c.kind==="to"?' <span class="hist-tag" style="font-size:9px;vertical-align:2px">ТО</span>':c.kind==="parts"?' <span class="hist-tag" style="font-size:9px;vertical-align:2px">ЗЧ</span>':'')+'</div>'
+        +'<div class="pay-nm">'+escH(c.car||"—")+(c.kind==="to"?' <span class="hist-tag" style="font-size:9px;vertical-align:2px">ТО</span>':'')+'</div>'
         +'<div class="pay-rl" style="font-family:var(--mono)">'+escH(c.vin||"")+'</div>'
         +(pr?('<div class="pay-bal" style="font-size:15px">'+pr.done+' / '+pr.tot+' етапів'
             +'<span style="font-size:11px;color:var(--tx3);font-weight:normal"> · '+pct+'%</span></div>'

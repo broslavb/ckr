@@ -4095,7 +4095,9 @@ function wRecalc(){
   document.getElementById("gt-total-usd").textContent=totalUSD?"≈ "+totalUSD.toFixed(0)+" USD":"";
   var wpw=document.getElementById("w-print-words"); if(wpw) wpw.textContent = totalUAH ? numberToWords(totalUAH) : "";
   var paidEl=document.getElementById("gt-paid"); if(paidEl) paidEl.textContent = pp ? Math.round(pp).toLocaleString("uk-UA")+" грн" : "—";
-  document.getElementById("gt-bal").textContent=(totalUAH-pp)?(Math.round(totalUAH-pp)).toLocaleString("uk-UA")+" грн":"—";
+  var gtBal=document.getElementById("gt-bal");
+  gtBal.textContent=(totalUAH-pp)?(Math.round(totalUAH-pp)).toLocaleString("uk-UA")+" грн":"—";
+  gtBal.style.color = Math.round(totalUAH-pp)>0 ? "var(--rd)" : "var(--gr)";
   var dr=document.getElementById("gt-disc-row");
   if(totalDisc>0){dr.style.display="flex";document.getElementById("gt-disc").textContent="−"+Math.round(totalDisc).toLocaleString("uk-UA")+" грн";}
   else dr.style.display="none";
@@ -8072,7 +8074,7 @@ function pmUpdateSummary(){
   var ptEl = document.getElementById("pm-paid-total");
   if(ptEl) ptEl.textContent = paidTotal.toLocaleString("uk-UA") + " грн";
   var balEl = document.getElementById("pm-balance");
-  if(balEl) balEl.textContent = balance.toLocaleString("uk-UA") + " грн";
+  if(balEl){ balEl.textContent = balance.toLocaleString("uk-UA") + " грн"; balEl.style.color = balance>0 ? "var(--rd)" : "var(--gr)"; }
 
   // Also update block headers (totals in header)
   PM_BLOCKS.forEach(function(block){
@@ -9360,7 +9362,8 @@ function soUpdateSummary(){
   var gtEl = document.getElementById("so-grand-total"); if(gtEl) gtEl.textContent=grandTotal.toLocaleString("uk-UA")+" грн";
   var paidTotal = paySumUAH(soPayments);
   var ptotEl = document.getElementById("so-paid-total"); if(ptotEl) ptotEl.textContent=paidTotal.toLocaleString("uk-UA")+" грн";
-  var balEl = document.getElementById("so-balance"); if(balEl) balEl.textContent=(grandTotal-paidTotal).toLocaleString("uk-UA")+" грн";
+  var balEl = document.getElementById("so-balance");
+  if(balEl){ balEl.textContent=(grandTotal-paidTotal).toLocaleString("uk-UA")+" грн"; balEl.style.color = (grandTotal-paidTotal)>0 ? "var(--rd)" : "var(--gr)"; }
 
   soRenderProfit(disc, worksTotal);
   refreshHiddenToggleBtns();

@@ -3215,9 +3215,9 @@ auth.onAuthStateChanged(function(user) {
     setTimeout(function(){ try{ switchTab("home", document.getElementById("tab-home-btn")); }catch(e){} }, 100);
     // Show settings tab and role badge for admin
     if (ADMINS.indexOf(user.email) >= 0) {
-      document.getElementById("tab-settings-btn").style.display = "block";
+      document.getElementById("tab-settings-btn").style.display = "flex";
       var statBtn = document.getElementById("tab-stats-btn");
-      if(statBtn) statBtn.style.display = "block";
+      if(statBtn) statBtn.style.display = "flex";
       document.getElementById("user-role").textContent = "ADMIN";
       document.getElementById("user-role").style.background = "rgba(255,208,128,.2)";
       document.getElementById("user-role").style.color = "#ffd080";
@@ -3226,10 +3226,10 @@ auth.onAuthStateChanged(function(user) {
       if(pr) pr.style.display = "flex";
       // Show presets tab for admin
       var pt = document.getElementById("tab-presets-btn");
-      if(pt) pt.style.display = "block";
+      if(pt) pt.style.display = "flex";
       // Show svc prices tab for admin
       var sp = document.getElementById("tab-svc-prices-btn");
-      if(sp) sp.style.display = "block";
+      if(sp) sp.style.display = "flex";
       // Show backup button for admin
       var bb = document.getElementById("backup-btn");
       if(bb) bb.style.display = "inline";

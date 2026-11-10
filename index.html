@@ -298,18 +298,21 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .hist-row{display:flex;gap:12px;align-items:stretch}
 .hist-body{flex:1;min-width:0;display:flex;flex-direction:column}
 .hist-ph{flex:none;align-self:stretch;width:auto;height:auto;aspect-ratio:4/3;min-width:100px;max-width:190px;object-fit:cover;border-radius:7px;border:1px solid var(--bd);background:var(--bg3)}
-/* Три колонки типів у Калькуляціях/В роботі/Архіві (рядкова сітка:
-   спільні VIN — навпроти по горизонталі, решта — незалежні колонки) */
-.tri-row{display:grid;gap:0 14px;align-items:start}
-.tri-hrow{margin-bottom:10px}
-.tri-vinrow{border-bottom:1px dashed var(--bd);margin-bottom:10px}
-.tri-main{min-width:0}
+/* Три колонки типів у Калькуляціях/В роботі/Архіві — одна сітка рядків:
+   усі клітинки рядка стоять на спільній горизонталі; пари Роботи↔ЗЧ угорі */
+.tri-grid{display:grid;gap:12px 14px;align-items:start}
 .tri-cell{min-width:0}
+.tri-cell .hist-card{margin-bottom:0}
+.tri-cell .hist-card + .hist-card{margin-top:10px}
+.tri-pair .hist-card{border-color:var(--blue-mid)}
 .tri-col-h{font-family:var(--disp);font-size:13px;letter-spacing:1px;color:var(--blue-dark);background:var(--bg2);border:1px solid var(--bd);border-left:4px solid var(--blue-mid);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
 .tri-col-h .cnt{font-family:var(--mono);font-size:11px;color:var(--tx3)}
 .tri-empty{font-family:var(--mono);font-size:11px;color:var(--tx3);padding:10px 4px}
 .tri-cell .hist-ph{max-width:150px;min-width:80px}
-@media(max-width:1250px){ .tri-row{grid-template-columns:1fr!important} .tri-main{grid-column:auto!important} .tri-hrow{display:none} .tri-cell .hist-ph{max-width:190px} }
+@media(max-width:1250px){
+  .tri-grid{grid-template-columns:1fr!important}
+  .tri-grid>*{grid-row:auto!important;grid-column:auto!important}
+}
 .hist-plan{display:flex;align-items:center;gap:8px;margin-top:6px;min-width:0}
 .hist-plan-bar{flex:0 0 150px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .hist-plan-bar>div{height:100%}
@@ -4703,29 +4706,12 @@ function triColsRender(list, docs, showMoveBtn){
       catch(err){ console.error("buildCard error:", err, doc.id); }
     });
   }
-  function emptyMark(cell){ var e=document.createElement("div"); e.className="tri-empty"; e.textContent="— порожньо —"; cell.appendChild(e); }
-  // Заголовки колонок
-  var hr=document.createElement("div"); hr.className="tri-row tri-hrow";
-  hr.style.gridTemplateColumns="repeat("+nc+",minmax(0,1fr))";
-  cols.forEach(function(c,ci){
-    var h=document.createElement("div"); h.className="tri-col-h";
-    h.innerHTML='<span>'+c.lbl+'</span><span class="cnt">'+colDocs[ci].length+'</span>';
-    hr.appendChild(h);
-  });
-  list.appendChild(hr);
-  // Контент: зона Роботи+ЗЧ (пари VIN вирівнюються) + НЕЗАЛЕЖНА колонка ТО
-  var body=document.createElement("div"); body.className="tri-row tri-body";
-  body.style.gridTemplateColumns="repeat("+nc+",minmax(0,1fr))";
-  var main=document.createElement("div"); main.className="tri-main";
-  if(hasWorks) main.style.gridColumn="span 2";
-  body.appendChild(main);
-  var tCell=document.createElement("div"); tCell.className="tri-cell";
-  var tDocs=colDocs[nc-1];
-  if(tDocs.length) addCards(tCell, tDocs); else emptyMark(tCell);
-  body.appendChild(tCell);
+  // Одна сітка: кожен «рядок» — спільна горизонталь поперек усіх колонок.
+  // Рядки лівої пари колонок: спочатку спільні VIN (Роботи↔ЗЧ навпроти),
+  // потім решта по порядку. ТО — незалежно, по одній картці на рядок.
+  var rowsW=[], rowsP=[], rowsT=[];
   if(hasWorks){
     var wDocs=colDocs[0], pDocs=colDocs[1];
-    // VIN, що є і в Роботах, і в Запчастинах — угорі, навпроти по горизонталі
     var inW={}, inP={};
     wDocs.forEach(function(d){ var v=vinOf(d); if(v) inW[v]=1; });
     pDocs.forEach(function(d){ var v=vinOf(d); if(v) inP[v]=1; });
@@ -4734,33 +4720,46 @@ function triColsRender(list, docs, showMoveBtn){
       if(v && inW[v] && inP[v] && multiVins.indexOf(v)<0) multiVins.push(v);
     });
     multiVins.forEach(function(v){
-      var r=document.createElement("div"); r.className="tri-row tri-vinrow";
-      r.style.gridTemplateColumns="repeat(2,minmax(0,1fr))";
-      [wDocs,pDocs].forEach(function(arr){
-        var cell=document.createElement("div"); cell.className="tri-cell";
-        addCards(cell, arr.filter(function(d){ return vinOf(d)===v; }));
-        r.appendChild(cell);
-      });
-      main.appendChild(r);
+      rowsW.push({pair:true, docs:wDocs.filter(function(d){ return vinOf(d)===v; })});
+      rowsP.push({pair:true, docs:pDocs.filter(function(d){ return vinOf(d)===v; })});
     });
-    // Решта Робіт і ЗЧ — незалежні колонки
-    var r2=document.createElement("div"); r2.className="tri-row";
-    r2.style.gridTemplateColumns="repeat(2,minmax(0,1fr))";
-    [wDocs,pDocs].forEach(function(arr){
-      var rest=arr.filter(function(d){ var v=vinOf(d); return !(v && inW[v] && inP[v]); });
-      var cell=document.createElement("div"); cell.className="tri-cell";
-      if(rest.length) addCards(cell, rest);
-      else if(!multiVins.length) emptyMark(cell);
-      r2.appendChild(cell);
-    });
-    main.appendChild(r2);
+    var restW=wDocs.filter(function(d){ var v=vinOf(d); return !(v && inW[v] && inP[v]); });
+    var restP=pDocs.filter(function(d){ var v=vinOf(d); return !(v && inW[v] && inP[v]); });
+    for(var k=0;k<Math.max(restW.length,restP.length);k++){
+      rowsW.push(restW[k]?{docs:[restW[k]]}:null);
+      rowsP.push(restP[k]?{docs:[restP[k]]}:null);
+    }
   } else {
-    // Лише ЗЧ + ТО: ЗЧ простою колонкою
-    var cell=document.createElement("div"); cell.className="tri-cell";
-    if(colDocs[0].length) addCards(cell, colDocs[0]); else emptyMark(cell);
-    main.appendChild(cell);
+    colDocs[0].forEach(function(d){ rowsW.push({docs:[d]}); });
   }
-  list.appendChild(body);
+  colDocs[nc-1].forEach(function(d){ rowsT.push({docs:[d]}); });
+  var N=Math.max(rowsW.length, rowsP.length, rowsT.length);
+  var wrap=document.createElement("div"); wrap.className="tri-grid";
+  wrap.style.gridTemplateColumns="repeat("+nc+",minmax(0,1fr))";
+  // Заголовки — рядок 1
+  cols.forEach(function(c,ci){
+    var h=document.createElement("div"); h.className="tri-col-h";
+    h.style.gridRow="1"; h.style.gridColumn=String(ci+1);
+    h.innerHTML='<span>'+c.lbl+'</span><span class="cnt">'+colDocs[ci].length+'</span>';
+    wrap.appendChild(h);
+  });
+  var colRows = hasWorks ? [rowsW,rowsP,rowsT] : [rowsW,rowsT];
+  for(var r=0;r<N;r++){
+    colRows.forEach(function(rows,ci){
+      var x=rows[r]; if(!x) return;
+      var cell=document.createElement("div");
+      cell.className="tri-cell"+(x.pair?" tri-pair":"");
+      cell.style.gridRow=String(r+2); cell.style.gridColumn=String(ci+1);
+      addCards(cell, x.docs);
+      wrap.appendChild(cell);
+    });
+  }
+  if(!total){
+    var e=document.createElement("div"); e.className="tri-empty";
+    e.style.gridRow="2"; e.style.gridColumn="1";
+    e.textContent="— порожньо —"; wrap.appendChild(e);
+  }
+  list.appendChild(wrap);
   return total;
 }
 

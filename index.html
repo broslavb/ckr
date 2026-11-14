@@ -2540,6 +2540,25 @@ body.hero-on .hero-pad{margin-right:40vw}
 </div>
 
 <!-- ══ НАРАХУВАННЯ — ДЕННА СТАВКА (payMode:"daily") ══════════════════════════ -->
+<div class="pay-modal" id="pay-week-modal">
+  <div class="pay-box" style="max-width:420px">
+    <div class="pay-box-t" id="pw-title">Тижнева ставка</div>
+    <div class="cal-nav">
+      <button class="btn btn-o" onclick="payWeekShift(-1)">‹</button>
+      <div class="cal-title" id="pw-range"></div>
+      <button class="btn btn-o" onclick="payWeekShift(1)">›</button>
+    </div>
+    <div class="pay-sub" style="margin:4px 0 8px">Відмітьте відпрацьовані дні — сума рахується пропорційно (ставка ÷ 5 за день)</div>
+    <div id="pw-days" style="display:flex;flex-direction:column;gap:4px;margin:6px 0"></div>
+    <div id="pw-sum" style="font-family:var(--mono);font-size:13px;font-weight:bold;margin:8px 0"></div>
+    <div id="pw-status" class="pay-status"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-p" id="pw-ok" onclick="payWeekDo()">💾 Нарахувати</button>
+      <button class="btn btn-o" onclick="payClose('pay-week-modal')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <div class="pay-modal" id="pay-daily-modal">
   <div class="pay-box" style="max-width:520px">
     <div class="pay-box-t" id="pay-daily-title">Нарахування — денна ставка</div>
@@ -11968,27 +11987,69 @@ function payEnsureTutWeekly(){
   }).catch(function(e){ showToast("Перерахунок тижня: "+e.message); payLoadAll(); });
   return true;
 }
-// Нарахувати поточний тиждень працівникові на тижневій ставці
+// Нарахувати тиждень на тижневій ставці — модалка з відмітками відпрацьованих
+// днів; сума пропорційна (ставка ÷ 5 за день, дефолт пн–пт)
+var PAY_WK_CTX = null;
+var PAY_WK_DOW = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"];
 function payWeekAccrue(wid){
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
-  var amt = Math.round(w.weeklyRateUAH||0);
-  if(!amt){ showToast("Задайте тижневу ставку (✎ на картці)"); return; }
+  if(!Math.round(w.weeklyRateUAH||0)){ showToast("Задайте тижневу ставку (✎ на картці)"); return; }
+  PAY_WK_CTX = {wid:wid, off:0};
+  payWeekRender();
+  document.getElementById("pay-week-modal").style.display = "flex";
+}
+function payWeekShift(d){
+  if(!PAY_WK_CTX) return;
+  var o = PAY_WK_CTX.off + d;
+  if(o < -8 || o > 1) return;
+  PAY_WK_CTX.off = o; payWeekRender();
+}
+function payWeekFmtD(s){ return s.slice(8,10)+"."+s.slice(5,7); }
+function payWeekRender(){
+  if(!PAY_WK_CTX) return;
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_WK_CTX.wid; }); if(!w) return;
+  var dt = new Date(new Date().toISOString().slice(0,10)+"T00:00:00");
+  dt.setDate(dt.getDate() - (dt.getDay()+6)%7 + PAY_WK_CTX.off*7);   // понеділок обраного тижня
+  var dates=[]; for(var i=0;i<7;i++){ var d=new Date(dt); d.setDate(dt.getDate()+i); dates.push(d.toISOString().slice(0,10)); }
+  PAY_WK_CTX.dates = dates;
+  document.getElementById("pw-title").textContent = w.name+" — тижнева ставка "+Math.round(w.weeklyRateUAH||0).toLocaleString("uk-UA")+" грн";
+  document.getElementById("pw-range").textContent = payWeekFmtD(dates[0])+" – "+payWeekFmtD(dates[6]);
+  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===w._id && a.type==="weekly" && !a.void && a.weekKey===dates[0]; });
+  PAY_WK_CTX.dup = !!dup;
+  var st=document.getElementById("pw-status");
+  st.className="pay-status"+(dup?" err":""); st.textContent = dup ? "Цей тиждень вже нараховано: "+Math.round(dup.amountUAH||0).toLocaleString("uk-UA")+" грн"+(dup.days?" ("+dup.days+" дн)":"") : "";
+  document.getElementById("pw-ok").disabled = !!dup;
+  var box=document.getElementById("pw-days");
+  box.innerHTML = dates.map(function(ds,i){
+    return '<label style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;cursor:pointer'+(dup?';opacity:.5':'')+'">'
+      +'<input type="checkbox" id="pw-d-'+i+'" '+(i<5?'checked':'')+(dup?' disabled':'')+' onchange="payWeekSum()"/>'
+      +'<b style="width:24px">'+PAY_WK_DOW[i]+'</b> '+payWeekFmtD(ds)+'</label>';
+  }).join("");
+  payWeekSum();
+}
+function payWeekSum(){
+  if(!PAY_WK_CTX) return;
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_WK_CTX.wid; }); if(!w) return;
+  var perDay = (w.weeklyRateUAH||0)/5, n=0, list=[];
+  for(var i=0;i<7;i++){ var cb=document.getElementById("pw-d-"+i); if(cb && cb.checked){ n++; list.push(PAY_WK_CTX.dates[i]); } }
+  PAY_WK_CTX.n=n; PAY_WK_CTX.list=list; PAY_WK_CTX.amt=Math.round(perDay*n);
+  document.getElementById("pw-sum").textContent = n+" дн × "+Math.round(perDay).toLocaleString("uk-UA")+" грн = "+PAY_WK_CTX.amt.toLocaleString("uk-UA")+" грн";
+}
+function payWeekDo(){
+  if(!PAY_WK_CTX || PAY_WK_CTX.dup) return;
+  var w = PAY_WORKERS.find(function(x){ return x._id===PAY_WK_CTX.wid; }); if(!w) return;
+  var amt = PAY_WK_CTX.amt||0, n = PAY_WK_CTX.n||0;
+  var st = document.getElementById("pw-status");
+  if(n<=0 || amt<=0){ st.className="pay-status err"; st.textContent="Відмітьте хоча б один день"; return; }
+  var dates=PAY_WK_CTX.dates, mon=dates[0];
+  var wk = payWeekFmtD(mon)+"–"+payWeekFmtD(dates[6]);
   var today = new Date().toISOString().slice(0,10);
-  var dt = new Date(today+"T00:00:00");
-  dt.setDate(dt.getDate() - (dt.getDay()+6)%7);              // понеділок поточного тижня
-  var mon = dt.toISOString().slice(0,10);
-  dt.setDate(dt.getDate()+6);
-  var sun = dt.toISOString().slice(0,10);
-  var fmt = function(s){ return s.slice(8,10)+"."+s.slice(5,7); };
-  var wk = fmt(mon)+"–"+fmt(sun);
-  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===wid && a.type==="weekly" && !a.void && a.weekKey===mon; });
-  if(dup){ showToast("Тиждень "+wk+" вже нараховано ("+Math.round(dup.amountUAH||0)+" грн)"); return; }
-  if(!confirm("Нарахувати тижневу ставку "+amt.toLocaleString("uk-UA")+" грн за тиждень "+wk+" — "+w.name+"?")) return;
   var rate = usdRate||44.1;
   db.collection("work_accruals").add({
-    workerId:wid, workerName:w.name, role:w.role, type:"weekly", weekKey:mon, rate:rate,
+    workerId:w._id, workerName:w.name, role:w.role, type:"weekly", weekKey:mon, rate:rate,
+    days:n, daysList:PAY_WK_CTX.list,
     amountUAH:amt, amountUSD:Math.round((amt/rate)*100)/100, date:today,
-    workName:"Тижнева ставка ("+wk+")",
+    workName:"Тижнева ставка ("+wk+" · "+n+" дн)",
     author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
   }).then(function(ref){
     if(w.role!=="slu" && w.role!=="kuz") return null;
@@ -11997,15 +12058,18 @@ function payWeekAccrue(wid){
       var sh=payCoordShare(w.role);
       extra.push(db.collection("work_accruals").add({
         workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:rate,
-        srcAccrualId:ref.id, srcWorkerId:wid, srcWorkerName:w.name, srcRole:w.role,
-        workName:"Тижнева ставка ("+wk+")", baseUSD:Math.round((amt/rate)*100)/100,
+        srcAccrualId:ref.id, srcWorkerId:w._id, srcWorkerName:w.name, srcRole:w.role,
+        workName:"Тижнева ставка ("+wk+" · "+n+" дн)", baseUSD:Math.round((amt/rate)*100)/100,
         amountUAH:Math.round(amt*sh), amountUSD:Math.round((amt/rate)*sh*100)/100,
         date:today, author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
       }));
     });
     return extra.length ? Promise.all(extra) : null;
-  }).then(function(){ showToast("Нараховано "+amt.toLocaleString("uk-UA")+" грн — "+w.name+" ("+wk+")"); payLoadAll(); })
-    .catch(function(e){ showToast("Помилка: "+e.message); });
+  }).then(function(){
+    payClose("pay-week-modal");
+    showToast("Нараховано "+amt.toLocaleString("uk-UA")+" грн — "+w.name+" ("+wk+", "+n+" дн)");
+    payLoadAll();
+  }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
 }
 // Ставка/тиждень — редагує власник
 function payEditWeeklyRate(wid){
@@ -13126,6 +13190,21 @@ function paintFreeDeposit(pid){
   return Math.round(dep - used);
 }
 function paintFmt(v){ return Math.round(v).toLocaleString("uk-UA"); }
+// Корекція депозиту (адмін): запис ± у deposits БЕЗ каси — вирівняти перекоси
+function paintDepositFix(pid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var p = PAINTERS.find(function(x){ return x._id===pid; }); if(!p) return;
+  var cur = paintFreeDeposit(pid);
+  var v = prompt("Корекція депозиту «"+p.name+"» (зараз вільний: "+paintFmt(cur)+" грн).\nВведіть суму корекції, грн (можна з мінусом). Каса НЕ чіпається:", "");
+  if(v===null) return;
+  var amt = Math.round(parseFloat(String(v).replace(",","."))||0);
+  if(!amt){ showToast("Сума 0 — нічого не змінено"); return; }
+  var note = prompt("Коментар до корекції (чому):", "") || "";
+  var deposits = (p.deposits||[]).concat([{id:"pd"+Date.now(), amount:amt, date:new Date().toISOString().slice(0,10), note:"КОРЕКЦІЯ"+(note?": "+note:""), fix:true}]);
+  db.collection("painters").doc(pid).update({deposits:deposits})
+    .then(function(){ showToast("Корекція "+(amt>0?"+":"")+paintFmt(amt)+" грн записана"); paintInit(); })
+    .catch(function(e){ showToast("Помилка: "+e.message); });
+}
 // Витрата в Касі (linked:true + paint:true — не підтягується повторно і не задвоюється в статистиці)
 function paintCashOp(amount, desc, car, vin, date){
   return db.collection("cash_operations").add({
@@ -13173,7 +13252,16 @@ function paintRender(){
     '<div class="pay-led" style="margin-bottom:14px"><div class="pay-nm">🎨 '+escH(p.name)+'</div>'
     + '<div class="pay-bal" style="font-size:18px;margin-top:4px">'+paintFmt(advSum+dep)+' грн <span style="font-size:12px;color:var(--tx3);font-weight:normal">— наші гроші у маляра</span></div>'
     + '<div class="pay-sub">аванси по '+open.length+' авто: <b>'+paintFmt(advSum)+' грн</b> · вільний депозит: <b style="color:var(--bl)">'+paintFmt(dep)+' грн</b></div>'
-    + ((p.deposits||[]).length ? '<div class="pay-sub" style="margin-top:4px">Депозити: '+(p.deposits||[]).map(function(d){ return paintFmt(d.amount)+' грн ('+escH(d.date||"")+(d.note?", "+escH(d.note):"")+')'; }).join(" · ")+'</div>' : '')
+    + ((p.deposits||[]).length ? '<div class="pay-sub" style="margin-top:4px">Депозити (+): '+(p.deposits||[]).map(function(d){ return paintFmt(d.amount)+' грн ('+escH(d.date||"")+(d.note?", "+escH(d.note):"")+')'; }).join(" · ")+'</div>' : '')
+    + (function(){
+        // Аудит депозиту (адмін): усі списання depositUse — видно, звідки взявся мінус
+        if(!isAdmin()) return '';
+        var uses = PAINT_JOBS.filter(function(j){ return j.painterId===p._id && (j.depositUse||0)>0; });
+        var h = uses.length ? '<div class="pay-sub" style="margin-top:2px">Списання з депозиту (−): '
+          + uses.map(function(j){ return '−'+paintFmt(j.depositUse)+' грн ('+escH(j.car||j.vin||"")+(j.closedDate?", "+escH(j.closedDate):"")+')'; }).join(" · ")+'</div>' : '';
+        h += '<div style="margin-top:6px"><button class="btn btn-o" style="font-size:11px;padding:3px 10px" onclick="paintDepositFix(\''+p._id+'\')">✎ Корекція депозиту</button></div>';
+        return h;
+      })()
     + '</div>';
   function jobCard(j){
     var adv = paintJobAdv(j), isOpen = j.status==="open";
@@ -13353,13 +13441,27 @@ function paintDoClose(){
   if(total<=0){ st.className="pay-status err"; st.textContent="Вкажіть вартість робіт маляра"; return; }
   if(extraRaw==="" || isNaN(extra) || extra<0){ st.className="pay-status err"; st.textContent="Дод. затрати обовʼязкові (якщо нема — впишіть 0)"; return; }
   var adv = paintJobAdv(j), dep = paintFreeDeposit(j.painterId);
-  if(depuse<0 || depuse > dep+0.01){ st.className="pay-status err"; st.textContent="З депозиту доступно лише "+paintFmt(dep)+" грн"; return; }
+  if(depuse<0 || depuse > Math.max(0,dep)+0.01){ st.className="pay-status err"; st.textContent="З депозиту доступно лише "+paintFmt(Math.max(0,dep))+" грн"+(dep<0?" (депозит у мінусі — закривайте без депозиту, мінус вирівняйте корекцією)":""); return; }
   if(depuse > Math.max(0,total-adv)+0.01){ st.className="pay-status err"; st.textContent="З депозиту можна взяти не більше залишку ("+paintFmt(Math.max(0,total-adv))+" грн)"; return; }
   var fin = Math.round(total - adv - depuse);
   var surplus = fin<0 ? -fin : 0;
   if(surplus>0 && !confirm("Аванси перевищують вартість на "+paintFmt(surplus)+" грн.\nПеренести залишок у вільний депозит маляра?")) return;
   var today = new Date().toISOString().slice(0,10);
-  db.collection("paint_jobs").doc(j._id).update({
+  // ЗАПОБІЖНИК: якщо береться депозит — перевіряємо залишок СВІЖИМИ даними з БД
+  // (застаріла вкладка могла показувати більший депозит — так і виникав мінус)
+  var freshCheck = depuse>0
+    ? Promise.all([
+        db.collection("painters").doc(j.painterId).get(),
+        db.collection("paint_jobs").where("painterId","==",j.painterId).get()
+      ]).then(function(res){
+        var depSum=((res[0].exists&&res[0].data().deposits)||[]).reduce(function(s,d){ return s+(d.amount||0); },0);
+        var used=0; res[1].forEach(function(d){ if(d.id!==j._id) used+=(d.data().depositUse||0); });
+        var fresh=Math.round(depSum-used);
+        if(depuse>fresh+0.01) throw new Error("З депозиту реально доступно "+paintFmt(Math.max(0,fresh))+" грн (дані оновлено) — зменшіть суму");
+      })
+    : Promise.resolve();
+  freshCheck.then(function(){
+  return db.collection("paint_jobs").doc(j._id).update({
     status:"closed", totalUAH:Math.round(total), extraUAH:Math.round(extra), extraNote:extraNote,
     depositUse:Math.round(depuse), finalPayUAH:Math.max(0,fin), closedDate:today, linked:false,
     closedBy:currentUserName||""
@@ -13379,6 +13481,7 @@ function paintDoClose(){
       showToast("✓ Закрито. Факт "+paintFmt(total+extra)+" грн — відкрийте Роботи цього авто, щоб підтягнути");
       paintInit();
     }).catch(function(e){ showToast("Закрито, але: "+e.message); paintInit(); });
+  });
   }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
 }
 function paintDeleteJob(id){

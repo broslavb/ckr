@@ -2667,6 +2667,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld"><label>Аванс одразу, грн (можна 0)</label><input type="number" id="paint-start-adv" min="0" step="100" placeholder="7500"/></div>
     </div>
     <div class="fld"><label>Коментар до авансу</label><input type="text" id="paint-start-note" placeholder="необовʼязково"/></div>
+    <div class="adm-fld" style="margin-top:4px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--tx2)"><input type="checkbox" id="paint-start-own"/> 🔒 Аванс моїми коштами (з кишені) — в Касу НЕ писати</label></div>
     <div class="pay-status" id="paint-start-status"></div>
     <div class="pay-btns">
       <button class="btn btn-p" onclick="paintDoStart()">Загнати</button>
@@ -13377,6 +13378,7 @@ function paintOpenStart(){
   document.getElementById("paint-start-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("paint-start-adv").value = "";
   document.getElementById("paint-start-note").value = "";
+  var _ow3=document.getElementById("paint-start-own"); if(_ow3) _ow3.checked=false;
   document.getElementById("paint-start-status").textContent = "";
   document.getElementById("paint-start-modal").style.display = "flex";
 }
@@ -13398,15 +13400,19 @@ function paintDoStart(){
   if(PAINT_JOBS.some(function(j){ return j.status==="open" && j.painterId===p._id && (j.vin||"").toUpperCase()===vin; })){
     st.className="pay-status err"; st.textContent="Це авто вже у цього маляра"; return;
   }
-  var advances = adv>0 ? [{id:"pa"+Date.now(), amount:Math.round(adv), date:date, note:note}] : [];
+  var ownEl3 = document.getElementById("paint-start-own");
+  var own3 = !!(ownEl3 && ownEl3.checked && isAdmin());
+  var adv1 = {id:"pa"+Date.now(), amount:Math.round(adv), date:date, note:note};
+  if(own3) adv1.own = true;
+  var advances = adv>0 ? [adv1] : [];
   db.collection("paint_jobs").add({
     painterId:p._id, painterName:p.name, vin:vin, car:car, status:"open", startDate:date,
     advances:advances, depositUse:0, linked:false,
     createdAt:new Date().toISOString(), author:currentUserName||""
   }).then(function(){
     planSetStageByKey(vin, "mal", "active", p.name);   // План: малярні роботи — в процесі
-    var fin = function(){ payClose("paint-start-modal"); showToast("Авто у маляра"+(adv>0?" · аванс "+paintFmt(adv)+" грн → Каса":"")); paintInit(); };
-    if(adv>0) paintCashOp(adv, "Малярка "+p.name+" — аванс · "+(car||vin)+(note?" ("+note+")":""), car, vin, date).then(fin)
+    var fin = function(){ payClose("paint-start-modal"); showToast("Авто у маляра"+(adv>0?" · аванс "+paintFmt(adv)+" грн"+(own3?" (🔒 власні, без Каси)":" → Каса"):"")); paintInit(); };
+    if(adv>0 && !own3) paintCashOp(adv, "Малярка "+p.name+" — аванс · "+(car||vin)+(note?" ("+note+")":""), car, vin, date).then(fin)
       .catch(function(e){ payClose("paint-start-modal"); showToast("⚠ Авто у маляра, але аванс у Касу НЕ потрапив: "+e.message+" — зробіть Звірку з Касою"); paintInit(); });
     else fin();
   }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });

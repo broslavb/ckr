@@ -2080,6 +2080,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     <!-- Швидкі витрати -->
     <div class="cash-quick">
       <span class="cash-quick-lbl">Швидка витрата:</span>
+      <button class="cash-quick-btn" onclick="cashShowModal('-','Видача готівки з каси власнику')">💼 Видача власнику</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Таксі')">🚕 Таксі</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Стоянка')">🅿️ Стоянка</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Мийка')">🚿 Мийка</button>
@@ -2683,6 +2684,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld"><label>Дата</label><input type="date" id="paint-money-date"/></div>
     </div>
     <div class="fld"><label>Коментар</label><input type="text" id="paint-money-note" placeholder="необовʼязково"/></div>
+    <div class="adm-fld" style="margin-top:4px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--tx2)"><input type="checkbox" id="paint-money-own"/> 🔒 Мої кошти (з кишені) — в Касу НЕ писати</label></div>
     <div class="pay-status" id="paint-money-status"></div>
     <div class="pay-btns">
       <button class="btn btn-p" onclick="paintDoMoney()">Зберегти</button>
@@ -2730,6 +2732,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld"><label>Дод. затрати (таксі/доставка), грн — обовʼязково</label><input type="number" id="paint-close-extra" min="0" step="50" value="1000" oninput="paintCloseRecalc()"/></div>
       <div class="fld"><label>Коментар до дод. затрат</label><input type="text" id="paint-close-extranote" placeholder="таксі, доставка..."/></div>
     </div>
+    <div class="adm-fld" style="margin-top:4px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--tx2)"><input type="checkbox" id="paint-close-own"/> 🔒 Доплату даю своїми коштами — в Касу НЕ писати</label></div>
     <div class="pay-status" id="paint-close-calc" style="font-weight:bold"></div>
     <div class="pay-status" id="paint-close-status"></div>
     <div class="pay-btns">
@@ -10409,7 +10412,7 @@ var CASH_EDIT_ID = null; // editing existing op
 
 var CASH_PRESETS = {
   "+": ["Оплата від клієнта", "Внесення готівки", "Аванс від клієнта", "Повернення коштів"],
-  "-": ["Таксі", "Стоянка", "Мийка первинна", "Мийка (обдув)", "Сертифікація авто", "Демонтаж/монтаж панорами", "Демонтаж/монтаж скла лобового", "Демонтаж/монтаж скла заднього", "Демонтаж/монтаж скла кутового", "Розвал/сходження", "Скидання Crash Data в SRS", "Заправка кондиціонеру", "Евакуатор, 1 сторона", "Сторонній електрик / кодування", "Сторонній електрик, виїзні роботи", "Коригування рівня передніх фар", "Вібростенд", "Полірування авто", "Пальне, дозаправки", "Хімчистка салону кросовер", "Хімчистка салону седан", "Прибирання / Уборка", "Діагностика (УкрДіагностика)", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
+  "-": ["Видача готівки з каси власнику", "Таксі", "Стоянка", "Мийка первинна", "Мийка (обдув)", "Сертифікація авто", "Демонтаж/монтаж панорами", "Демонтаж/монтаж скла лобового", "Демонтаж/монтаж скла заднього", "Демонтаж/монтаж скла кутового", "Розвал/сходження", "Скидання Crash Data в SRS", "Заправка кондиціонеру", "Евакуатор, 1 сторона", "Сторонній електрик / кодування", "Сторонній електрик, виїзні роботи", "Коригування рівня передніх фар", "Вібростенд", "Полірування авто", "Пальне, дозаправки", "Хімчистка салону кросовер", "Хімчистка салону седан", "Прибирання / Уборка", "Діагностика (УкрДіагностика)", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
 };
 
 // ── МАРШРУТИЗАЦІЯ ВИТРАТ У КАЛЬКУЛЯЦІЮ АВТО ──────────────────────────────────
@@ -13252,7 +13255,7 @@ function paintRender(){
     '<div class="pay-led" style="margin-bottom:14px"><div class="pay-nm">🎨 '+escH(p.name)+'</div>'
     + '<div class="pay-bal" style="font-size:18px;margin-top:4px">'+paintFmt(advSum+dep)+' грн <span style="font-size:12px;color:var(--tx3);font-weight:normal">— наші гроші у маляра</span></div>'
     + '<div class="pay-sub">аванси по '+open.length+' авто: <b>'+paintFmt(advSum)+' грн</b> · вільний депозит: <b style="color:var(--bl)">'+paintFmt(dep)+' грн</b></div>'
-    + ((p.deposits||[]).length ? '<div class="pay-sub" style="margin-top:4px">Депозити (+): '+(p.deposits||[]).map(function(d){ return paintFmt(d.amount)+' грн ('+escH(d.date||"")+(d.note?", "+escH(d.note):"")+')'; }).join(" · ")+'</div>' : '')
+    + ((p.deposits||[]).length ? '<div class="pay-sub" style="margin-top:4px">Депозити (+): '+(p.deposits||[]).map(function(d){ return paintFmt(d.amount)+' грн ('+escH(d.date||"")+(d.note?", "+escH(d.note):"")+(d.own?", 🔒 власні":"")+')'; }).join(" · ")+'</div>' : '')
     + (function(){
         // Аудит депозиту (адмін): усі списання depositUse — видно, звідки взявся мінус
         if(!isAdmin()) return '';
@@ -13271,7 +13274,7 @@ function paintRender(){
     if(isOpen){
       h += '<div class="pay-bal" style="font-size:15px">аванс: '+paintFmt(adv)+' грн</div>'
         + '<div class="pay-sub">загнали '+escH(j.startDate||"")+'</div>'
-        + ((j.advances||[]).map(function(a){ return '<div class="pay-sub">💵 '+paintFmt(a.amount)+' грн · '+escH(a.date||"")+(a.note?' · '+escH(a.note):'')+'</div>'; }).join(""))
+        + ((j.advances||[]).map(function(a){ return '<div class="pay-sub">💵 '+paintFmt(a.amount)+' грн · '+escH(a.date||"")+(a.note?' · '+escH(a.note):'')+(a.own?' · 🔒 власні':'')+'</div>'; }).join(""))
         + '<div class="pay-cbtns">'
         + '<button onclick="ps3dOpenPaint(\''+j._id+'\')" title="Схема авто (3D): що фарбуємо / що відмічено">🚗 Схема</button>'
         + '<button onclick="paintOpenAdvance(\''+j._id+'\')">＋ Аванс</button>'
@@ -13361,6 +13364,7 @@ function paintOpenAdvance(jobId){
   document.getElementById("paint-money-amount").value = "";
   document.getElementById("paint-money-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("paint-money-note").value = "";
+  var _ow=document.getElementById("paint-money-own"); if(_ow) _ow.checked=false;
   document.getElementById("paint-money-status").textContent = "";
   document.getElementById("paint-money-modal").style.display = "flex";
 }
@@ -13371,6 +13375,7 @@ function paintOpenDeposit(){
   document.getElementById("paint-money-amount").value = "";
   document.getElementById("paint-money-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("paint-money-note").value = "";
+  var _ow=document.getElementById("paint-money-own"); if(_ow) _ow.checked=false;
   document.getElementById("paint-money-status").textContent = "";
   document.getElementById("paint-money-modal").style.display = "flex";
 }
@@ -13381,18 +13386,27 @@ function paintDoMoney(){
   var note = document.getElementById("paint-money-note").value.trim();
   var st = document.getElementById("paint-money-status");
   if(amount<=0){ st.className="pay-status err"; st.textContent="Вкажіть суму"; return; }
+  // 🔒 Власні кошти (лише адмін): запис у малярку є, витрати в Касі НЕМАЄ
+  var ownEl = document.getElementById("paint-money-own");
+  var own = !!(ownEl && ownEl.checked && isAdmin());
   if(PAINT_CTX.kind==="advance"){
     var j = PAINT_JOBS.find(function(x){ return x._id===PAINT_CTX.jobId; }); if(!j) return;
-    var advances = (j.advances||[]).concat([{id:"pa"+Date.now(), amount:Math.round(amount), date:date, note:note}]);
+    var adv1 = {id:"pa"+Date.now(), amount:Math.round(amount), date:date, note:note};
+    if(own) adv1.own = true;
+    var advances = (j.advances||[]).concat([adv1]);
     db.collection("paint_jobs").doc(j._id).update({advances:advances}).then(function(){
-      var fin = function(){ payClose("paint-money-modal"); showToast("Аванс "+paintFmt(amount)+" грн → Каса"); paintInit(); };
+      var fin = function(){ payClose("paint-money-modal"); showToast("Аванс "+paintFmt(amount)+" грн"+(own?" (🔒 власні, без Каси)":" → Каса")); paintInit(); };
+      if(own){ fin(); return; }
       paintCashOp(amount, "Малярка "+(j.painterName||"")+" — аванс · "+(j.car||j.vin)+(note?" ("+note+")":""), j.car||"", j.vin||"", date).then(fin).catch(fin);
     }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
   } else {
     var p = PAINTERS.find(function(x){ return x._id===PAINT_CTX.painterId; }); if(!p) return;
-    var deposits = (p.deposits||[]).concat([{id:"pd"+Date.now(), amount:Math.round(amount), date:date, note:note}]);
+    var dep1 = {id:"pd"+Date.now(), amount:Math.round(amount), date:date, note:note};
+    if(own) dep1.own = true;
+    var deposits = (p.deposits||[]).concat([dep1]);
     db.collection("painters").doc(p._id).update({deposits:deposits}).then(function(){
-      var fin = function(){ payClose("paint-money-modal"); showToast("Депозит "+paintFmt(amount)+" грн → Каса"); paintInit(); };
+      var fin = function(){ payClose("paint-money-modal"); showToast("Депозит "+paintFmt(amount)+" грн"+(own?" (🔒 власні, без Каси)":" → Каса")); paintInit(); };
+      if(own){ fin(); return; }
       paintCashOp(amount, "Малярка "+p.name+" — депозит (аванс наперед)"+(note?" ("+note+")":""), "", "", date).then(fin).catch(fin);
     }).catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
   }
@@ -13410,6 +13424,7 @@ function paintOpenClose(jobId){
   document.getElementById("paint-close-depuse").value = 0;
   document.getElementById("paint-close-extra").value = 1000;
   document.getElementById("paint-close-extranote").value = "";
+  var _ow2=document.getElementById("paint-close-own"); if(_ow2) _ow2.checked=false;
   document.getElementById("paint-close-status").textContent = "";
   paintCloseRecalc();
   document.getElementById("paint-close-modal").style.display = "flex";
@@ -13460,14 +13475,16 @@ function paintDoClose(){
         if(depuse>fresh+0.01) throw new Error("З депозиту реально доступно "+paintFmt(Math.max(0,fresh))+" грн (дані оновлено) — зменшіть суму");
       })
     : Promise.resolve();
+  var ownEl = document.getElementById("paint-close-own");
+  var ownPay = !!(ownEl && ownEl.checked && isAdmin());
   freshCheck.then(function(){
   return db.collection("paint_jobs").doc(j._id).update({
     status:"closed", totalUAH:Math.round(total), extraUAH:Math.round(extra), extraNote:extraNote,
-    depositUse:Math.round(depuse), finalPayUAH:Math.max(0,fin), closedDate:today, linked:false,
+    depositUse:Math.round(depuse), finalPayUAH:Math.max(0,fin), finalPayOwn:(ownPay&&fin>0), closedDate:today, linked:false,
     closedBy:currentUserName||""
   }).then(function(){
     var chain = Promise.resolve();
-    if(fin>0) chain = chain.then(function(){ return paintCashOp(fin, "Малярка "+(j.painterName||"")+" — доплата (розрахунок) · "+(j.car||j.vin), j.car||"", j.vin||"", today); });
+    if(fin>0 && !ownPay) chain = chain.then(function(){ return paintCashOp(fin, "Малярка "+(j.painterName||"")+" — доплата (розрахунок) · "+(j.car||j.vin), j.car||"", j.vin||"", today); });
     if(surplus>0){
       chain = chain.then(function(){
         var p = PAINTERS.find(function(x){ return x._id===j.painterId; });

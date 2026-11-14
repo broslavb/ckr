@@ -13309,11 +13309,19 @@ function paintOpenStart(){
   var p = PAINTERS.find(function(x){ return x._id===PAINT_SEL; }); if(!p) return;
   document.getElementById("paint-start-title").textContent = "Загнати авто — "+p.name;
   var sel = document.getElementById("paint-start-car");
-  db.collection("calculations").where("type","==","works").limit(400).get().then(function(snap){
+  // Авто «В роботі» — і з Робіт, і з ТО/Замовлень
+  Promise.all([
+    db.collection("calculations").where("type","==","works").limit(400).get(),
+    db.collection("calculations").where("type","==","service_order").limit(400).get()
+  ]).then(function(res){
     var opts = '<option value="">— впишу VIN вручну —</option>', seen = {};
-    snap.forEach(function(d){ var r=d.data();
+    res[0].forEach(function(d){ var r=d.data();
       if(r.status==="in_work" && r.vin && !seen[r.vin]){ seen[r.vin]=1;
         opts += '<option value="'+escH(r.vin)+'|'+escH(r.car||"")+'">'+escH(r.car||"")+' · '+escH(r.vin)+'</option>'; }
+    });
+    res[1].forEach(function(d){ var r=d.data();
+      if(r.status==="in_work" && r.vin && !seen[r.vin]){ seen[r.vin]=1;
+        opts += '<option value="'+escH(r.vin)+'|'+escH(r.car||"")+'">'+escH(r.car||"")+' · '+escH(r.vin)+' · ТО</option>'; }
     });
     sel.innerHTML = opts;
   }).catch(function(){ sel.innerHTML = '<option value="">— впишу VIN вручну —</option>'; });

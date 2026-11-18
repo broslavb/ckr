@@ -11323,26 +11323,29 @@ function payRenderCards(){
     var b4 = document.createElement("button"); b4.textContent = "📄 Звіт";
     (function(id){ b4.onclick = function(){ payOpenReport(id); }; })(w._id);
     btns.appendChild(b1); btns.appendChild(b2); btns.appendChild(b3); btns.appendChild(b4); card.appendChild(btns);
-    if(isAdmin()){
+    if(isAdmin() || isCoordAccount()){
       var btns2 = document.createElement("div"); btns2.className = "pay-cbtns"; btns2.style.marginTop="6px";
       var ba = document.createElement("button"); ba.textContent = "Аванс";
       (function(id){ ba.onclick = function(){ payOpenGive("advance", id); }; })(w._id);
+      btns2.appendChild(ba);
+      if(isAdmin()){
       var br = document.createElement("button"); br.textContent = "Розстрочка";
       (function(id){ br.onclick = function(){ payOpenGive("loan", id); }; })(w._id);
-      btns2.appendChild(ba); btns2.appendChild(br);
+      btns2.appendChild(br);
+      }
       // #9 Ручний бонус-корегування (Анікін, менеджер ЗЧ) — лише власник
-      if(w.role==="coord" || w.role==="pmgr"){
+      if(isAdmin() && (w.role==="coord" || w.role==="pmgr")){
         var bb = document.createElement("button"); bb.textContent = "＋ Бонус"; bb.style.cssText="color:var(--gr);border-color:var(--gr)";
         (function(id){ bb.onclick = function(){ payManualBonus(id); }; })(w._id);
         btns2.appendChild(bb);
       }
       // Тижнева ставка — лише для чинного координатора (Марченко з 09.11.2026)
-      if(w.role==="coord" && !w.coordTo){
+      if(isAdmin() && w.role==="coord" && !w.coordTo){
         var bw = document.createElement("button"); bw.textContent = "＋ Тиждень ("+Math.round(PAY_COORD_WEEK_UAH).toLocaleString("uk-UA")+" грн)"; bw.style.cssText="color:var(--bl);border-color:var(--bl)";
         (function(id){ bw.onclick = function(){ payCoordWeek(id); }; })(w._id);
         btns2.appendChild(bw);
       }
-      if(w.role==="pmgr"){
+      if(isAdmin() && w.role==="pmgr"){
         var bs = document.createElement("button"); bs.textContent = "✎ Ставка";
         (function(id){ bs.onclick = function(){ payEditBaseRate(id); }; })(w._id);
         btns2.appendChild(bs);
@@ -12249,10 +12252,17 @@ function payDoAccrue(){
 }
 
 // ── АВАНС / РОЗСТРОЧКА ──
+// Аванс може видавати і координатор (Марченко) — але лише З КАСИ;
+// розстрочка і «власні кошти» — тільки власник.
 function payOpenGive(kind, wid){
-  if(!isAdmin()){ showToast("Лише власник"); return; }
+  if(!isAdmin() && !(isCoordAccount() && kind==="advance")){ showToast("Лише власник"); return; }
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
   PAY_SEL_WORKER = wid; PAY_GIVE_KIND = kind;
+  var srcSel = document.getElementById("pay-give-source");
+  if(srcSel){
+    if(!isAdmin()){ srcSel.value="cash"; srcSel.disabled=true; }
+    else srcSel.disabled=false;
+  }
   var cur = payCurOf(w.role);
   document.getElementById("pay-give-title").textContent = (kind==="loan"?"Розстрочка — ":"Аванс — ")+w.name;
   document.getElementById("pay-give-amt-lbl").textContent = "Сума ("+(cur==="usd"?"$":"грн")+")";
@@ -12275,6 +12285,11 @@ function payDoGive(){
   var uah = cur==="usd" ? Math.round(inp*rate) : inp;
   var usd = cur==="usd" ? inp : Math.round((inp/rate)*100)/100;
   var type = PAY_GIVE_KIND==="loan" ? "loan" : "advance";
+  // Координатор: лише аванс і лише з Каси
+  if(!isAdmin()){
+    if(type!=="advance"){ showToast("Лише власник"); return; }
+    source = "cash";
+  }
   db.collection("worker_payments").add({
     workerId:w._id, workerName:w.name, role:w.role,
     amountUAH:uah, rate:rate, amountUSD:usd, payCur:cur,

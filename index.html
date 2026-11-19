@@ -1300,16 +1300,19 @@ body.is-adm #pay-set-btn{display:inline-block}
 /* ── План: шкала етапів з авто над нею ── */
 #plan-scale{margin-bottom:16px}
 .pscale{background:var(--bg2);border-radius:18px;box-shadow:var(--shadow);padding:16px 10px 10px;overflow-x:auto}
-.pscale-row{display:flex;align-items:flex-end;min-width:980px}
-.pscale-col{flex:1 1 0;min-width:68px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;padding:0 3px}
+.pscale-row{display:flex;align-items:flex-end;min-width:1240px}
+.pscale-col{flex:1 1 0;min-width:88px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;padding:0 3px;border-radius:12px;transition:background .12s}
+.pscale-col.drop{background:var(--acd)}
+.pscale-col.drop .pscale-node{border-color:var(--ac);background:var(--ac)}
 .pscale-col::before{content:"";position:absolute;left:0;right:0;bottom:37px;height:2px;background:var(--bd)}
 .pscale-col:first-child::before{left:50%}
 .pscale-col:last-child::before{right:50%}
 .pscale-cars{display:flex;flex-direction:column;justify-content:flex-end;gap:5px;margin-bottom:8px;position:relative;z-index:2}
-.pscale-car{width:54px;height:40px;border-radius:9px;overflow:hidden;cursor:pointer;border:2px solid #fff;box-shadow:0 2px 8px rgba(24,29,39,.22);background:var(--bg3);transition:transform .12s}
-.pscale-car:hover{transform:scale(1.15)}
-.pscale-car img{width:100%;height:100%;object-fit:cover;display:block}
-.pscale-more{width:54px;height:20px;border-radius:7px;background:var(--bg3);color:var(--tx2);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pscale-car{width:76px;height:57px;border-radius:11px;overflow:hidden;cursor:grab;border:2px solid #fff;box-shadow:0 2px 8px rgba(24,29,39,.22);background:var(--bg3);transition:transform .12s}
+.pscale-car:hover{transform:scale(1.12)}
+.pscale-car:active{cursor:grabbing}
+.pscale-car img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.pscale-more{width:76px;height:22px;border-radius:8px;background:var(--bg3);color:var(--tx2);font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pscale-node{width:12px;height:12px;border-radius:999px;background:var(--bg2);border:2px solid var(--bda);margin-bottom:6px;position:relative;z-index:2;box-sizing:border-box}
 .pscale-node.on{background:var(--ac);border-color:var(--ac)}
 .pscale-node.ok{background:var(--gr);border-color:var(--gr)}
@@ -3574,7 +3577,7 @@ function switchTab(t, el) {
   el.classList.add("active");
   var editorTab = (t==="works"||t==="parts"||t==="service");
   // Головна, Калькуляції/В роботі та Архів — на всю ширину, без правої заставки
-  var fullTab = editorTab || t==="home" || t==="active" || t==="archive";
+  var fullTab = editorTab || t==="home" || t==="active" || t==="archive" || t==="plan";
   ["home","works","parts","service","cash","parking","paint","plan","lamps","pay","stats","active","receive","archive","settings","svcprices","presets"].forEach(function(id){
     var e = document.getElementById("tab-"+id);
     if (!e) return;
@@ -14959,25 +14962,94 @@ function planScaleRender(){
   });
   extraOrder.forEach(function(k){ cols.push(extra[k]); });
   cols.push(doneCol);
+  PLAN_SCALE_COLS = cols;
   var total=0; cols.forEach(function(c){ total+=c.cars.length; });
   if(!total){ box.style.display="none"; box.innerHTML=""; return; }
   box.style.display="";
+  var canE = planCanEdit();
   box.innerHTML='<div class="pscale"><div class="pscale-row">'+cols.map(function(col,ci){
     var MAX=6, exp=!!PLAN_SCALE_EXP[ci];
     var list=exp?col.cars:col.cars.slice(0,MAX);
     var more=col.cars.length-list.length;
     var carsH=list.map(function(c){
       var ph=planPhotoOf(c)||(typeof CAR_PH_DEF!=="undefined"?CAR_PH_DEF:"");
-      return '<div class="pscale-car" title="'+escH((c.car||"")+(c.vin?" · "+c.vin:"")+' — '+col.lbl)+'" onclick="planOpen(\''+c._id+'\')">'
-        +'<img src="'+escH(ph)+'" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.onerror=null;this.src=CAR_PH_DEF"/></div>';
+      return '<div class="pscale-car" title="'+escH((c.car||"")+(c.vin?" · "+c.vin:"")+' — '+col.lbl)+(canE?' (перетягніть на інший етап)':'')+'"'
+        +(canE?' draggable="true" ondragstart="planScaleDragStart(event,\''+c._id+'\')" ondragend="planScaleDragClear()"':'')
+        +' onclick="planOpen(\''+c._id+'\')">'
+        +'<img src="'+escH(ph)+'" referrerpolicy="no-referrer" loading="lazy" alt="" draggable="false" onerror="this.onerror=null;this.src=CAR_PH_DEF"/></div>';
     }).join("");
     if(more>0) carsH+='<div class="pscale-more" title="Показати всі" onclick="PLAN_SCALE_EXP['+ci+']=1;planScaleRender()">+'+more+'</div>';
-    return '<div class="pscale-col">'
+    return '<div class="pscale-col"'+(canE?' ondragover="planScaleDragOver(event,'+ci+')" ondrop="planScaleDrop(event,'+ci+')"':'')+'>'
       +'<div class="pscale-cars">'+carsH+'</div>'
       +'<div class="pscale-node'+(col.cars.length?(col.done?" ok":" on"):"")+'"'+(col.cars.length?' title="'+col.cars.length+' авто"':'')+'></div>'
       +'<div class="pscale-lbl'+(col.cars.length?" on":"")+'">'+escH(col.lbl)+'</div>'
       +'</div>';
   }).join("")+'</div></div>';
+}
+// ── Перетягування авто по шкалі: підтвердження → запис у план авто ──
+var PLAN_SCALE_COLS=[], PLAN_DRAG_CID=null;
+function planScaleDragStart(ev,cid){
+  if(!planCanEdit()){ if(ev&&ev.preventDefault) ev.preventDefault(); return; }
+  PLAN_DRAG_CID=cid;
+  try{ ev.dataTransfer.setData("text/plain",cid); ev.dataTransfer.effectAllowed="move"; }catch(e){}
+}
+function planScaleDragOver(ev,ci){
+  if(!planCanEdit()) return;
+  ev.preventDefault();
+  try{ ev.dataTransfer.dropEffect="move"; }catch(e){}
+  var els=document.querySelectorAll("#plan-scale .pscale-col");
+  for(var i=0;i<els.length;i++){ els[i].classList.toggle("drop", i===ci); }
+}
+function planScaleDragClear(){
+  var els=document.querySelectorAll("#plan-scale .pscale-col.drop");
+  for(var i=0;i<els.length;i++){ els[i].classList.remove("drop"); }
+}
+function planScaleDrop(ev,ci){
+  ev.preventDefault(); planScaleDragClear();
+  var cid=PLAN_DRAG_CID;
+  try{ cid=ev.dataTransfer.getData("text/plain")||cid; }catch(e){}
+  PLAN_DRAG_CID=null;
+  if(!cid) return;
+  if(!planCanEdit()){ showToast("Редагують власник і координатор"); return; }
+  var col=PLAN_SCALE_COLS[ci]; if(!col) return;
+  var c=PLAN_CARS.find(function(x){ return x._id===cid; }); if(!c) return;
+  var p=PLAN_DOCS[cid];
+  if(!p || !(p.stages && p.stages.length)){ showToast("План цього авто ще не створено — відкрийте його плитку"); return; }
+  var today=new Date().toISOString().slice(0,10);
+  var by=(currentUserName||"")+" · "+today;
+  if(col.done){
+    if(!confirm("«"+(c.car||cid)+"» → ГОТОВО?\n\nУсі етапи плану буде позначено ✅ виконаними.")) return;
+    p.stages.forEach(function(s){
+      if(s.status==="na") return;
+      if(s.status!=="done"){ s.status="done"; if(!s.startDate)s.startDate=today; if(!s.doneDate)s.doneDate=today; s.changedBy=by; }
+    });
+  } else {
+    var idx=-1;
+    for(var i=0;i<p.stages.length;i++){
+      var s=p.stages[i];
+      if((col.key && s.key===col.key) || s.name===col.name || s.name===col.lbl){ idx=i; break; }
+    }
+    if(idx<0){ showToast("У плані «"+(c.car||"")+"» немає етапу «"+col.lbl+"»"); return; }
+    if(p.stages[idx].status==="active"){ showToast("«"+(c.car||"")+"» вже на етапі «"+col.lbl+"»"); return; }
+    if(!confirm("Перемістити «"+(c.car||cid)+"» на етап «"+col.lbl+"»?\n\nЕтапи до нього → ✅ виконані, цей → 🔵 в роботі, пізніші → ☐ зняті.")) return;
+    p.stages.forEach(function(s,j){
+      if(s.status==="na") return;
+      if(j<idx){ if(s.status!=="done"){ s.status="done"; if(!s.startDate)s.startDate=today; if(!s.doneDate)s.doneDate=today; s.changedBy=by; } }
+      else if(j===idx){ s.status="active"; s.startDate=s.startDate||today; s.doneDate=""; s.changedBy=by; }
+      else if(s.status!=="todo"){ s.status="todo"; s.startDate=""; s.doneDate=""; s.changedBy=by; }
+    });
+    // Взаємовиключна пара «Закупівля ЗЧ» / «Очікування від клієнта»
+    var tk=p.stages[idx].key;
+    if(tk==="buy_parts"||tk==="client_parts"){
+      var pk = tk==="buy_parts" ? "client_parts" : "buy_parts";
+      p.stages.forEach(function(o){ if(o.key===pk && o.status!=="na"){ o.status="na"; o.startDate=""; o.doneDate=""; } });
+    }
+  }
+  p.updatedAt=new Date().toISOString();
+  db.collection("plans").doc(cid).set(p).then(function(){
+    showToast("✓ "+(c.car||"")+" → «"+col.lbl+"»");
+    planRender();
+  }).catch(function(e){ showToast("⚠ Не збереглось: "+e.message); planRender(); });
 }
 function planRender(){
   var tiles=document.getElementById("plan-tiles"), det=document.getElementById("plan-detail");

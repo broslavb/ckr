@@ -1358,14 +1358,16 @@ body.hero-on .hero-pad{margin-right:40vw}
 /* ── МОБІЛЬНА РОЗКЛАДКА (≤900px): редактори калькуляцій в одну колонку —
    права панель підсумків опускається ПІД поля лівої. Друк не чіпаємо. ── */
 @media(max-width:900px){
-  #tab-works.main{display:block!important;height:auto}
+  /* display НЕ чіпаємо (switchTab ховає вкладки інлайновим display:none) —
+     лише переводимо грід в одну колонку, права панель стає під лівою */
+  #tab-works.main{grid-template-columns:1fr!important;height:auto}
   #tab-works .left{height:auto;overflow:visible;border-right:none;padding:12px}
   #tab-works .right{height:auto;overflow:visible;border-top:3px solid var(--bda)}
-  .pm-layout{display:block!important;height:auto;overflow:visible}
+  .pm-layout{grid-template-columns:1fr!important;height:auto;overflow:visible}
   .pm-left{height:auto;overflow:visible;padding:12px}
   .pm-right-wrap{max-height:none;overflow:visible;padding:12px;border-top:3px solid var(--bda)}
   .pm-right{position:static;max-height:none}
-  #tab-service.so-layout{display:block!important;height:auto;overflow:visible}
+  #tab-service.so-layout{grid-template-columns:1fr!important;height:auto;overflow:visible}
   .so-left{height:auto;overflow:visible;padding:12px}
   .so-right-wrap{max-height:none;overflow:visible;padding:12px;border-top:3px solid var(--bda)}
   .car-info{grid-template-columns:1fr 1fr}

@@ -1683,7 +1683,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
       <button class="btn btn-o" onclick="sluSheetPrint()" title="Зарплатна калькуляція для слюсаря: Слюсарні + Безпека, без цін клієнта">🔧 Лист слюсаря</button>
       <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
-      <button class="btn btn-o" onclick="calcJump('parts')" title="Відкрити збережену калькуляцію Запчастин цього авто (по VIN)">⇄ До Запчастин</button>
+      <button class="btn" onclick="calcJump('parts')" title="Відкрити збережену калькуляцію Запчастин цього авто (по VIN)" style="background:var(--ac);color:#fff;border-color:var(--ac)">⇄ До Запчастин</button>
       <button class="btn btn-o" onclick="wArchiveCurrent()" title="Завершити ремонт і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
       <button class="btn btn-o" id="w-hidden-toggle" onclick="toggleWorksHidden()" title="Показати/сховати приховані роботи" style="display:none">👁 Показати приховані</button>
     </div>
@@ -1828,7 +1828,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
           <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
           <button class="btn btn-o" onclick="newCalcLinked('works')" title="Створити Роботи для цього ж авто">➕ Роботи (це авто)</button>
-          <button class="btn btn-o" onclick="calcJump('works')" title="Відкрити збережену калькуляцію Робіт цього авто (по VIN)">⇄ До Робіт</button>
+          <button class="btn" onclick="calcJump('works')" title="Відкрити збережену калькуляцію Робіт цього авто (по VIN)" style="background:var(--ac);color:#fff;border-color:var(--ac)">⇄ До Робіт</button>
           <button class="btn btn-o" onclick="pmArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
           <button class="btn btn-o" onclick="openCalcLog('parts')" title="Історія змін цієї калькуляції">🕘 Історія</button>
           <button class="btn btn-o" onclick="pmClear()">&#10005; Нова</button>

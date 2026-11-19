@@ -11,54 +11,57 @@
 <!-- Lora — шрифт головного меню -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 /* System fonts only — no external font loading delay */
 :root{
-  --bg:#f0f4fa;--bg2:#ffffff;--bg3:#e8eef8;--bd:#c5d3e8;--bda:#a8bdd8;
-  --ac:#1565C0;--acd:rgba(21,101,192,.12);--acd2:rgba(21,101,192,.06);
-  --tx:#0d1b3e;--tx2:#3a4f72;--tx3:#7a8fa8;
-  --gr:#2d7a4f;--rd:#c0392b;--bl:#1565C0;
-  --mono:'Consolas','Courier New',monospace;--sans:Verdana,Geneva,Tahoma,sans-serif;--disp:'Arial Black','Impact',sans-serif;
-  --blue-dark:#0d2b6b;--blue-mid:#1565C0;--blue-light:#e3edf8;
+  --bg:#f3f5f9;--bg2:#ffffff;--bg3:#eef1f6;--bd:#e4e8f0;--bda:#cbd5e6;
+  --ac:#3f5bf6;--acd:rgba(63,91,246,.1);--acd2:rgba(63,91,246,.05);
+  --tx:#181d27;--tx2:#4a5468;--tx3:#8a93a6;
+  --gr:#0e9f6e;--rd:#d6336c;--bl:#3f5bf6;
+  --mono:'Consolas','Courier New',monospace;--sans:'Manrope',Verdana,Geneva,Tahoma,sans-serif;--disp:'Manrope',Verdana,sans-serif;
+  --blue-dark:#181d27;--blue-mid:#3f5bf6;--blue-light:#eceffe;
+  --shadow:0 1px 2px rgba(24,29,39,.05),0 8px 22px rgba(24,29,39,.06);
+  --shadow-up:0 2px 4px rgba(24,29,39,.07),0 14px 30px rgba(24,29,39,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0}html{font-size:14px}
-body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans-serif;min-height:100vh}
+body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,Tahoma,sans-serif;min-height:100vh}
 
 /* ── LOGIN ── */
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--blue-dark)}
-.login-box{background:#fff;border-radius:8px;padding:40px 48px;width:360px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.login-box{background:#fff;border-radius:22px;padding:40px 48px;width:360px;box-shadow:var(--shadow-up)}
 .login-logo{font-family:var(--disp);font-size:36px;letter-spacing:4px;color:var(--blue-dark);text-align:center;margin-bottom:4px}
 .login-sub{font-family:var(--mono);font-size:11px;color:var(--tx3);text-align:center;margin-bottom:28px;letter-spacing:1px}
 .login-field{margin-bottom:14px}
 .login-field label{display:block;font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 .login-field input{width:100%;border:1px solid var(--bd);border-radius:4px;padding:9px 12px;font-family:var(--mono);font-size:13px;outline:none;transition:border .2s;color:var(--tx)}
 .login-field input:focus{border-color:var(--blue-mid)}
-.login-btn{width:100%;background:#0d2b6b;color:#fff;border:none;border-radius:4px;padding:11px;font-family:var(--disp);font-size:16px;letter-spacing:2px;cursor:pointer;margin-top:8px;transition:background .2s}
-.login-btn:hover{background:var(--blue-mid)}
+.login-btn{width:100%;background:var(--ac);color:#fff;border:none;border-radius:999px;padding:12px;font-family:'Manrope',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;cursor:pointer;margin-top:8px;transition:background .2s}
+.login-btn:hover{background:#2a41c9}
 .login-err{color:var(--rd);font-family:var(--mono);font-size:11px;margin-top:10px;text-align:center;min-height:16px}
 
 /* ── HEADER ── */
 #app-screen{display:none}
-.hdr{background:var(--blue-dark);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;font-family:Verdana,sans-serif}
-.logo{display:flex;align-items:center;font-family:'Lora',Georgia,serif;font-size:22px;letter-spacing:2px;color:#fff;font-weight:700}
-.logo span{color:rgba(255,255,255,.55);font-size:22px;line-height:1;font-family:'Lora',Georgia,serif;font-weight:600;letter-spacing:1px;margin-left:12px;white-space:nowrap}
+.hdr{background:var(--bg2);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;font-family:'Manrope',Verdana,sans-serif;border-bottom:1px solid var(--bd)}
+.logo{display:flex;align-items:center;font-family:'Manrope',sans-serif;font-size:21px;letter-spacing:-.3px;color:var(--tx);font-weight:800}
+.logo span{color:var(--tx3);font-size:12.5px;line-height:1;font-family:'Manrope',sans-serif;font-weight:700;letter-spacing:1.6px;margin-left:14px;white-space:nowrap}
 .hdr-right{display:flex;align-items:center;gap:14px}
-.rate-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.6)}
+.rate-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--tx3);background:var(--bg3);border-radius:999px;padding:5px 12px}
 .rate-dot{width:6px;height:6px;border-radius:50%;background:var(--rd)}
-.rate-inp{width:62px;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.3);color:#fff;font-family:var(--mono);font-size:13px;font-weight:500;outline:none;text-align:right;padding:0 2px}
-.user-badge{font-family:Verdana,sans-serif;font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:8px}
-.logout-btn{font-family:Verdana,sans-serif;font-size:10px;color:rgba(255,255,255,.4);cursor:pointer;border:1px solid rgba(255,255,255,.2);border-radius:3px;padding:3px 8px;transition:all .15s}
-.logout-btn:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+.rate-inp{width:62px;background:transparent;border:none;border-bottom:1px solid var(--bda);color:var(--tx);font-family:var(--mono);font-size:13px;font-weight:600;outline:none;text-align:right;padding:0 2px}
+.user-badge{font-family:'Manrope',Verdana,sans-serif;font-weight:600;font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:8px}
+.logout-btn{font-family:'Manrope',Verdana,sans-serif;font-weight:700;font-size:10px;color:var(--tx3);cursor:pointer;border:1px solid var(--bd);border-radius:999px;padding:4px 10px;transition:all .15s}
+.logout-btn:hover{color:var(--tx);border-color:var(--bda)}
 
 /* ── TABS ── */
-.tabs{display:flex;border-bottom:1px solid var(--bd);background:var(--bg2);padding:0 16px;overflow-x:auto;scrollbar-width:none}
+.tabs{display:flex;align-items:center;gap:3px;height:41px;border-bottom:1px solid var(--bd);background:var(--bg2);padding:0 14px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tab{display:flex;align-items:center;white-space:nowrap;flex:none;padding:0 8px;line-height:1;height:40px;box-sizing:border-box;font-family:'Lora',Georgia,'Times New Roman',serif;font-weight:700;font-size:11px;text-transform:uppercase;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px}
-.tab:hover{color:var(--tx)}.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.tab{display:flex;align-items:center;white-space:nowrap;flex:none;padding:0 13px;line-height:1;height:29px;box-sizing:border-box;font-family:'Manrope',Verdana,sans-serif;font-weight:700;font-size:12px;color:var(--tx2);cursor:pointer;border-radius:999px;transition:background .15s,color .15s}
+.tab:hover{color:var(--tx);background:var(--bg3)}.tab.active{color:#fff;background:var(--blue-dark)}
+.tab.active span{color:rgba(255,255,255,.65)!important}
 
 /* ── LAYOUT ── */
 .main{display:grid;grid-template-columns:1fr 1fr;height:calc(100vh - 93px)}
@@ -130,7 +133,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .side-opt{padding:5px 10px;font-family:var(--mono);font-size:11px;color:var(--tx2);cursor:pointer;border-radius:3px;white-space:nowrap}
 .side-opt:hover{background:var(--acd);color:var(--ac)}
 .srch{margin-bottom:10px;position:relative}
-.srch input{width:100%;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:7px 10px 7px 30px;border-radius:3px;outline:none;transition:border .2s}
+.srch input{width:100%;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:9px 14px 9px 32px;border-radius:999px;outline:none;transition:border .2s,box-shadow .2s;box-shadow:var(--shadow)}
 .srch input:focus{border-color:var(--ac)}
 .srch-ic{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:13px;pointer-events:none}
 
@@ -234,10 +237,11 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .gt-sub{font-family:var(--mono);font-size:10px;color:var(--tx3);text-align:right}
 .acts{padding:10px 14px;border-top:1px solid var(--bd);display:flex;gap:7px;flex-wrap:wrap;background:var(--bg2)}
 /* Оплати: інтерактивні поля лише на екрані, у друку — чистий текст */
-.tab-create{position:relative;color:var(--ac)}
-.create-menu{display:none;position:fixed;background:var(--bg2);border:1px solid var(--bda);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.18);min-width:190px;z-index:300;overflow:hidden}
+.tab-create{position:relative;color:#fff;background:var(--ac);font-weight:800}
+.tab-create:hover{color:#fff;background:#2a41c9}
+.create-menu{display:none;position:fixed;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--shadow-up);min-width:200px;z-index:300;overflow:hidden}
 .create-menu.open{display:block}
-.create-menu>div{padding:10px 16px;font-family:'Lora',Georgia,serif;font-weight:700;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:1px solid var(--bd)}
+.create-menu>div{padding:11px 18px;font-family:'Manrope',Verdana,sans-serif;font-weight:700;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:1px solid var(--bd)}
 .create-menu>div:last-child{border-bottom:none}
 .create-menu>div:hover{background:var(--acd);color:var(--ac)}
 .atf-chip{font-family:var(--mono);font-size:11px;padding:5px 12px;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s}
@@ -250,9 +254,9 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
   .w-pay-print{display:block!important;font-family:Arial,sans-serif;font-size:9pt;color:#000;margin-top:6px}
   .w-pay-print .wpp-row{display:flex;justify-content:space-between;padding:2px 0}
 }
-.btn{padding:7px 13px;border-radius:3px;font-family:var(--mono);font-size:11px;cursor:pointer;border:1px solid;transition:all .15s;letter-spacing:.5px}
-.btn-p{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark);font-weight:500}
-.btn-p:hover{background:var(--blue-mid)}
+.btn{padding:7px 14px;border-radius:999px;font-family:'Manrope',var(--sans);font-size:11px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;letter-spacing:.3px}
+.btn-p{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark)}
+.btn-p:hover{background:#2e3647}
 .btn-o{background:transparent;color:var(--tx2);border-color:var(--bda)}
 .btn-o:hover{color:var(--tx);border-color:var(--tx3)}
 
@@ -290,8 +294,8 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .arch-search input{flex:1;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:3px;outline:none;transition:border .2s}
 .arch-search input:focus{border-color:var(--ac)}
 .arch-search .btn{padding:8px 14px}
-.hist-card{background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
-.hist-card:hover{border-color:var(--ac)}
+.hist-card{background:var(--bg2);border:1px solid transparent;border-radius:14px;padding:13px 15px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,box-shadow .15s;box-shadow:var(--shadow)}
+.hist-card:hover{border-color:var(--ac);box-shadow:var(--shadow-up)}
 .hist-card.status-done{border-left:3px solid var(--gr)}
 .hist-card.status-final{border-left:3px solid var(--blue-mid)}
 .hist-card.status-insurance{border-left:3px solid var(--ac)}
@@ -306,8 +310,9 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .tri-cell .hist-card{margin-bottom:0}
 .tri-cell .hist-card + .hist-card{margin-top:10px}
 .tri-pair .hist-card{border-color:var(--blue-mid)}
-.tri-col-h{font-family:var(--disp);font-size:13px;letter-spacing:1px;color:var(--blue-dark);background:var(--bg2);border:1px solid var(--bd);border-left:4px solid var(--blue-mid);border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
-.tri-col-h .cnt{font-family:var(--mono);font-size:11px;color:var(--tx3)}
+.tri-col-h{font-family:'Manrope',sans-serif;font-weight:800;font-size:12.5px;letter-spacing:.8px;color:var(--tx);background:transparent;border:none;padding:4px 8px 6px;display:flex;align-items:center}
+.tri-col-h::before{content:"";width:9px;height:9px;border-radius:999px;background:var(--tri-dot,var(--ac));margin-right:9px;flex:none}
+.tri-col-h .cnt{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--tx2);background:var(--bg3);border-radius:999px;padding:2px 10px;margin-left:auto}
 .tri-empty{font-family:var(--mono);font-size:11px;color:var(--tx3);padding:10px 4px}
 .tri-cell .hist-ph{max-width:150px;min-width:80px}
 @media(max-width:1250px){
@@ -326,9 +331,9 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .ci-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ci-photo:hover{border-color:var(--bda)}
 .ci-ph-edit{position:absolute;right:6px;top:6px;z-index:2;background:rgba(13,27,62,.6);color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;line-height:1.4}
-.hist-car{font-family:var(--disp);font-size:15px;letter-spacing:1px}
-.hist-vin{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:1px}
-.hist-tot{font-family:var(--mono);font-size:14px;color:var(--blue-dark);font-weight:500}
+.hist-car{font-family:'Manrope',sans-serif;font-weight:800;font-size:15px;letter-spacing:-.2px}
+.hist-vin{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:2px}
+.hist-tot{font-family:var(--mono);font-size:14px;color:var(--tx);font-weight:700}
 /* Праві дії картки — фіксовані колонки, щоб суми/статуси вирівнювались по вертикалі */
 /* Компактно: сума зверху, під нею кнопка «Завершено» + корзина — назві авто лишається ширина */
 .card-actions{display:grid;grid-template-columns:auto auto;gap:6px 10px;align-items:center;justify-items:end;flex-shrink:0}
@@ -338,7 +343,7 @@ body{background:var(--bg);color:var(--tx);font-family:Verdana,Geneva,Tahoma,sans
 .card-actions .ca-del{grid-row:2;grid-column:2;display:flex;justify-content:center;min-width:20px}
 .hist-meta{font-family:var(--mono);font-size:10px;color:var(--tx2);margin-top:3px}
 .hist-tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
-.hist-tag{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:2px;background:var(--bg3);color:var(--tx2)}
+.hist-tag{font-family:'Manrope',sans-serif;font-weight:700;font-size:10px;padding:3px 9px;border-radius:999px;background:var(--bg3);color:var(--tx2)}
 .hist-tag.w{background:var(--acd);color:var(--ac)}
 .hist-tag.master{background:var(--blue-light);color:var(--blue-mid)}
 .hist-del{color:var(--tx3);font-size:12px;cursor:pointer;padding:4px;transition:color .15s}
@@ -885,12 +890,12 @@ input, select, button, .btn, .pp-inp, .cinp,
 }
 
 
-.card-type-works{border-left:4px solid #2d7a4f!important}
-.card-type-parts{border-left:4px solid #1565C0!important}
-.card-type-service{border-left:4px solid #e65100!important}
-.card-type-works .hist-car{color:#1a3a6b}
-.card-type-parts .hist-car{color:#1565C0}
-.card-type-service .hist-car{color:#e65100}
+.card-type-works{border-left:4px solid #3f5bf6!important}
+.card-type-parts{border-left:4px solid #e8750a!important}
+.card-type-service{border-left:4px solid #0e9f6e!important}
+.card-type-works .hist-car{color:#181d27}
+.card-type-parts .hist-car{color:#181d27}
+.card-type-service .hist-car{color:#181d27}
 .active-group-hdr{display:flex;align-items:baseline;gap:10px;padding:10px 14px 4px;margin-top:8px;border-bottom:2px solid var(--ac)}
 .active-group-car{font-family:var(--disp);font-size:13px;font-weight:700;color:var(--blue-dark);letter-spacing:.5px}
 .active-group-vin{font-family:var(--mono);font-size:10px;color:var(--tx3)}
@@ -1251,27 +1256,30 @@ body.is-adm #pay-set-btn{display:inline-block}
 }
 /* ═══ ГЛОБАЛЬНА ЗАСТАВКА (оглядові вкладки; ховається в редакторах авто) ═══ */
 /* ── ГОЛОВНА — плитки розділів ─────────────────────────────────────────────── */
-#tab-home{min-height:calc(100vh - 93px);background:linear-gradient(170deg,rgba(9,16,34,.88) 0%,rgba(9,16,34,.78) 45%,rgba(12,20,42,.92) 100%),url("assets/hero.jpg") center 28%/cover no-repeat fixed}
-.home-wrap{padding:22px 34px 34px;max-width:1750px;margin:0 auto}
-.home-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
-.home-hi{font-family:'Lora',Georgia,serif;font-weight:700;font-size:26px;color:#fff;letter-spacing:.3px;text-shadow:0 1px 10px rgba(0,0,0,.6)}
-.home-date{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.55);margin-top:3px;text-transform:capitalize}
-#home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;min-height:calc(100vh - 230px);grid-auto-rows:minmax(190px,1fr)}
-#home-grid.dense{grid-template-columns:repeat(auto-fit,minmax(245px,1fr));grid-auto-rows:minmax(165px,1fr);gap:14px}
-.home-tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding:20px 22px 18px;border:1px solid rgba(255,255,255,.16);border-radius:14px;cursor:pointer;overflow:hidden;background:#101a30;transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease}
-.home-tile::before{content:"";position:absolute;left:0;top:0;right:0;height:4px;background:linear-gradient(90deg,var(--hta),rgba(var(--htr),.25));z-index:3}
-.home-tile:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.5);border-color:var(--hta)}
-.ht-ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;transition:transform .3s ease}
-.home-tile:hover .ht-ph{transform:scale(1.045)}
-.ht-shade{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(8,13,28,.22) 0%,rgba(8,13,28,.08) 38%,rgba(8,13,28,.87) 86%)}
-.ht-ico{position:absolute;top:16px;left:18px;width:46px;height:46px;border-radius:12px;background:rgba(10,16,32,.55);border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;z-index:2}
-#home-grid.dense .ht-ico{width:40px;height:40px;font-size:21px;border-radius:10px}
-.ht-tt{position:relative;z-index:2;font-family:'Lora',Georgia,serif;font-weight:700;font-size:19px;color:#fff;letter-spacing:.2px;text-shadow:0 1px 10px rgba(0,0,0,.65)}
-#home-grid.dense .ht-tt{font-size:17px}
-.ht-dd{position:relative;z-index:2;font-size:11.5px;color:rgba(255,255,255,.82);line-height:1.35;text-shadow:0 1px 6px rgba(0,0,0,.6)}
-.ht-chips{position:relative;z-index:2;display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.ht-chip{font-family:var(--mono);font-size:11px;font-weight:700;color:#14233f;background:rgba(255,255,255,.92);border:1px solid transparent;border-radius:6px;padding:5px 11px;transition:background .12s,color .12s}
+#tab-home{min-height:calc(100vh - 93px);background:var(--bg)}
+.home-wrap{padding:26px 34px 36px;max-width:1750px;margin:0 auto}
+.home-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+.home-hi{font-family:'Manrope',sans-serif;font-weight:800;font-size:27px;color:var(--tx);letter-spacing:-.5px}
+.home-date{font-family:'Manrope',sans-serif;font-weight:600;font-size:12.5px;color:var(--tx3);margin-top:4px;text-transform:capitalize}
+#home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px;grid-auto-rows:minmax(150px,auto)}
+#home-grid.dense{grid-template-columns:repeat(auto-fit,minmax(245px,1fr));grid-auto-rows:minmax(135px,auto);gap:15px}
+.home-tile{position:relative;display:flex;flex-direction:column;justify-content:flex-start;gap:9px;padding:22px;border:1px solid transparent;border-radius:18px;cursor:pointer;overflow:hidden;background:var(--bg2);box-shadow:var(--shadow);transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease}
+.home-tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-up);border-color:rgba(var(--htr),.5)}
+.ht-ico{width:46px;height:46px;border-radius:999px;background:rgba(var(--htr),.11);color:var(--hta);display:flex;align-items:center;justify-content:center;line-height:1}
+#home-grid.dense .ht-ico{width:42px;height:42px}
+.ht-tt{font-family:'Manrope',sans-serif;font-weight:800;font-size:17px;color:var(--tx);letter-spacing:-.2px;margin-top:3px}
+#home-grid.dense .ht-tt{font-size:16px}
+.ht-dd{font-size:12px;font-weight:600;color:var(--tx3);line-height:1.45}
+.ht-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ht-chip{font-family:'Manrope',sans-serif;font-size:11px;font-weight:700;color:var(--hta);background:rgba(var(--htr),.1);border:1px solid transparent;border-radius:999px;padding:5px 12px;transition:background .12s,color .12s}
 .ht-chip:hover{background:var(--hta);color:#fff}
+.ht-hero{background:var(--ac);box-shadow:0 10px 28px rgba(63,91,246,.32)}
+.ht-hero:hover{border-color:transparent;box-shadow:0 14px 34px rgba(63,91,246,.42)}
+.ht-hero .ht-ico{background:rgba(255,255,255,.16);color:#fff}
+.ht-hero .ht-tt{color:#fff}
+.ht-hero .ht-dd{color:rgba(255,255,255,.75)}
+.ht-hero .ht-chip{color:#fff;background:rgba(255,255,255,.16)}
+.ht-hero .ht-chip:hover{background:rgba(255,255,255,.32);color:#fff}
 @media(max-width:1000px){ .home-wrap{padding:14px} #home-grid{min-height:0;grid-auto-rows:minmax(120px,auto)} }
 @media print{ #tab-home{display:none!important} }
 
@@ -1379,24 +1387,24 @@ body.hero-on .hero-pad{margin-right:40vw}
 </div>
 
 <div class="hdr">
-  <div onclick="goHome()" title="На головну" style="display:flex;align-items:center;gap:10px;cursor:pointer"><svg width="30" height="30" viewBox="0 0 64 64" aria-label="CKR" style="flex:0 0 auto"><path d="M32 3 L57 11 V33 C57 47 46 56 32 61 C18 56 7 47 7 33 V11 Z" fill="#ffffff"/><path d="M16 39 C24 27 40 27 48 39" fill="none" stroke="#0d2b6b" stroke-width="3.4" stroke-linecap="round"/><path d="M20 45 C26 37 38 37 44 45" fill="none" stroke="#4f79c7" stroke-width="2.6" stroke-linecap="round"/><circle cx="32" cy="19" r="2.8" fill="#e53935"/></svg><span class="logo">CKR <span>ЦЕХ КУЗОВНОГО РЕМОНТУ · КРОПИВНИЦЬКИЙ</span></span></div>
+  <div onclick="goHome()" title="На головну" style="display:flex;align-items:center;gap:10px;cursor:pointer"><svg width="30" height="30" viewBox="0 0 64 64" aria-label="CKR" style="flex:0 0 auto"><path d="M32 3 L57 11 V33 C57 47 46 56 32 61 C18 56 7 47 7 33 V11 Z" fill="#181d27"/><path d="M16 39 C24 27 40 27 48 39" fill="none" stroke="#8da2ff" stroke-width="3.4" stroke-linecap="round"/><path d="M20 45 C26 37 38 37 44 45" fill="none" stroke="#5b6ea8" stroke-width="2.6" stroke-linecap="round"/><circle cx="32" cy="19" r="2.8" fill="#e53935"/></svg><span class="logo">CKR <span>ЦЕХ КУЗОВНОГО РЕМОНТУ · КРОПИВНИЦЬКИЙ</span></span></div>
   <div class="hdr-right">
     <div class="rate-badge">
       <span class="rate-dot" id="rdot"></span>
-      <span style="color:rgba(255,255,255,.5)">USD</span>
+      <span style="color:var(--tx3)">USD</span>
       <input type="number" id="rdisp" value="44.1" step="0.01" min="1" class="rate-inp" oninput="usdRate=parseFloat(this.value)||usdRate;wRecalc()" onchange="rateSetManual(this)" title="Курс USD. Оновлюється автоматично щодня. Можна змінити вручну — збережеться для всіх користувачів"/>
       <span>грн/$</span>
     </div>
     <div class="user-badge">
-      <span id="user-name">—</span><span id="user-role" style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);margin-left:-6px"></span>
-      <span id="backup-btn" onclick="showBackupModal()" style="display:none;cursor:pointer;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.6);padding:3px 8px;border:1px solid rgba(255,255,255,.2);border-radius:3px;margin-right:4px" title="Резервне копіювання">💾 Бекап</span>
+      <span id="user-name">—</span><span id="user-role" style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:999px;background:var(--bg3);color:var(--tx3);margin-left:-6px"></span>
+      <span id="backup-btn" onclick="showBackupModal()" style="display:none;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--tx2);padding:4px 10px;border:1px solid var(--bd);border-radius:999px;margin-right:4px" title="Резервне копіювання">💾 Бекап</span>
       <span class="logout-btn" onclick="doLogout()">вийти</span>
     </div>
   </div>
 </div>
 
 <div class="tabs">
-  <div class="tab" id="tab-home-btn" onclick="switchTab('home',this)" title="Головна">⌂ Головна</div>
+  <div class="tab" id="tab-home-btn" onclick="switchTab('home',this)" title="Головна">Головна</div>
   <div class="tab tab-create" id="tab-create-btn" onclick="toggleCreateMenu(event)">
     ＋ Створити калькуляцію ▾
     <div class="create-menu" id="create-menu">
@@ -1405,20 +1413,20 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div onclick="event.stopPropagation();newCalc('service')">ТО / Замовлення</div>
     </div>
   </div>
-  <div class="tab" id="tab-cash-btn" onclick="switchTab('cash',this)">💰 Каса</div>
-  <div class="tab" id="tab-parking-btn" onclick="switchTab('parking',this)">🅿 Парковка</div>
-  <div class="tab" id="tab-paint-btn" onclick="switchTab('paint',this)">🎨 Малярки</div>
-  <div class="tab" id="tab-plan-btn" onclick="switchTab('plan',this)">📋 План</div>
-  <div class="tab" id="tab-lamps-btn" onclick="switchTab('lamps',this)">💡 Лампи</div>
-  <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">👷 Зарплата</div>
-  <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">🗂 Калькуляції</div>
-  <div class="tab" id="tab-inwork-btn" onclick="switchTabActive('in_work',this)">🔧 В роботі <span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
-  <div class="tab" id="tab-receive-btn" onclick="switchTab('receive',this)">📦 Отримання <span id="receive-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
-  <div class="tab" id="tab-archive-btn" onclick="switchTab('archive',this)">🗄 Архів <span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
-  <div class="tab" id="tab-stats-btn" onclick="switchTab('stats',this)" style="display:none">📊 Статистика</div>
-  <div class="tab" id="tab-settings-btn" onclick="switchTab('settings',this)" style="display:none">⚙ Ціни</div>
-  <div class="tab" id="tab-svc-prices-btn" onclick="switchTab('svcprices',this)" style="display:none">⚙ Ціни ТО</div>
-  <div class="tab" id="tab-presets-btn" onclick="switchTab('presets',this)" style="display:none">☰ Шаблони ЗЧ</div>
+  <div class="tab" id="tab-cash-btn" onclick="switchTab('cash',this)">Каса</div>
+  <div class="tab" id="tab-parking-btn" onclick="switchTab('parking',this)">Парковка</div>
+  <div class="tab" id="tab-paint-btn" onclick="switchTab('paint',this)">Малярки</div>
+  <div class="tab" id="tab-plan-btn" onclick="switchTab('plan',this)">План</div>
+  <div class="tab" id="tab-lamps-btn" onclick="switchTab('lamps',this)">Лампи</div>
+  <div class="tab" id="tab-pay-btn" onclick="switchTab('pay',this)">Зарплата</div>
+  <div class="tab" id="tab-calc-btn" onclick="switchTabActive('calc',this)">Калькуляції</div>
+  <div class="tab" id="tab-inwork-btn" onclick="switchTabActive('in_work',this)">В роботі&nbsp;<span id="active-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-receive-btn" onclick="switchTab('receive',this)">Отримання&nbsp;<span id="receive-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-archive-btn" onclick="switchTab('archive',this)">Архів&nbsp;<span id="arch-cnt" style="font-family:var(--mono);font-size:10px;color:var(--tx3)"></span></div>
+  <div class="tab" id="tab-stats-btn" onclick="switchTab('stats',this)" style="display:none">Статистика</div>
+  <div class="tab" id="tab-settings-btn" onclick="switchTab('settings',this)" style="display:none">Ціни</div>
+  <div class="tab" id="tab-svc-prices-btn" onclick="switchTab('svcprices',this)" style="display:none">Ціни ТО</div>
+  <div class="tab" id="tab-presets-btn" onclick="switchTab('presets',this)" style="display:none">Шаблони ЗЧ</div>
 </div>
 
 <!-- HOME TAB — головна: плитки розділів за правами -->
@@ -4720,9 +4728,9 @@ function buildCard(doc, showMoveBtn) {
 // угорі «рядками»: картки одного VIN стоять навпроти по горизонталі.
 function triColsRender(list, docs, showMoveBtn){
   var cols = [
-    {lbl:"🔧 РОБОТИ",          test:function(t){ return t==="works"; },                  show:can("works")},
-    {lbl:"🧩 ЗАПЧАСТИНИ",      test:function(t){ return t==="parts"||t==="parts_v2"; },  show:true},
-    {lbl:"🧰 ТО / ЗАМОВЛЕННЯ", test:function(t){ return t==="service_order"; },          show:true}
+    {lbl:"РОБОТИ",          dot:"#3f5bf6", test:function(t){ return t==="works"; },                  show:can("works")},
+    {lbl:"ЗАПЧАСТИНИ",      dot:"#e8750a", test:function(t){ return t==="parts"||t==="parts_v2"; },  show:true},
+    {lbl:"ТО / ЗАМОВЛЕННЯ", dot:"#0e9f6e", test:function(t){ return t==="service_order"; },          show:true}
   ].filter(function(c){ return c.show; });
   var nc=cols.length, total=0;
   var hasWorks = cols.length===3;   // без прав на Роботи пар не буває
@@ -4769,6 +4777,7 @@ function triColsRender(list, docs, showMoveBtn){
   cols.forEach(function(c,ci){
     var h=document.createElement("div"); h.className="tri-col-h";
     h.style.gridRow="1"; h.style.gridColumn=String(ci+1);
+    if(c.dot) h.style.setProperty("--tri-dot", c.dot);
     h.innerHTML='<span>'+c.lbl+'</span><span class="cnt">'+colDocs[ci].length+'</span>';
     wrap.appendChild(h);
   });
@@ -4926,21 +4935,30 @@ function homeRender(){
   var g=document.getElementById("home-grid"); if(!g) return;
   var dEl=document.getElementById("home-date");
   if(dEl){ var n=new Date(); dEl.textContent = HOME_DAYS[n.getDay()]+", "+n.getDate()+" "+HOME_MONS[n.getMonth()]+" "+n.getFullYear(); }
+  var hiEl=document.getElementById("home-hi");
+  if(hiEl){
+    var hh=new Date().getHours();
+    var greet = hh<5?"Доброї ночі":(hh<12?"Доброго ранку":(hh<18?"Добрий день":"Добрий вечір"));
+    var unEl=document.getElementById("user-name");
+    var un=(unEl&&unEl.textContent?unEl.textContent:"").trim().split(" ")[0];
+    hiEl.textContent = greet+(un&&un!=="—"?", "+un:"")+"!";
+  }
+  function hsvg(p){ return "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+p+"</svg>"; }
   var T=[
-    {i:"➕", t:"Нова калькуляція", d:"Почати розрахунок для авто", a:"#1565C0", r:"21,101,192", ph:"assets/home/create.jpg",
+    {i:hsvg("<path d='M12 5v14M5 12h14'></path>"), t:"Нова калькуляція", d:"Почати розрахунок для авто", a:"#3f5bf6", r:"63,91,246", hero:true,
      chips:[{t:"Роботи",cap:"works",go:"newCalc('works')"},{t:"Запчастини",go:"newCalc('parts')"},{t:"ТО / Замовлення",go:"newCalc('service')"}]},
-    {i:"🗂", t:"Калькуляції", d:"Всі розрахунки по авто — хаб", a:"#0d2b6b", r:"13,43,107", ph:"assets/home/calc.jpg", go:"homeGo('calc','tab-calc-btn')"},
-    {i:"🔧", t:"В роботі", d:"Авто, що зараз у цеху", a:"#e67e22", r:"230,126,34", ph:"assets/home/inwork.jpg", go:"homeGo('in_work','tab-inwork-btn')"},
-    {i:"📋", t:"План", d:"Етапи ремонту по кожному авто", a:"#f39c12", r:"243,156,18", cap:"plan", ph:"assets/home/plan.jpg", go:"homeGo('plan','tab-plan-btn')"},
-    {i:"📦", t:"Отримання", d:"Замовлені запчастини в дорозі", a:"#8e44ad", r:"142,68,173", ph:"assets/home/receive.jpg", go:"homeGo('receive','tab-receive-btn')"},
-    {i:"💰", t:"Каса", d:"Приходи, витрати, баланс", a:"#2d7a4f", r:"45,122,79", cap:"cash", ph:"assets/home/cash.jpg", go:"homeGo('cash','tab-cash-btn')"},
-    {i:"🅿", t:"Парковка", d:"Облік стоянки авто", a:"#16a085", r:"22,160,133", cap:"parking", ph:"assets/home/parking.jpg", go:"homeGo('parking','tab-parking-btn')"},
-    {i:"🎨", t:"Малярки", d:"Аванси, депозити, факт робіт", a:"#c2185b", r:"194,24,91", cap:"paint", ph:"assets/home/paint.jpg", go:"homeGo('paint','tab-paint-btn')"},
-    {i:"💡", t:"Лампи", d:"LED DETAILING · склад і продажі", a:"#b8860b", r:"184,134,11", cap:"lamps", ph:"assets/home/lamps.jpg", go:"homeGo('lamps','tab-lamps-btn')"},
-    {i:"👷", t:"Зарплата", d:"Нарахування, виплати, табель", a:"#34495e", r:"52,73,94", cap:"pay", ph:"assets/home/pay.jpg", go:"homeGo('pay','tab-pay-btn')"},
-    {i:"📊", t:"Статистика", d:"Прибуток по завершених авто", a:"#c0392b", r:"192,57,43", cap:"stats", ph:"assets/home/stats.jpg", go:"homeGo('stats','tab-stats-btn')"},
-    {i:"🗄", t:"Архів", d:"Завершені та видані авто", a:"#607d8b", r:"96,125,139", ph:"assets/home/archive.jpg", go:"homeGo('archive','tab-archive-btn')"},
-    {i:"⚙", t:"Ціни й шаблони", d:"Каталоги цін, доплати, шаблони ЗЧ", a:"#455a64", r:"69,90,100", cap:"prices", ph:"assets/home/prices.jpg",
+    {i:hsvg("<rect x='4' y='3' width='16' height='18' rx='2'></rect><path d='M8 7h8M8 11h8M8 15h5'></path>"), t:"Калькуляції", d:"Всі розрахунки по авто — хаб", a:"#3f5bf6", r:"63,91,246", go:"homeGo('calc','tab-calc-btn')"},
+    {i:hsvg("<path d='M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3z'></path>"), t:"В роботі", d:"Авто, що зараз у цеху", a:"#e8750a", r:"232,117,10", go:"homeGo('in_work','tab-inwork-btn')"},
+    {i:hsvg("<rect x='5' y='4' width='14' height='17' rx='2'></rect><path d='M9 2v4M15 2v4M9 11l2 2 4-4'></path>"), t:"План", d:"Етапи ремонту по кожному авто", a:"#0e9f6e", r:"14,159,110", cap:"plan", go:"homeGo('plan','tab-plan-btn')"},
+    {i:hsvg("<path d='M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8'></path>"), t:"Отримання", d:"Замовлені запчастини в дорозі", a:"#7c5cf0", r:"124,92,240", go:"homeGo('receive','tab-receive-btn')"},
+    {i:hsvg("<rect x='3' y='6' width='18' height='12' rx='2'></rect><circle cx='12' cy='12' r='2.6'></circle>"), t:"Каса", d:"Приходи, витрати, баланс", a:"#0e9f6e", r:"14,159,110", cap:"cash", go:"homeGo('cash','tab-cash-btn')"},
+    {i:hsvg("<rect x='4' y='3' width='16' height='18' rx='3'></rect><path d='M9 16V8h3.5a2.5 2.5 0 0 1 0 5H9'></path>"), t:"Парковка", d:"Облік стоянки авто", a:"#0b8fb4", r:"11,143,180", cap:"parking", go:"homeGo('parking','tab-parking-btn')"},
+    {i:hsvg("<path d='M19 11c1.2 0 2-.9 2-2s-2-4-2-4-2 2.9-2 4 .8 2 2 2zM3 5h10v6H3zM8 11v4a2 2 0 0 0 2 2h4v4'></path>"), t:"Малярки", d:"Аванси, депозити, факт робіт", a:"#d6336c", r:"214,51,108", cap:"paint", go:"homeGo('paint','tab-paint-btn')"},
+    {i:hsvg("<path d='M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.7 1 1.5 1 2.5h6c0-1 .2-1.8 1-2.5A6 6 0 0 0 12 3z'></path>"), t:"Лампи", d:"LED DETAILING · склад і продажі", a:"#d99a06", r:"217,154,6", cap:"lamps", go:"homeGo('lamps','tab-lamps-btn')"},
+    {i:hsvg("<rect x='3' y='7' width='18' height='13' rx='2'></rect><path d='M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M3 13h18'></path>"), t:"Зарплата", d:"Нарахування, виплати, табель", a:"#3f5bf6", r:"63,91,246", cap:"pay", go:"homeGo('pay','tab-pay-btn')"},
+    {i:hsvg("<path d='M4 20V10M10 20V4M16 20v-7M21 20H3'></path>"), t:"Статистика", d:"Прибуток по завершених авто", a:"#0b8fb4", r:"11,143,180", cap:"stats", go:"homeGo('stats','tab-stats-btn')"},
+    {i:hsvg("<rect x='3' y='4' width='18' height='5' rx='1'></rect><path d='M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4'></path>"), t:"Архів", d:"Завершені та видані авто", a:"#607d8b", r:"96,125,139", go:"homeGo('archive','tab-archive-btn')"},
+    {i:hsvg("<path d='M20.6 9.4l-6-6a2 2 0 0 0-1.4-.6H5a2 2 0 0 0-2 2v8.2c0 .5.2 1 .6 1.4l6 6a2 2 0 0 0 2.8 0l8.2-8.2a2 2 0 0 0 0-2.8z'></path><circle cx='8' cy='8' r='1.4'></circle>"), t:"Ціни й шаблони", d:"Каталоги цін, доплати, шаблони ЗЧ", a:"#7c5cf0", r:"124,92,240", cap:"prices",
      chips:[{t:"Ціни",go:"homeGo('settings','tab-settings-btn')"},{t:"Ціни ТО",go:"homeGo('svcprices','tab-svc-prices-btn')"},{t:"Шаблони ЗЧ",go:"homeGo('presets','tab-presets-btn')"}]}
   ];
   g.innerHTML = T.map(function(o){
@@ -4951,9 +4969,7 @@ function homeRender(){
         return '<span class="ht-chip" onclick="event.stopPropagation();'+c.go+'">'+c.t+'</span>';
       }).join("")+'</div>';
     }
-    return '<div class="home-tile" style="--hta:'+o.a+';--htr:'+o.r+'"'+(o.go?' onclick="'+o.go+'"':'')+'>'
-      +(o.ph?'<img class="ht-ph" src="'+o.ph+'" alt="" loading="lazy">':'')
-      +'<div class="ht-shade"></div>'
+    return '<div class="home-tile'+(o.hero?' ht-hero':'')+'" style="--hta:'+o.a+';--htr:'+o.r+'"'+(o.go?' onclick="'+o.go+'"':'')+'>'
       +'<div class="ht-ico">'+o.i+'</div>'
       +'<div class="ht-tt">'+o.t+'</div>'
       +'<div class="ht-dd">'+o.d+'</div>'+chips+'</div>';

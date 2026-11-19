@@ -920,6 +920,8 @@ input, select, button, .btn, .pp-inp, .cinp,
 .cash-quick-btn{font-family:'Manrope',Verdana,sans-serif;font-size:12px;color:var(--tx2);background:var(--bg2);border:1px solid var(--bda);border-radius:20px;padding:6px 13px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .cash-quick-btn:hover{color:#b71c1c;border-color:#b71c1c;background:#fff;box-shadow:0 2px 8px rgba(183,28,28,.15)}
 .cash-quick-btn:active{transform:translateY(1px)}
+.cash-quick-btn.qop-in{color:var(--gr);border-color:rgba(14,159,110,.45)}
+.cash-quick-btn.qop-in:hover{color:#fff;background:var(--gr);border-color:var(--gr);box-shadow:0 2px 8px rgba(14,159,110,.25)}
 .cash-filter-inp{background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:4px 8px;border-radius:3px;outline:none}
 .cash-filter-inp:focus{border-color:var(--ac)}
 .cash-table-wrap{overflow-y:auto;flex:1;padding:0 20px 20px}
@@ -1352,6 +1354,33 @@ body.hero-on .hero-pad{margin-right:40vw}
 #app-hero .hub-tagline .l2{display:block;margin-top:8px;font-family:'Lora',Georgia,serif;font-size:12px;letter-spacing:3px;color:#cdd8ea;text-shadow:0 2px 8px rgba(0,0,0,.85)}
 @media(max-width:1000px){ body.hero-on #app-hero{display:none} body.hero-on .hero-pad{margin-right:0} }
 @media print{ #app-hero{display:none!important} }
+
+/* ── МОБІЛЬНА РОЗКЛАДКА (≤900px): редактори калькуляцій в одну колонку —
+   права панель підсумків опускається ПІД поля лівої. Друк не чіпаємо. ── */
+@media(max-width:900px){
+  #tab-works.main{display:block!important;height:auto}
+  #tab-works .left{height:auto;overflow:visible;border-right:none;padding:12px}
+  #tab-works .right{height:auto;overflow:visible;border-top:3px solid var(--bda)}
+  .pm-layout{display:block!important;height:auto;overflow:visible}
+  .pm-left{height:auto;overflow:visible;padding:12px}
+  .pm-right-wrap{max-height:none;overflow:visible;padding:12px;border-top:3px solid var(--bda)}
+  .pm-right{position:static;max-height:none}
+  #tab-service.so-layout{display:block!important;height:auto;overflow:visible}
+  .so-left{height:auto;overflow:visible;padding:12px}
+  .so-right-wrap{max-height:none;overflow:visible;padding:12px;border-top:3px solid var(--bda)}
+  .car-info{grid-template-columns:1fr 1fr}
+  .ci-wrap{flex-wrap:wrap}
+  .ci-photo{width:100%;max-width:360px;margin:0 auto}
+}
+/* Модалки Каси — щоб влазили на телефон */
+@media(max-width:640px){
+  #cash-modal>div{min-width:0!important;width:min(94vw,480px);padding:16px!important;max-height:92vh;overflow-y:auto;box-sizing:border-box}
+  #cashq-modal .qop-box{width:min(94vw,480px);max-height:92vh}
+  .cash-balance-wrap{flex-wrap:wrap;gap:10px}
+  .cash-table-wrap{overflow-x:auto;padding:0 10px 14px}
+  .cash-table{min-width:560px}
+  .cash-quick{padding:8px 10px}
+}
 </style>
 </head>
 <body>
@@ -2133,18 +2162,29 @@ body.hero-on .hero-pad{margin-right:40vw}
       </div>
     </div>
 
+    <!-- Швидкі операції: оплати клієнтів (прихід) -->
+    <div class="cash-quick" style="border-bottom:none;padding-bottom:4px">
+      <span class="cash-quick-lbl">Оплата клієнта:</span>
+      <button class="cash-quick-btn qop-in" onclick="qopOpen('payauto')">💳 За авто (ЗЧ + Роботи)</button>
+      <button class="cash-quick-btn qop-in" onclick="qopOpen('paypart')">🔩 Запчастини</button>
+      <button class="cash-quick-btn qop-in" onclick="qopOpen('paywork')">🔧 Роботи</button>
+      <button class="cash-quick-btn qop-in" onclick="qopOpen('payto')">🧰 ТО / Замовлення</button>
+    </div>
     <!-- Швидкі витрати -->
     <div class="cash-quick">
       <span class="cash-quick-lbl">Швидка витрата:</span>
+      <button id="cashq-paintadv-btn" class="cash-quick-btn" onclick="qopOpen('paintadv')" style="display:none">🎨 Аванс малярці</button>
+      <button class="cash-quick-btn" onclick="qopOpen('glass')">🪟 Скло (дем./монт.)</button>
+      <button class="cash-quick-btn" onclick="qopOpen('cert')">📜 Сертифікація</button>
+      <button class="cash-quick-btn" onclick="qopOpen('evac')">🚚 Евакуатор</button>
+      <button class="cash-quick-btn" onclick="qopOpen('electric')">⚡ Електрик/кодування</button>
+      <button class="cash-quick-btn" onclick="qopOpen('parking')">🅿️ Парковка (оплата)</button>
+      <button class="cash-quick-btn" onclick="qopOpen('wash1')">🚿 Мийка первинна</button>
+      <button class="cash-quick-btn" onclick="qopOpen('wash2')">💨 Мийка (обдув)</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Видача готівки з каси власнику')">💼 Видача власнику</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Таксі')">🚕 Таксі</button>
-      <button class="cash-quick-btn" onclick="cashShowModal('-','Стоянка')">🅿️ Стоянка</button>
-      <button class="cash-quick-btn" onclick="cashShowModal('-','Мийка')">🚿 Мийка</button>
-      <button class="cash-quick-btn" onclick="cashShowModal('-','Сторонній електрик')">⚡ Електрик</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Прибирання / Уборка')">🧹 Прибирання</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Розвал/сходження')">🔧 Розвал/сходж.</button>
-      <button class="cash-quick-btn" onclick="cashShowModal('-','Вібростенд')">📳 Вібростенд</button>
-      <button class="cash-quick-btn" onclick="cashShowModal('-','Коригування рівня фар')">💡 Рівень фар</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Кава / Продукти')">☕ Кава/прод.</button>
       <button class="cash-quick-btn" onclick="cashShowModal('-','Метізи / Кліпси')">🔩 Метізи</button>
     </div>
@@ -2225,6 +2265,19 @@ body.hero-on .hero-pad{margin-right:40vw}
     <div style="display:flex;gap:8px;margin-top:20px">
       <button class="btn btn-p" onclick="cashSaveOp()" id="cash-modal-save" style="flex:1">Зберегти</button>
       <button class="btn btn-o" onclick="document.getElementById('cash-modal').style.display='none'">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK CASH OPS MODAL (швидкі операції Каси: аванс малярці, скло, оплати клієнтів…) -->
+<div id="cashq-modal" style="display:none;position:fixed;z-index:520;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div class="qop-box" style="background:var(--bg2);border-radius:14px;padding:20px 22px;width:min(94vw,440px);max-height:92vh;overflow-y:auto;box-sizing:border-box;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:'Manrope',Verdana,sans-serif">
+    <div id="cashq-title" style="font-size:15px;font-weight:800;margin-bottom:14px"></div>
+    <div id="cashq-body" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div id="cashq-status" style="margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" id="cashq-save" onclick="qopSave()" style="flex:1">Зберегти</button>
+      <button class="btn btn-o" onclick="qopClose()">Скасувати</button>
     </div>
   </div>
 </div>
@@ -4073,7 +4126,7 @@ function blockTotal(items,cur,disc,malBud){
 }
 
 function wAddPayment(){
-  wPayments.push({id:"wp"+(++uidCounter), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:"kasa"});
+  wPayments.push({id:"wp"+(++uidCounter), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:(isAdmin()?"own":"kasa")});
   wRenderPayments(); wRecalc();
 }
 function wRenderPayments(){
@@ -8222,7 +8275,7 @@ function pmUpdateSummary(){
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
 function pmAddPayment(){
-  pmPayments.push({id:uid(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:"kasa"});
+  pmPayments.push({id:uid(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:(isAdmin()?"own":"kasa")});
   pmRenderPayments();
 }
 
@@ -8288,6 +8341,7 @@ function recordBalanceUAH(r){
 // ── Оплата клієнта → Каса ────────────────────────────────────────────────────
 // Нова оплата, внесена у формі (Роботи/ЗЧ/ТО), при збереженні створює ПРИХІД у
 // Касі (src:"kasa"). Власник може обрати «Власні» (src:"own") — каса не чіпається.
+// Дефолт для ВЛАСНИКА — «Власні» (мимо каси, рішення 19.11), селектом можна Касу.
 // Для всіх, крім власника, нові оплати йдуть у Касу обовʼязково (без вибору).
 // Старі оплати без src не чіпаються; оплати, створені З Каси (fromCashOpId) — теж.
 function payRowSrcHtml(p, i, arrName){
@@ -9455,7 +9509,7 @@ function soPopulateWorkDD(dropdown, query, work, input){
 
 // ── PAYMENTS ─────────────────────────────────────────────────────────────────
 function soAddPayment(){
-  soPayments.push({id:soUID(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:"kasa"});
+  soPayments.push({id:soUID(), amount:0, cur:"uah", rate:usdRate, comment:"", date:new Date().toISOString().split("T")[0], type:"cash", src:(isAdmin()?"own":"kasa")});
   soRenderPayments();
 }
 
@@ -10563,6 +10617,9 @@ function cashDestFor(desc){
 // ── INIT ─────────────────────────────────────────────────────────────────────
 function cashInit(){
   cashLoadOps();
+  // «Аванс малярці» — лише власник або координатор
+  var b = document.getElementById("cashq-paintadv-btn");
+  if(b) b.style.display = (isAdmin()||isCoordAccount()) ? "" : "none";
 }
 
 function cashLoadOps(){
@@ -10725,6 +10782,7 @@ function cashRenderTable(){
       '<td>'+
         '<input class="cash-edit-inp" value="'+escH(op.desc||"")+'" placeholder="Опис..." '+
         'onchange="cashUpdateOp(\''+op._id+'\',\'desc\',this.value)" style="width:100%"/>'+
+        (op.exec ? '<div style="font-size:10px;color:var(--tx3);padding:1px 0 0 2px">👤 '+escH(op.exec)+'</div>' : '')+
       '</td>'+
       '<td class="'+(op.type==="+"?"cash-amt-plus":"cash-amt-minus")+'">'+
         (op.type==="+"?"+":"−")+' '+(op.amount||0).toLocaleString("uk-UA")+" грн"+
@@ -11007,6 +11065,448 @@ document.addEventListener("click", function(e){
   var dd = document.getElementById("cash-presets-dd");
   if(dd && !dd.contains(e.target) && e.target.id !== "cash-modal-desc") dd.style.display="none";
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ШВИДКІ ОПЕРАЦІЇ КАСИ (вибір авто зі списку; мобільний сценарій) ──────────
+// Витрати пишуть операцію з dest:"works" → звичний механізм підтягне її у
+// СТОРОННІ РОБОТИ калькуляції при відкритті (wPullCashWorks). Аванс малярці та
+// оплата парковки пишуться linked:true — у калькуляцію НЕ дублюються (малярка
+// йде через «Малярні — факт», парковка — через wPullParking по parking-доку).
+// Оплати клієнтів: власник за замовчуванням МИМО каси (src:"own" прямо в
+// калькуляцію), чекбокс «В Касу»; координатор/решта — завжди через Касу.
+// ══════════════════════════════════════════════════════════════════════════════
+var QOP=null, QOP_CARS=[], QOP_PAINTERS=[], QOP_PJOBS=[], QOP_PARKS=[], QOP_PAYCARS=[];
+var QOP_GLASS_OPS=["Демонтаж/монтаж панорами","Демонтаж/монтаж скла лобового","Демонтаж/монтаж скла заднього","Демонтаж/монтаж скла кутового","Демонтаж/монтаж скла кутового"];
+var QOP_EL_OPS=["фари","ліхтарі задні","дод. опції","радари"];
+var QOP_TITLES={paintadv:"🎨 Аванс малярці", glass:"🪟 Демонтаж/монтаж скла", cert:"📜 Сертифікація авто",
+  evac:"🚚 Евакуатор, 1 сторона", electric:"⚡ Сторонній електрик / кодування", parking:"🅿️ Оплата парковки",
+  wash1:"🚿 Мийка первинна", wash2:"💨 Мийка (обдув)",
+  payauto:"💳 Оплата клієнта — за авто", paypart:"💳 Оплата клієнта — Запчастини",
+  paywork:"💳 Оплата клієнта — Роботи", payto:"💳 Оплата клієнта — ТО / Замовлення"};
+
+function qopClose(){ var m=document.getElementById("cashq-modal"); if(m) m.style.display="none"; QOP=null; }
+function qopSt(msg){ var s=document.getElementById("cashq-status"); if(s){ s.className="pay-status err"; s.textContent=msg; } }
+function qopF(lbl,inner){ return '<div class="fld"><label>'+lbl+'</label>'+inner+'</div>'; }
+function qopAmountF(lbl){ return qopF(lbl||"Сума (грн)",'<input type="number" id="qop-amount" min="1" step="1" placeholder="0" style="font-size:17px;font-weight:700"/>'); }
+function qopDateF(){ return qopF("Дата",'<input type="date" id="qop-date" value="'+new Date().toISOString().slice(0,10)+'"/>'); }
+function qopAmount(){ return Math.round(parseFloat((document.getElementById("qop-amount")||{}).value)||0); }
+function qopDate(){ return (document.getElementById("qop-date")||{}).value || new Date().toISOString().slice(0,10); }
+
+// Авто «В роботі» (Роботи + ТО), унікальні по VIN — для витратних операцій
+function qopLoadCars(){
+  return db.collection("calculations").where("status","==","in_work").get().then(function(snap){
+    var byKey={};
+    snap.forEach(function(d){
+      var r=d.data(); var vin=(r.vin||"").toUpperCase().trim();
+      var key=vin||("N:"+(r.car||d.id));
+      if(!byKey[key]) byKey[key]={vin:vin, car:r.car||"", isTO:true};
+      if(r.type!=="service_order") byKey[key].isTO=false;
+      if(r.type==="works" && r.car) byKey[key].car=r.car;
+    });
+    QOP_CARS=Object.keys(byKey).map(function(k){ return byKey[k]; });
+    QOP_CARS.sort(function(a,b){ return (a.car||a.vin||"").localeCompare(b.car||b.vin||"","uk"); });
+  });
+}
+function qopCarSelF(){
+  var opts='<option value="">— оберіть авто —</option>';
+  QOP_CARS.forEach(function(c,i){
+    opts+='<option value="'+i+'">'+escH((c.car||c.vin||"—")+(c.isTO?" · ТО":"")+(c.vin?" · …"+c.vin.slice(-6):""))+'</option>';
+  });
+  return qopF("Авто (в роботі)",'<select id="qop-car">'+opts+'</select>');
+}
+function qopCar(){
+  var v=(document.getElementById("qop-car")||{}).value;
+  if(v===""||v===undefined) return null;
+  return QOP_CARS[parseInt(v,10)]||null;
+}
+
+// Активні калькуляції з залишками оплат (для оплат клієнтів)
+function qopLoadPayCars(){
+  return db.collection("calculations").orderBy("createdAt","desc").limit(300).get().then(function(snap){
+    var byKey={};
+    snap.forEach(function(d){
+      var r=d.data();
+      if(r.status==="done"||r.status==="shelved"||!r.car) return;
+      var vin=(r.vin||"").toUpperCase().trim();
+      var key=vin||("N:"+r.car);
+      if(!byKey[key]) byKey[key]={vin:vin, car:r.car||"", docs:{}};
+      if(r.type==="works" && r.car) byKey[key].car=r.car;
+      var slot = r.type==="works" ? "works" : (r.type==="service_order" ? "to" : ((r.type==="parts_v2"||r.type==="parts") ? "parts" : ""));
+      if(!slot) return;
+      if(!byKey[key].docs[slot]) byKey[key].docs[slot]={id:d.id, due:recordBalanceUAH(r)};   // перший = найсвіжіший
+    });
+    QOP_PAYCARS=Object.keys(byKey).map(function(k){ return byKey[k]; });
+    QOP_PAYCARS.sort(function(a,b){ return (a.car||a.vin||"").localeCompare(b.car||b.vin||"","uk"); });
+  });
+}
+function qopPayCar(){
+  var v=(document.getElementById("qop-paycar")||{}).value;
+  if(v===""||v===undefined) return null;
+  return (QOP&&QOP.list) ? (QOP.list[parseInt(v,10)]||null) : null;
+}
+
+// Запис витрати в Касу
+function qopCashAdd(f){
+  var date=f.date||new Date().toISOString().slice(0,10);
+  var op={ type:"-", amount:Math.round(f.amount||0), desc:f.desc||"", car:f.car||"", vin:f.vin||"",
+    dest:(f.dest!==undefined?f.dest:"works"), markup:(f.markup!==undefined?f.markup:1.3),
+    linked:!!f.linked, date:date, ts:date+"T"+new Date().toTimeString().substr(0,8),
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" };
+  if(f.exec) op.exec=f.exec;
+  if(f.paint) op.paint=true;
+  if(f.park) op.park=true;
+  return db.collection("cash_operations").add(op);
+}
+
+function qopOpen(kind){
+  if(kind==="paintadv" && !(isAdmin()||isCoordAccount())){ showToast("Аванс малярці — лише власник або координатор"); return; }
+  QOP={kind:kind};
+  document.getElementById("cashq-title").textContent=QOP_TITLES[kind]||"";
+  var body=document.getElementById("cashq-body");
+  body.innerHTML='<div class="pay-sub">Завантаження…</div>';
+  var s=document.getElementById("cashq-status"); if(s){ s.className=""; s.innerHTML=""; }
+  document.getElementById("cashq-modal").style.display="flex";
+  if(kind==="parking"){
+    db.collection("parking").where("status","in",["active","paused"]).get().then(function(snap){
+      QOP_PARKS=[]; snap.forEach(function(d){ var p=Object.assign({_id:d.id},d.data()); if(!p.archived) QOP_PARKS.push(p); });
+      qopBuild(kind);
+    }).catch(function(e){ qopSt("Помилка: "+e.message); });
+  } else if(kind==="paintadv"){
+    Promise.all([ qopLoadCars(), db.collection("painters").get(), db.collection("paint_jobs").where("status","==","open").get() ])
+    .then(function(res){
+      QOP_PAINTERS=[]; res[1].forEach(function(d){ var p=Object.assign({_id:d.id},d.data()); if(p.active!==false) QOP_PAINTERS.push(p); });
+      QOP_PJOBS=[]; res[2].forEach(function(d){ QOP_PJOBS.push(Object.assign({_id:d.id},d.data())); });
+      qopBuild(kind);
+    }).catch(function(e){ qopSt("Помилка: "+e.message); });
+  } else if(kind==="payauto"||kind==="paypart"||kind==="paywork"||kind==="payto"){
+    qopLoadPayCars().then(function(){ qopBuild(kind); }).catch(function(e){ qopSt("Помилка: "+e.message); });
+  } else {
+    qopLoadCars().then(function(){ qopBuild(kind); }).catch(function(e){ qopSt("Помилка: "+e.message); });
+  }
+}
+
+function qopBuild(kind){
+  var body=document.getElementById("cashq-body"), h="", i;
+  var inpSt='background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-size:12px;padding:6px 10px;border-radius:4px;outline:none;box-sizing:border-box';
+  if(kind==="paintadv"){
+    var po='<option value="">— оберіть малярку —</option>';
+    QOP_PAINTERS.forEach(function(p,ix){ po+='<option value="'+ix+'">'+escH(p.name)+'</option>'; });
+    h+=qopF("Малярка",'<select id="qop-painter">'+po+'</select>');
+    h+=qopCarSelF();
+    h+=qopAmountF("Сума авансу (грн)");
+    h+=qopDateF();
+    h+=qopF("Примітка (необовʼязково)",'<input type="text" id="qop-note"/>');
+    if(isAdmin()){
+      h+='<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="qop-fromcash" style="width:16px;height:16px;flex:none"/><span>З Каси (без галочки — 🔒 власні кошти, Каса не чіпається)</span></label>';
+    } else {
+      h+='<div class="pay-sub">Джерело: <b>Каса</b> — витрата запишеться автоматично</div>';
+    }
+  } else if(kind==="glass"){
+    h+=qopF("Виконавець",'<select id="qop-exec" onchange="qopExecTgl()"><option value="Мороз">Мороз</option><option value="Слінченко">Слінченко</option><option value="__other">Інший…</option></select>');
+    h+='<input type="text" id="qop-exec-other" placeholder="Імʼя виконавця" style="display:none;'+inpSt+'"/>';
+    h+=qopCarSelF();
+    h+='<div class="fld"><label>Операції (відмітьте і впишіть суму, грн)</label><div style="display:flex;flex-direction:column;gap:7px">';
+    QOP_GLASS_OPS.forEach(function(n,ix){
+      h+='<div style="display:flex;align-items:center;gap:8px">'
+        +'<label style="flex:1;display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;min-width:0"><input type="checkbox" id="qop-g'+ix+'" onchange="qopGlassTgl('+ix+')" style="width:16px;height:16px;flex:none"/><span>'+escH(n)+(ix===4?' <span style="color:var(--tx3)">(друге)</span>':'')+'</span></label>'
+        +'<input type="number" id="qop-gs'+ix+'" placeholder="грн" disabled style="width:90px;flex:none;font-family:var(--mono);'+inpSt+'"/>'
+        +'</div>';
+    });
+    h+='</div></div>';
+    h+=qopDateF();
+  } else if(kind==="evac"){
+    h+=qopCarSelF();
+    h+=qopAmountF();
+    h+=qopF("Куди / звідки",'<select id="qop-evcom" onchange="qopEvTgl()"><option value="на малярку">на малярку</option><option value="з малярки">з малярки</option><option value="__other">інше…</option></select>');
+    h+='<input type="text" id="qop-evcom-other" placeholder="Коментар" style="display:none;'+inpSt+'"/>';
+    h+=qopDateF();
+  } else if(kind==="electric"){
+    h+=qopCarSelF();
+    h+='<div class="fld"><label>Що робили</label><div style="display:flex;flex-direction:column;gap:7px">';
+    QOP_EL_OPS.forEach(function(n,ix){
+      h+='<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="qop-el'+ix+'" style="width:16px;height:16px;flex:none"/><span>'+n+'</span></label>';
+    });
+    h+='<input type="text" id="qop-el-other" placeholder="інше (впишіть)"/>';
+    h+='</div></div>';
+    h+=qopAmountF();
+    h+=qopDateF();
+  } else if(kind==="parking"){
+    if(!QOP_PARKS.length){ body.innerHTML='<div class="pay-sub">Немає активних парковок</div>'; return; }
+    var pk='<option value="">— оберіть авто на парковці —</option>';
+    QOP_PARKS.forEach(function(p,ix){ pk+='<option value="'+ix+'">'+escH((p.car||p.vin||"—")+" · з "+(p.startDate||"?"))+'</option>'; });
+    h+=qopF("Парковка",'<select id="qop-park" onchange="qopParkInfo()">'+pk+'</select>');
+    h+='<div class="pay-sub" id="qop-park-info"></div>';
+    h+=qopAmountF("Сплачено охороні (грн)");
+    h+='<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="qop-park-interim" style="width:16px;height:16px;flex:none"/><span>Проміжкова оплата — парковку НЕ закривати і не коригувати</span></label>';
+    h+=qopDateF();
+  } else if(kind==="payauto"||kind==="paypart"||kind==="paywork"||kind==="payto"){
+    QOP.need = kind==="paypart" ? ["parts"] : kind==="paywork" ? ["works"] : kind==="payto" ? ["to"] : ["parts","works"];
+    var list=QOP_PAYCARS.filter(function(c){ return QOP.need.some(function(sl){ return !!c.docs[sl]; }); });
+    QOP.list=list;
+    if(!list.length){ body.innerHTML='<div class="pay-sub">Немає активних калькуляцій цього типу</div>'; return; }
+    var co='<option value="">— оберіть авто —</option>';
+    list.forEach(function(c,ix){ co+='<option value="'+ix+'">'+escH((c.car||c.vin||"—")+(c.vin?" · …"+c.vin.slice(-6):""))+'</option>'; });
+    h+=qopF("Авто",'<select id="qop-paycar" onchange="qopPayInfo()">'+co+'</select>');
+    h+='<div class="pay-sub" id="qop-pay-info"></div>';
+    h+=qopAmountF("Сума оплати (грн)");
+    h+=qopF("Коментар (необовʼязково)",'<input type="text" id="qop-note"/>');
+    if(isAdmin()){
+      h+='<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="qop-tocash" style="width:16px;height:16px;flex:none"/><span>В Касу (без галочки — мимо каси, оплата пишеться напряму в калькуляцію як «власні»)</span></label>';
+    } else {
+      h+='<div class="pay-sub">Оплата запишеться <b>приходом у Касу</b> і рознесеться в калькуляцію</div>';
+    }
+  } else { // cert, wash1, wash2 — просте: авто + сума
+    h+=qopCarSelF();
+    h+=qopAmountF();
+    h+=qopDateF();
+  }
+  body.innerHTML=h;
+}
+
+function qopExecTgl(){ var s=document.getElementById("qop-exec"), o=document.getElementById("qop-exec-other"); if(s&&o) o.style.display = s.value==="__other" ? "" : "none"; }
+function qopEvTgl(){ var s=document.getElementById("qop-evcom"), o=document.getElementById("qop-evcom-other"); if(s&&o) o.style.display = s.value==="__other" ? "" : "none"; }
+function qopGlassTgl(ix){ var c=document.getElementById("qop-g"+ix), s=document.getElementById("qop-gs"+ix); if(!c||!s) return; s.disabled=!c.checked; if(c.checked) s.focus(); else s.value=""; }
+function qopParkInfo(){
+  var v=(document.getElementById("qop-park")||{}).value, el=document.getElementById("qop-park-info");
+  if(!el) return;
+  if(v===""){ el.textContent=""; return; }
+  var p=QOP_PARKS[parseInt(v,10)]; if(!p){ el.textContent=""; return; }
+  var days=parkBillableDays(p), calc=days*(p.dailyRate||0);
+  el.innerHTML="Розрахунково: <b>"+days+" дн × "+(p.dailyRate||0)+" грн = "+calc.toLocaleString("uk-UA")+" грн</b>"
+    +((p.interimPaid||0)>0 ? " · проміжково вже сплачено: <b>"+(p.interimPaid||0).toLocaleString("uk-UA")+" грн</b>" : "");
+}
+function qopPayInfo(){
+  var el=document.getElementById("qop-pay-info"); if(!el) return;
+  var c=qopPayCar(); if(!c){ el.textContent=""; return; }
+  var lbl={parts:"ЗЧ", works:"Роботи", to:"ТО"}, out=[];
+  (QOP.need||[]).forEach(function(sl){
+    var d=c.docs[sl];
+    out.push(lbl[sl]+": "+(d ? (d.due>0 ? "залишок <b>"+d.due.toLocaleString("uk-UA")+" грн</b>" : "<b style='color:var(--gr)'>сплачено</b>") : "немає"));
+  });
+  el.innerHTML=out.join(" · ");
+}
+
+function qopSave(){
+  if(!QOP) return;
+  var kind=QOP.kind, date=qopDate(), c, amount;
+
+  // ── Аванс малярці ──
+  if(kind==="paintadv"){
+    var pv=(document.getElementById("qop-painter")||{}).value;
+    if(pv===""){ qopSt("Оберіть малярку"); return; }
+    var p=QOP_PAINTERS[parseInt(pv,10)];
+    c=qopCar(); if(!c){ qopSt("Оберіть авто"); return; }
+    if(!c.vin || c.vin.length!==17){ qopSt("В авто немає коректного VIN — внесіть аванс через вкладку Малярки"); return; }
+    amount=qopAmount(); if(amount<=0){ qopSt("Вкажіть суму"); return; }
+    var note=((document.getElementById("qop-note")||{}).value||"").trim();
+    var fcEl=document.getElementById("qop-fromcash");
+    var own = isAdmin() ? !(fcEl&&fcEl.checked) : false;
+    var adv={id:"pa"+Date.now(), amount:amount, date:date, note:note};
+    if(own) adv.own=true;
+    var job=null, ji;
+    for(ji=0;ji<QOP_PJOBS.length;ji++){ if(QOP_PJOBS[ji].painterId===p._id && (QOP_PJOBS[ji].vin||"").toUpperCase()===c.vin){ job=QOP_PJOBS[ji]; break; } }
+    var btn=document.getElementById("cashq-save"); if(btn) btn.disabled=true;
+    var save = job
+      ? db.collection("paint_jobs").doc(job._id).update({advances:(job.advances||[]).concat([adv])})
+      : db.collection("paint_jobs").add({
+          painterId:p._id, painterName:p.name, vin:c.vin, car:c.car||"", status:"open", startDate:date,
+          advances:[adv], depositUse:0, linked:false,
+          createdAt:new Date().toISOString(), author:currentUserName||""
+        }).then(function(){ try{ planSetStageByKey(c.vin,"mal","active",p.name); }catch(e){} });
+    save.then(function(){
+      var fin=function(){
+        if(btn) btn.disabled=false; qopClose();
+        showToast("Аванс "+amount.toLocaleString("uk-UA")+" грн — "+p.name+(job?"":" (авто заведено маляру)")+(own?" · 🔒 власні кошти":" → Каса"));
+        cashLoadOps();
+        try{ if(CURRENT_TAB==="paint") paintInit(); }catch(e){}
+      };
+      if(own){ fin(); return; }
+      paintCashOp(amount, "Малярка "+p.name+" — аванс · "+(c.car||c.vin)+(note?" ("+note+")":""), c.car||"", c.vin, date).then(fin)
+        .catch(function(e){ if(btn) btn.disabled=false; qopClose(); showToast("⚠ Аванс записано в малярку, але в Касу НЕ потрапив: "+e.message+" — зробіть Звірку з Касою"); cashLoadOps(); });
+    }).catch(function(e){ if(btn) btn.disabled=false; qopSt("Помилка: "+e.message); });
+    return;
+  }
+
+  // ── Скло: кілька операцій за раз ──
+  if(kind==="glass"){
+    var exSel=(document.getElementById("qop-exec")||{}).value||"";
+    var exec = exSel==="__other" ? ((document.getElementById("qop-exec-other")||{}).value||"").trim() : exSel;
+    if(!exec){ qopSt("Вкажіть виконавця"); return; }
+    c=qopCar(); if(!c){ qopSt("Оберіть авто"); return; }
+    var items=[], gi;
+    for(gi=0;gi<QOP_GLASS_OPS.length;gi++){
+      var cb=document.getElementById("qop-g"+gi);
+      if(cb&&cb.checked) items.push({name:QOP_GLASS_OPS[gi], amount:Math.round(parseFloat((document.getElementById("qop-gs"+gi)||{}).value)||0)});
+    }
+    if(!items.length){ qopSt("Відмітьте хоча б одну операцію"); return; }
+    for(gi=0;gi<items.length;gi++){ if(items[gi].amount<=0){ qopSt("Впишіть суму: "+items[gi].name); return; } }
+    var btn2=document.getElementById("cashq-save"); if(btn2) btn2.disabled=true;
+    Promise.all(items.map(function(it){
+      return qopCashAdd({amount:it.amount, desc:it.name, exec:exec, car:c.car||"", vin:c.vin||"", date:date});
+    })).then(function(){
+      if(btn2) btn2.disabled=false; qopClose();
+      var tot=items.reduce(function(s,x){ return s+x.amount; },0);
+      showToast(items.length+" опер. · "+tot.toLocaleString("uk-UA")+" грн ("+exec+") — підтягнуться у СТОРОННІ при відкритті калькуляції");
+      cashLoadOps();
+    }).catch(function(e){ if(btn2) btn2.disabled=false; qopSt("Помилка: "+e.message); cashLoadOps(); });
+    return;
+  }
+
+  // ── Парковка ──
+  if(kind==="parking"){
+    var pkv=(document.getElementById("qop-park")||{}).value;
+    if(pkv===""){ qopSt("Оберіть парковку"); return; }
+    var pk=QOP_PARKS[parseInt(pkv,10)];
+    amount=qopAmount(); if(amount<=0){ qopSt("Вкажіть суму"); return; }
+    var interim=!!(document.getElementById("qop-park-interim")||{}).checked;
+    var btn3=document.getElementById("cashq-save"); if(btn3) btn3.disabled=true;
+    if(interim){
+      Promise.all([
+        qopCashAdd({amount:amount, desc:"Парковка — проміжкова оплата", car:pk.car||"", vin:pk.vin||"", date:date, dest:"", markup:1, linked:true, park:true}),
+        db.collection("parking").doc(pk._id).update({interimPaid:(pk.interimPaid||0)+amount})
+      ]).then(function(){
+        if(btn3) btn3.disabled=false; qopClose();
+        showToast("Проміжкова оплата "+amount.toLocaleString("uk-UA")+" грн — парковка лишається активною");
+        cashLoadOps();
+        try{ if(CURRENT_TAB==="parking") parkLoad(); }catch(e){}
+      }).catch(function(e){ if(btn3) btn3.disabled=false; qopSt("Помилка: "+e.message); cashLoadOps(); });
+    } else {
+      var days=parkBillableDays(pk);
+      var costTotal=amount+(pk.interimPaid||0);
+      if(!confirm("Закрити парковку «"+(pk.car||pk.vin)+"»?\nУ калькуляцію (СТОРОННІ) піде "+costTotal.toLocaleString("uk-UA")+" грн"
+        +((pk.interimPaid||0)>0 ? " (разом із проміжковими "+(pk.interimPaid||0).toLocaleString("uk-UA")+" грн)" : "")+".")){ if(btn3) btn3.disabled=false; return; }
+      Promise.all([
+        qopCashAdd({amount:amount, desc:"Парковка — оплата, закриття", car:pk.car||"", vin:pk.vin||"", date:date, dest:"", markup:1, linked:true, park:true}),
+        db.collection("parking").doc(pk._id).update({status:"done", endDate:date, days:days, cost:costTotal, linked:false, adjustedByCash:true})
+      ]).then(function(){
+        if(btn3) btn3.disabled=false; qopClose();
+        showToast("Парковку закрито · "+costTotal.toLocaleString("uk-UA")+" грн підтягнеться у СТОРОННІ при відкритті Робіт");
+        cashLoadOps();
+        try{ if(CURRENT_TAB==="parking") parkLoad(); }catch(e){}
+      }).catch(function(e){ if(btn3) btn3.disabled=false; qopSt("Помилка: "+e.message); cashLoadOps(); });
+    }
+    return;
+  }
+
+  // ── Оплати клієнтів ──
+  if(kind==="paypart"||kind==="paywork"||kind==="payto"){
+    c=qopPayCar(); if(!c){ qopSt("Оберіть авто"); return; }
+    var slot=QOP.need[0];
+    if(!c.docs[slot]){ qopSt("У цього авто немає такої калькуляції"); return; }
+    amount=qopAmount(); if(amount<=0){ qopSt("Вкажіть суму"); return; }
+    qopPayCommit(c, [{slot:slot, amount:amount}]);
+    return;
+  }
+  if(kind==="payauto"){
+    c=qopPayCar(); if(!c){ qopSt("Оберіть авто"); return; }
+    amount=qopAmount(); if(amount<=0){ qopSt("Вкажіть суму"); return; }
+    var hasP=!!c.docs.parts, hasW=!!c.docs.works;
+    if(!hasP&&!hasW){ qopSt("Немає калькуляцій ЗЧ/Робіт"); return; }
+    var dueP=hasP?Math.max(0,c.docs.parts.due):0, dueW=hasW?Math.max(0,c.docs.works.due):0;
+    var pAmt=0, wAmt=0;
+    if(hasP&&!hasW) pAmt=amount;
+    else if(!hasP&&hasW) wAmt=amount;
+    else if(amount>=dueP+dueW){ pAmt=dueP; wAmt=amount-dueP; }   // усе закрито; переплата — в Роботи
+    else if(dueP<=0){ wAmt=amount; }
+    else if(dueW<=0){ pAmt=amount; }
+    else {
+      var s2=document.getElementById("cashq-status");
+      s2.className="pay-status";
+      s2.innerHTML='Суми не вистачає на все (залишки: ЗЧ '+dueP.toLocaleString("uk-UA")+' + Роботи '+dueW.toLocaleString("uk-UA")+' грн). Що закрити повністю?'
+        +'<div style="display:flex;gap:8px;margin-top:8px">'
+        +'<button class="btn btn-p" style="flex:1" onclick="qopPayAutoGo(\'parts\')">Запчастини</button>'
+        +'<button class="btn btn-p" style="flex:1" onclick="qopPayAutoGo(\'works\')">Роботи</button></div>';
+      return;
+    }
+    var arr=[]; if(pAmt>0) arr.push({slot:"parts",amount:pAmt}); if(wAmt>0) arr.push({slot:"works",amount:wAmt});
+    qopPayCommit(c, arr);
+    return;
+  }
+
+  // ── Прості витрати: авто + сума (+ опції) ──
+  c=qopCar(); if(!c){ qopSt("Оберіть авто"); return; }
+  amount=qopAmount(); if(amount<=0){ qopSt("Вкажіть суму"); return; }
+  var desc="";
+  if(kind==="cert") desc="Сертифікація авто";
+  else if(kind==="wash1") desc="Мийка первинна";
+  else if(kind==="wash2") desc="Мийка (обдув)";
+  else if(kind==="evac"){
+    var com=(document.getElementById("qop-evcom")||{}).value||"";
+    if(com==="__other") com=((document.getElementById("qop-evcom-other")||{}).value||"").trim();
+    desc="Евакуатор, 1 сторона"+(com?" — "+com:"");
+  } else if(kind==="electric"){
+    var sel=[];
+    QOP_EL_OPS.forEach(function(n,ix){ var cb=document.getElementById("qop-el"+ix); if(cb&&cb.checked) sel.push(n); });
+    var oth=((document.getElementById("qop-el-other")||{}).value||"").trim(); if(oth) sel.push(oth);
+    desc="Сторонній електрик / кодування"+(sel.length?" — "+sel.join(", "):"");
+  } else return;
+  var btn4=document.getElementById("cashq-save"); if(btn4) btn4.disabled=true;
+  qopCashAdd({amount:amount, desc:desc, car:c.car||"", vin:c.vin||"", date:date}).then(function(){
+    if(btn4) btn4.disabled=false; qopClose();
+    showToast(desc+" · "+amount.toLocaleString("uk-UA")+" грн — підтягнеться у СТОРОННІ при відкритті калькуляції");
+    cashLoadOps();
+  }).catch(function(e){ if(btn4) btn4.disabled=false; qopSt("Помилка: "+e.message); });
+}
+
+// Авто-рознесення з пріоритетом (коли суми не вистачає на ЗЧ + Роботи)
+function qopPayAutoGo(prio){
+  var c=qopPayCar(); if(!c) return;
+  var amount=qopAmount(); if(amount<=0) return;
+  var dueP=Math.max(0,c.docs.parts.due), dueW=Math.max(0,c.docs.works.due);
+  var pAmt, wAmt;
+  if(prio==="parts"){ pAmt=Math.min(dueP,amount); wAmt=amount-pAmt; }
+  else { wAmt=Math.min(dueW,amount); pAmt=amount-wAmt; }
+  var arr=[]; if(pAmt>0) arr.push({slot:"parts",amount:pAmt}); if(wAmt>0) arr.push({slot:"works",amount:wAmt});
+  qopPayCommit(c, arr);
+}
+
+// Запис оплати клієнта: через Касу (прихід + рознесення) або МИМО каси (src:"own")
+function qopPayCommit(c, arr){
+  var date=qopDate();
+  var comment=((document.getElementById("qop-note")||{}).value||"").trim();
+  var toCash = isAdmin() ? !!(document.getElementById("qop-tocash")||{}).checked : true;
+  var btn=document.getElementById("cashq-save"); if(btn) btn.disabled=true;
+  var typesOf={parts:["parts_v2","parts"], works:["works"], to:["service_order"]};
+  var lblOf={parts:"ЗЧ", works:"Роботи", to:"ТО"};
+  var total=arr.reduce(function(s,a){ return s+a.amount; },0);
+  if(toCash){
+    if(!c.vin){ if(btn) btn.disabled=false; qopSt("В авто немає VIN — внесіть оплату через форму калькуляції"); return; }
+    var splits=arr.map(function(a){ return {kind:(a.slot==="to"?"service":a.slot), types:typesOf[a.slot], amount:a.amount}; });
+    var partsL=arr.map(function(a){ return lblOf[a.slot]+" "+Math.round(a.amount).toLocaleString("uk-UA"); });
+    var op={ type:"+", amount:Math.round(total), desc:"Оплата клієнта · "+partsL.join(" + ")+" грн",
+      car:c.car||"", vin:c.vin, dest:"", markup:1, linked:true, isClientPayment:true,
+      splitCur:"uah", splitRate:0, splitComment:comment,
+      date:date, ts:date+"T"+new Date().toTimeString().substr(0,8),
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" };
+    db.collection("cash_operations").add(op).then(function(ref){
+      op._id=ref.id; CASH_OPS.push(op);
+      CASH_OPS.sort(function(a,b){ return (a.ts||"").localeCompare(b.ts||""); });
+      cashRenderBalance(); cashRenderTable();
+      if(btn) btn.disabled=false; qopClose();
+      cashApplyIncomeToCalcs(op, splits, "uah", usdRate||44.1, comment||op.desc, date);
+    }).catch(function(e){ if(btn) btn.disabled=false; qopSt("Помилка: "+e.message); });
+  } else {
+    // МИМО КАСИ: оплата напряму в калькуляцію як «власні» (src:"own") — Каса не чіпається
+    var done=0, errs=[];
+    var fin=function(){
+      done++;
+      if(done<arr.length) return;
+      if(btn) btn.disabled=false; qopClose();
+      showToast(errs.length ? "⚠ Частково: "+errs.join("; ") : "Оплату "+Math.round(total).toLocaleString("uk-UA")+" грн записано в калькуляцію (мимо Каси, 🔒 власні)");
+      cashRefreshOpenCalcPayments(c.vin);
+    };
+    arr.forEach(function(a){
+      var dref=c.docs[a.slot];
+      if(!dref){ errs.push(lblOf[a.slot]+": немає калькуляції"); fin(); return; }
+      db.collection("calculations").doc(dref.id).get().then(function(d){
+        if(!d.exists) throw new Error("калькуляцію не знайдено");
+        var pays=(d.data().payments||[]).concat([{ id:"cp"+Date.now()+Math.floor(Math.random()*100000),
+          amount:Math.round(a.amount), cur:"uah", rate:usdRate||44.1, comment:comment, date:date, type:"cash", src:"own" }]);
+        return db.collection("calculations").doc(dref.id).update({payments:pays, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      }).then(fin).catch(function(e){ errs.push(lblOf[a.slot]+": "+e.message); fin(); });
+    });
+  }
+}
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -13262,7 +13762,9 @@ function wPullParking(vin){
     snap.forEach(function(doc){
       var p = doc.data(); if(p.linked || p.archived || already[doc.id]) return;
       var uid = "u"+(++uidCounter);
-      wsel[uid] = {cat:CAT_STO, name:"Парковка, "+(p.days||0)+" дн × "+(p.dailyRate||0)+" грн",
+      // Закрита оплатою через Касу — сума фактична (коригована), не дні × ставка
+      var pnm = p.adjustedByCash ? "Парковка, "+(p.days||0)+" дн" : "Парковка, "+(p.days||0)+" дн × "+(p.dailyRate||0)+" грн";
+      wsel[uid] = {cat:CAT_STO, name:pnm,
         price:(p.cost||0), side:"", coeff:1, uid:uid, fromParking:true, parkingId:doc.id};
       W_PARK_TO_LINK.push(doc.id); added++;
     });

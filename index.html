@@ -22,13 +22,13 @@
   --ac:#3f5bf6;--acd:rgba(63,91,246,.1);--acd2:rgba(63,91,246,.05);
   --tx:#181d27;--tx2:#4a5468;--tx3:#8a93a6;
   --gr:#0e9f6e;--rd:#d6336c;--bl:#3f5bf6;
-  --mono:'Consolas','Courier New',monospace;--sans:'Manrope',Verdana,Geneva,Tahoma,sans-serif;--disp:'Manrope',Verdana,sans-serif;
+  --mono:'Manrope',Verdana,sans-serif;--sans:'Manrope',Verdana,Geneva,Tahoma,sans-serif;--disp:'Manrope',Verdana,sans-serif;
   --blue-dark:#181d27;--blue-mid:#3f5bf6;--blue-light:#eceffe;
   --shadow:0 1px 2px rgba(24,29,39,.05),0 8px 22px rgba(24,29,39,.06);
   --shadow-up:0 2px 4px rgba(24,29,39,.07),0 14px 30px rgba(24,29,39,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0}html{font-size:14px}
-body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,Tahoma,sans-serif;min-height:100vh}
+body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,Tahoma,sans-serif;min-height:100vh;font-variant-numeric:tabular-nums}
 
 /* ── LOGIN ── */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
@@ -145,10 +145,10 @@ body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,T
 .rblock-hdr{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--blue-dark);cursor:pointer;user-select:none}
 .rblock-hdr:hover{background:#223d72}
 .rblock-lbl{font-family:var(--disp);font-size:12px;letter-spacing:1.5px;color:#fff}
-.rblock-disc-note{font-family:Verdana,sans-serif;font-size:10px;letter-spacing:0;font-weight:normal;font-style:italic;color:rgba(255,255,255,.85);margin-left:8px}
+.rblock-disc-note{font-family:'Manrope',Verdana,sans-serif;font-size:10px;letter-spacing:0;font-weight:normal;font-style:italic;color:rgba(255,255,255,.85);margin-left:8px}
 @media print{ .rblock-disc-note{color:#fff!important;font-size:9pt!important} }
 .rblock-sums{display:flex;gap:10px;align-items:center}
-.rblock-usd{font-family:Verdana,sans-serif;font-size:11px;color:#ffd080;font-weight:600}
+.rblock-usd{font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:#ffd080;font-weight:600}
 .rblock-uah{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5)}
 .rb-raw{text-decoration:line-through;font-weight:400;margin-right:6px;color:var(--tx3);font-size:11px}
 .rblock-usd .rb-raw{color:rgba(255,255,255,.8)}
@@ -203,8 +203,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,T
 .ritem-acc.full{color:#0b6b33;font-weight:bold}
 @media print{ .ritem-acc{display:none!important} }
 .ritem-prices{text-align:right;flex-shrink:0}
-.ritem-usd{font-family:Verdana,sans-serif;font-size:11px;color:var(--blue-mid);font-weight:600}
-.ritem-uah{font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3)}
+.ritem-usd{font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:var(--blue-mid);font-weight:600}
+.ritem-uah{font-family:'Manrope',Verdana,sans-serif;font-size:10px;color:var(--tx3)}
 .ritem-coeff-wrap{display:flex;align-items:center;gap:2px;background:var(--bg3);border:1px solid var(--bd);border-radius:3px;padding:1px 4px}
 .ritem-coeff-inp{width:38px;background:transparent;border:none;color:var(--ac);font-family:var(--mono);font-size:11px;outline:none;text-align:center;-moz-appearance:textfield}
 .ritem-coeff-inp::-webkit-inner-spin-button,.ritem-coeff-inp::-webkit-outer-spin-button{opacity:1;height:14px}
@@ -229,7 +229,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,T
 .grand-tot{padding:12px 14px;border-top:1px solid var(--bda);background:var(--bg);flex-shrink:0}
 .gtrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .gtlbl{font-family:var(--mono);font-size:10px;color:var(--tx2)}
-.gtval{font-family:Verdana,sans-serif;font-size:12px;color:var(--tx);font-weight:600}
+.gtval{font-family:'Manrope',Verdana,sans-serif;font-size:12px;color:var(--tx);font-weight:600}
 .gtval.ac{color:var(--ac)}.gtval.gr{color:var(--gr)}.gtval.bl{color:var(--bl)}
 .gtrow.main{border-top:1px solid var(--bd);padding-top:10px;margin-top:6px;height:auto}
 .gtrow.main .gtlbl{font-size:12px;color:var(--tx);font-weight:500}
@@ -356,7 +356,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Manrope',Verdana,Geneva,T
 .rcv-car .rcv-vin{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:0;margin-left:8px}
 .rcv-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:4px;padding:9px 12px;margin-bottom:6px}
 .rcv-main{flex:1;min-width:0}
-.rcv-name{font-family:Verdana,sans-serif;font-size:13px;color:var(--tx);font-weight:600}
+.rcv-name{font-family:'Manrope',Verdana,sans-serif;font-size:13px;color:var(--tx);font-weight:600}
 .rcv-typ{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-left:6px}
 .rcv-code{font-family:var(--mono);font-size:14px;font-weight:bold;color:var(--blue-dark);letter-spacing:.5px;margin-top:3px}
 .rcv-code .rcv-alt{font-size:11px;font-weight:normal;color:var(--tx3)}
@@ -373,7 +373,7 @@ tr.pr-overdue td:nth-child(2){box-shadow:inset 3px 0 0 #ef6c00!important}
 .overdue-badge{font-size:9px;color:#e65100;font-weight:bold;font-family:var(--mono);white-space:nowrap;flex-shrink:0}
 @media (prefers-reduced-motion: reduce){ tr.pr-overdue td{animation:none;background:rgba(255,152,0,.30)!important} }
 @media print{ tr.pr-overdue td{animation:none!important;background:transparent!important} .overdue-badge{display:none!important} }
-.cancel-banner{background:rgba(211,47,47,.12);border:1px solid #d32f2f;border-left:4px solid #d32f2f;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:#b71c1c;font-family:Verdana,sans-serif;font-size:13px;line-height:1.5}
+.cancel-banner{background:rgba(211,47,47,.12);border:1px solid #d32f2f;border-left:4px solid #d32f2f;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:#b71c1c;font-family:'Manrope',Verdana,sans-serif;font-size:13px;line-height:1.5}
 @media print{ .cancel-banner{display:none!important} }
 mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .rcv-nottn{color:var(--tx3)}
@@ -489,8 +489,8 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .pb:not(.collapsed) .pb-body{display:block}
 
 /* Parts table */
-.pt{width:100%;border-collapse:collapse;font-size:12px;font-family:Verdana,sans-serif}
-.pt th{font-family:Verdana,sans-serif;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+.pt{width:100%;border-collapse:collapse;font-size:12px;font-family:'Manrope',Verdana,sans-serif}
+.pt th{font-family:'Manrope',Verdana,sans-serif;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
 .pt td{padding:3px 4px;border-bottom:1px solid var(--bd);vertical-align:middle}
 .pt tr:last-child td{border-bottom:none}
 .pt tr:hover td{background:var(--acd2)}
@@ -500,7 +500,7 @@ mark.rcv-hl{background:#ffe082;color:inherit;border-radius:2px;padding:0 1px}
 .pt tr.var-row{background:rgba(21,101,192,.03)}
 
 /* Inputs */
-.pi{width:100%;background:transparent;border:none;color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;min-width:0}
+.pi{width:100%;background:transparent;border:none;color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;min-width:0}
 .pi:focus{background:var(--bg);border-radius:2px;box-shadow:0 0 0 1px var(--ac)}
 .pi-num{width:40px;text-align:right}
 .pi-price{width:80px;text-align:right;color:var(--ac)}
@@ -711,31 +711,31 @@ tr.pr-cancelled td input,tr.pr-cancelled td .pr-avail-txt{color:#c62828!importan
 .so-section-hdr span:first-child{font-family:var(--disp);font-size:13px;letter-spacing:1.5px;color:#fff}
 .so-section-total{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.8)}
 /* Parts table inside SO */
-.so-pt{width:100%;border-collapse:collapse;font-size:12px;font-family:Verdana,sans-serif;margin-bottom:0}
-.so-pt th{font-family:Verdana,sans-serif;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+.so-pt{width:100%;border-collapse:collapse;font-size:12px;font-family:'Manrope',Verdana,sans-serif;margin-bottom:0}
+.so-pt th{font-family:'Manrope',Verdana,sans-serif;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
 .so-pt td{padding:3px 4px;border-bottom:1px solid var(--bd);vertical-align:middle}
 .so-pt tr:last-child td{border-bottom:none}
 .so-pt tr:hover td{background:var(--acd2)}
 .so-pt tr.var-row{background:rgba(21,101,192,.03)}
 /* Works table inside SO */
-.so-wt{width:100%;border-collapse:collapse;font-size:12px;font-family:Verdana,sans-serif;margin-bottom:0}
-.so-wt th{font-family:Verdana,sans-serif;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+.so-wt{width:100%;border-collapse:collapse;font-size:12px;font-family:'Manrope',Verdana,sans-serif;margin-bottom:0}
+.so-wt th{font-family:'Manrope',Verdana,sans-serif;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
 .so-wt td{padding:3px 4px;border-bottom:1px solid var(--bd);vertical-align:middle}
 .so-wt tr:last-child td{border-bottom:none}
 .so-wt tr:hover td{background:var(--acd2)}
 /* Work search dropdown */
 .so-work-wrap{position:relative}
-.so-work-inp{width:100%;background:transparent;border:none;color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none}
+.so-work-inp{width:100%;background:transparent;border:none;color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none}
 .so-work-inp:focus{background:var(--bg);border-radius:2px;box-shadow:0 0 0 1px var(--ac)}
 .so-work-dd{position:absolute;left:0;top:100%;z-index:200;background:var(--bg2);border:1px solid var(--bda);border-radius:4px;min-width:320px;max-height:240px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15);display:none}
 .so-work-dd.open{display:block}
-.so-work-opt{padding:5px 10px;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);cursor:pointer;border-bottom:1px solid var(--bd)}
+.so-work-opt{padding:5px 10px;font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:var(--tx2);cursor:pointer;border-bottom:1px solid var(--bd)}
 .so-work-opt:last-child{border-bottom:none}
 .so-work-opt:hover{background:var(--acd);color:var(--ac)}
 /* Автодоповнення замовників */
 .cust-dd{position:absolute;left:0;top:100%;z-index:300;background:var(--bg2);border:1px solid var(--bda);border-radius:4px;min-width:280px;max-width:420px;max-height:260px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.18);display:none}
 .cust-dd.open{display:block}
-.cust-opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;font-family:Verdana,sans-serif;font-size:12px;color:var(--tx);cursor:pointer;border-bottom:1px solid var(--bd)}
+.cust-opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;font-family:'Manrope',Verdana,sans-serif;font-size:12px;color:var(--tx);cursor:pointer;border-bottom:1px solid var(--bd)}
 .cust-opt:last-child{border-bottom:none}
 .cust-opt:hover{background:var(--acd)}
 .cust-sub{font-family:var(--mono);font-size:10px;color:var(--tx3);white-space:nowrap}
@@ -821,7 +821,7 @@ input, select, button, .btn, .pp-inp, .cinp,
 .tlbl, .tval, .zcrow, .pm-sum-title, .pm-slbl, .pm-sval,
 .hist-car, .hist-meta, .hist-tag, .arch-empty, .arch-loading,
 .login-logo, .login-sub, .login-field label, .login-field input,
-.pm-pay-inp { font-family: Verdana, Geneva, Tahoma, sans-serif !important; }
+.pm-pay-inp { font-family: 'Manrope', Verdana, sans-serif !important; }
 
 /* Parts print */
 @media print {
@@ -917,13 +917,13 @@ input, select, button, .btn, .pp-inp, .cinp,
 .cash-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .cash-quick{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 20px;background:var(--bg3);border-bottom:1px solid var(--bd)}
 .cash-quick-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx3);margin-right:2px}
-.cash-quick-btn{font-family:Verdana,sans-serif;font-size:12px;color:var(--tx2);background:var(--bg2);border:1px solid var(--bda);border-radius:20px;padding:6px 13px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.cash-quick-btn{font-family:'Manrope',Verdana,sans-serif;font-size:12px;color:var(--tx2);background:var(--bg2);border:1px solid var(--bda);border-radius:20px;padding:6px 13px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .cash-quick-btn:hover{color:#b71c1c;border-color:#b71c1c;background:#fff;box-shadow:0 2px 8px rgba(183,28,28,.15)}
 .cash-quick-btn:active{transform:translateY(1px)}
-.cash-filter-inp{background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:4px 8px;border-radius:3px;outline:none}
+.cash-filter-inp{background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:4px 8px;border-radius:3px;outline:none}
 .cash-filter-inp:focus{border-color:var(--ac)}
 .cash-table-wrap{overflow-y:auto;flex:1;padding:0 20px 20px}
-.cash-table{width:100%;border-collapse:collapse;font-family:Verdana,sans-serif;font-size:12px;margin-top:8px}
+.cash-table{width:100%;border-collapse:collapse;font-family:'Manrope',Verdana,sans-serif;font-size:12px;margin-top:8px}
 .cash-table th{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;padding:6px 8px;border-bottom:2px solid var(--bd);text-align:left;position:sticky;top:0;background:var(--bg);z-index:1}
 .cash-table td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
 .cash-table tr:hover td{background:var(--acd2)}
@@ -935,7 +935,7 @@ input, select, button, .btn, .pp-inp, .cinp,
 .cash-car-tag{display:inline-block;background:var(--acd);color:var(--ac);font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:3px;white-space:nowrap}
 .cash-del{cursor:pointer;color:var(--tx3);font-size:14px;opacity:.5;padding:2px 4px}
 .cash-del:hover{color:var(--rd);opacity:1}
-.cash-edit-inp{background:transparent;border:none;color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;border-radius:2px;min-width:60px}
+.cash-edit-inp{background:transparent;border:none;color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;border-radius:2px;min-width:60px}
 .cash-edit-inp:hover{background:var(--bg3)}
 .cash-edit-inp:focus{background:var(--bg);border:1px solid var(--ac);padding:1px 3px}
 .cash-preset-opt{padding:6px 10px;cursor:pointer;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--bd)}
@@ -966,7 +966,7 @@ input, select, button, .btn, .pp-inp, .cinp,
   .pt td:nth-child(14) { display:none!important; }
   /* Замість селекта наявності друкуємо тип деталі текстом: аналог / ориг. / б.в. (п.3.2) */
   .pt td:nth-child(2) select { display:none!important; }
-  .pt td:nth-child(2) .pr-avail-txt { display:inline!important; font-family:Verdana,sans-serif!important; font-size:7.5pt!important; font-weight:bold!important; color:#0d2b6b!important; white-space:nowrap!important; flex-shrink:0!important; margin-right:4px!important; }
+  .pt td:nth-child(2) .pr-avail-txt { display:inline!important; font-family:'Manrope',Verdana,sans-serif!important; font-size:7.5pt!important; font-weight:bold!important; color:#0d2b6b!important; white-space:nowrap!important; flex-shrink:0!important; margin-right:4px!important; }
   .pt td:nth-child(2) { white-space:normal!important; word-break:break-word!important; }
   .pt td { white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; }
   .pt td:nth-child(2) input { display:block!important; width:100%!important; border:none!important; background:transparent!important; font-size:9pt!important; white-space:normal!important; overflow:visible!important; }
@@ -1029,7 +1029,7 @@ body.is-adm #pay-set-btn{display:inline-block}
 
 
 /* Hide discount % — show only name */
-.disc-name-only { font-family:Verdana,sans-serif; font-size:12px; color:var(--tx2); }
+.disc-name-only { font-family:'Manrope',Verdana,sans-serif; font-size:12px; color:var(--tx2); }
 @media print {
   /* Show discount name without % in print */
   .rblock-disc select, #mal-type, #pm-disc { display:none!important; }
@@ -1048,9 +1048,9 @@ body.is-adm #pay-set-btn{display:inline-block}
 .wcp-t{font-family:var(--mono);font-size:11px;color:#a04000;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .wcp-row{border-top:1px dashed #f0b27a;padding:8px 0}
 .wcp-row:first-of-type{border-top:none}
-.wcp-nm{font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--tx)}
+.wcp-nm{font-family:'Manrope',Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--tx)}
 .wcp-d{font-family:var(--mono);font-size:10px;color:var(--tx3);font-weight:normal}
-.wcp-cmp{font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);margin:3px 0 6px}
+.wcp-cmp{font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:var(--tx2);margin:3px 0 6px}
 .wcp-fact{color:#a04000}
 .wcp-diff{color:var(--rd);font-family:var(--mono);font-size:10px;border:1px solid var(--rd);border-radius:3px;padding:1px 4px}
 .wcp-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -1067,7 +1067,7 @@ body.is-adm #pay-set-btn{display:inline-block}
 .pay-wrap{padding:16px 20px;overflow-y:auto;height:calc(100vh - 93px)}
 .pay-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .pay-h1{font-family:var(--disp);font-size:18px;letter-spacing:2px;color:var(--blue-dark)}
-.pay-hint{font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:8px 12px;margin-bottom:14px;line-height:1.55}
+.pay-hint{font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:var(--tx2);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:8px 12px;margin-bottom:14px;line-height:1.55}
 .pay-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:18px}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .cal-nav .btn{padding:2px 12px;font-size:16px;line-height:1}
@@ -1157,7 +1157,7 @@ body.is-adm #pay-set-btn{display:inline-block}
 .pay-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pay-fund{font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--bg3);border-radius:4px;margin:10px 0;color:var(--tx2)}
 .pay-works{max-height:46vh;overflow-y:auto;border:1px solid var(--bd);border-radius:4px}
-.pay-wrow{display:grid;grid-template-columns:1fr 90px 64px 132px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
+.pay-wrow{display:grid;grid-template-columns:1fr 90px 64px 132px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--bd);font-family:'Manrope',Verdana,sans-serif;font-size:12px}
 .pay-wrow:last-child{border-bottom:none}
 .pay-wrow.head{background:var(--bg3);font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;position:sticky;top:0}
 .pay-wrow input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:3px 6px;font-family:var(--mono);font-size:11px;color:var(--tx);text-align:right;outline:none}
@@ -1171,11 +1171,11 @@ body.is-adm #pay-set-btn{display:inline-block}
 .pay-status.ok{color:var(--gr)}
 .pay-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .pay-led{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
-.pay-led table{width:100%;border-collapse:collapse;font-family:Verdana,sans-serif;font-size:12px}
+.pay-led table{width:100%;border-collapse:collapse;font-family:'Manrope',Verdana,sans-serif;font-size:12px}
 .pay-led th{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;text-align:left;padding:5px 6px;border-bottom:1px solid var(--bd)}
 .pay-led td{padding:5px 6px;border-bottom:1px solid var(--bd);color:var(--tx2)}
 .pay-led .a{color:var(--gr)} .pay-led .p{color:var(--rd)}
-.pay-wk{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd);font-family:Verdana,sans-serif;font-size:12px}
+.pay-wk{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd);font-family:'Manrope',Verdana,sans-serif;font-size:12px}
 
 /* ═══ АКТ ВИКОНАНИХ РОБІТ (окремий друк) ═══ */
 #act-doc{display:none}
@@ -2032,7 +2032,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
 <!-- BACKUP MODAL -->
 <div id="backup-modal" style="display:none;position:fixed;z-index:600;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border-radius:8px;padding:28px 32px;min-width:380px;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:Verdana,sans-serif">
+  <div style="background:var(--bg2);border-radius:8px;padding:28px 32px;min-width:380px;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:'Manrope',Verdana,sans-serif">
     <div style="font-size:15px;font-weight:bold;color:var(--blue-dark);margin-bottom:6px">💾 Резервне копіювання</div>
     <div style="font-size:11px;color:var(--tx3);margin-bottom:20px">Експорт та імпорт всіх даних з Firebase</div>
 
@@ -2068,7 +2068,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
 <!-- SHEETS INSTRUCTIONS MODAL -->
 <div id="sheets-modal" style="display:none;position:fixed;z-index:700;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border-radius:8px;padding:28px 32px;width:560px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:Verdana,sans-serif">
+  <div style="background:var(--bg2);border-radius:8px;padding:28px 32px;width:560px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:'Manrope',Verdana,sans-serif">
     <div style="font-size:14px;font-weight:bold;color:var(--blue-dark);margin-bottom:16px">🔄 Налаштування автобекапу в Google Sheets</div>
     <div id="sheets-instructions-content" style="font-size:11px;color:var(--tx);line-height:1.7"></div>
     <div style="text-align:right;margin-top:16px">
@@ -2079,7 +2079,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
 <!-- SERVICE ORDER PRINT MODAL -->
 <div id="so-print-modal" style="display:none;position:fixed;z-index:500;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border-radius:6px;padding:24px 28px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:Verdana,sans-serif">
+  <div style="background:var(--bg2);border-radius:6px;padding:24px 28px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:'Manrope',Verdana,sans-serif">
     <div style="font-size:14px;font-weight:bold;color:var(--blue-dark);margin-bottom:16px">🖨 Друк ТО / Замовлення</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
       <div style="font-size:11px;color:var(--tx3)">Рахунок № <input id="so-inv-modal-num" type="text" style="font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--bd);padding:3px 6px;border-radius:3px;outline:none;width:160px" placeholder="28.05.2026-001"/></div>
@@ -2160,7 +2160,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
 <!-- CASH OPERATION MODAL -->
 <div id="cash-modal" style="display:none;position:fixed;z-index:500;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border-radius:8px;padding:24px 28px;min-width:360px;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:Verdana,sans-serif">
+  <div style="background:var(--bg2);border-radius:8px;padding:24px 28px;min-width:360px;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:'Manrope',Verdana,sans-serif">
     <div id="cash-modal-title" style="font-size:15px;font-weight:bold;margin-bottom:18px"></div>
 
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -2172,7 +2172,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld">
         <label>Опис операції</label>
         <div style="position:relative">
-          <input type="text" id="cash-modal-desc" placeholder="Або оберіть з типових..." style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none;box-sizing:border-box" oninput="cashFilterPresets(this.value)" onfocus="cashFilterPresets(this.value)"/>
+          <input type="text" id="cash-modal-desc" placeholder="Або оберіть з типових..." style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none;box-sizing:border-box" oninput="cashFilterPresets(this.value)" onfocus="cashFilterPresets(this.value)"/>
           <div id="cash-presets-dd" style="display:none;position:absolute;left:0;top:100%;z-index:200;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15)"></div>
         </div>
       </div>
@@ -2180,7 +2180,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div class="fld">
         <label>Авто (необов'язково)</label>
         <div style="position:relative">
-          <input type="text" id="cash-modal-car" placeholder="ЦКР / Назва авто..." list="cash-car-list" oninput="cashCarChanged()" onchange="cashCarChanged()" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none;box-sizing:border-box"/>
+          <input type="text" id="cash-modal-car" placeholder="ЦКР / Назва авто..." list="cash-car-list" oninput="cashCarChanged()" onchange="cashCarChanged()" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none;box-sizing:border-box"/>
           <datalist id="cash-car-list"></datalist>
         </div>
       </div>
@@ -2200,13 +2200,13 @@ body.hero-on .hero-pad{margin-right:40vw}
         <div class="fld" id="cash-split-parts-wrap" style="display:none;margin-bottom:6px"><label>На запчастини</label><input type="number" id="cash-split-parts" min="0" step="1" placeholder="0" oninput="cashSplitRecalc()" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:14px;padding:6px 10px;border-radius:4px"/></div>
         <div class="fld" id="cash-split-works-wrap" style="display:none;margin-bottom:6px"><label>На роботи</label><input type="number" id="cash-split-works" min="0" step="1" placeholder="0" oninput="cashSplitRecalc()" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:14px;padding:6px 10px;border-radius:4px"/></div>
         <div class="fld" id="cash-split-service-wrap" style="display:none;margin-bottom:6px"><label>На ТО</label><input type="number" id="cash-split-service" min="0" step="1" placeholder="0" oninput="cashSplitRecalc()" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:var(--mono);font-size:14px;padding:6px 10px;border-radius:4px"/></div>
-        <input type="text" id="cash-split-comment" placeholder="Коментар до оплати (необов'язково)" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
+        <input type="text" id="cash-split-comment" placeholder="Коментар до оплати (необов'язково)" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
         <div class="pay-sub" id="cash-split-total" style="margin-top:8px"></div>
       </div>
 
       <div class="fld">
         <label>Дата</label>
-        <input type="date" id="cash-modal-date" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
+        <input type="date" id="cash-modal-date" style="width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:12px;padding:6px 10px;border-radius:4px;outline:none"/>
       </div>
     </div>
 
@@ -2222,7 +2222,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 <div id="tab-active" style="display:none">
   <div class="arch-view">
     <div class="arch-search">
-      <input type="text" id="active-vin-search" placeholder="Пошук по VIN / номеру кузова..." style="font-family:Verdana,sans-serif;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
+      <input type="text" id="active-vin-search" placeholder="Пошук по VIN / номеру кузова..." style="font-family:'Manrope',Verdana,sans-serif;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/>
       <button class="btn btn-p" onclick="searchActiveByVin()">Знайти</button>
       <button class="btn btn-o" onclick="loadActive()">Всі</button>
     </div>
@@ -2330,7 +2330,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 
 <!-- PRINT MODAL -->
 <div id="print-modal" style="display:none;position:fixed;z-index:500;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border-radius:6px;padding:24px 28px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:Verdana,sans-serif">
+  <div style="background:var(--bg2);border-radius:6px;padding:24px 28px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.3);font-family:'Manrope',Verdana,sans-serif">
     <div style="font-size:14px;font-weight:bold;color:var(--blue-dark);margin-bottom:16px">🖨 Налаштування друку</div>
     <div id="print-modal-options" style="margin-bottom:18px;display:flex;flex-direction:column;gap:10px"></div>
     <div style="display:flex;gap:8px">
@@ -5610,7 +5610,7 @@ function dailyOpsRenderEditor(){
   var box=document.getElementById("daily-ops-editor"); if(!box) return;
   var h = DAILY_OPS.map(function(o,i){
     return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'
-      +'<input type="text" value="'+escH(o.name)+'" onchange="dailyOpUpd('+i+',\'name\',this.value)" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Verdana,sans-serif;font-size:12px;padding:5px 8px;border-radius:3px;outline:none"/>'
+      +'<input type="text" value="'+escH(o.name)+'" onchange="dailyOpUpd('+i+',\'name\',this.value)" style="flex:1;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-family:Manrope,Verdana,sans-serif;font-size:12px;padding:5px 8px;border-radius:3px;outline:none"/>'
       +'<input type="number" value="'+(o.price||0)+'" min="0" step="50" onchange="dailyOpUpd('+i+',\'price\',+this.value)" style="width:90px;background:var(--bg);border:1px solid var(--bd);color:var(--ac);font-family:var(--mono);font-size:12px;font-weight:bold;padding:5px 8px;border-radius:3px;outline:none;text-align:right"/>'
       +'<span style="font-family:var(--mono);font-size:10px;color:var(--tx3)">грн</span>'
       +'<span style="color:var(--rd);cursor:pointer;font-size:16px" onclick="dailyOpDel('+i+')">&#215;</span></div>';
@@ -5644,7 +5644,7 @@ function renderSettingsContent(){
   var dsec=document.createElement("div");
   dsec.className="settings-section";
   dsec.innerHTML='<div class="settings-section-title">ДОПЛАТИ — ДЕННА СТАВКА'
-    +'<span style="font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3);margin-left:8px">· грн · фіксовані операції понад ставку/день</span></div>'
+    +'<span style="font-family:Manrope,Verdana,sans-serif;font-size:10px;color:var(--tx3);margin-left:8px">· грн · фіксовані операції понад ставку/день</span></div>'
     +'<div id="daily-ops-editor" style="max-width:560px;padding:4px 0"></div>';
   el.appendChild(dsec);
   dailyOpsLoad(function(){ dailyOpsRenderEditor(); });
@@ -5670,7 +5670,7 @@ function renderSettingsContent(){
     sec.className="settings-section";
     var title=document.createElement("div");
     title.className="settings-section-title";
-    title.innerHTML=cat+'<span style="font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3);margin-left:8px">· ціни в '+cur+'</span>';
+    title.innerHTML=cat+'<span style="font-family:Manrope,Verdana,sans-serif;font-size:10px;color:var(--tx3);margin-left:8px">· ціни в '+cur+'</span>';
     sec.appendChild(title);
 
     var subs = SUBSECTIONS[cat];
@@ -5794,7 +5794,7 @@ function showPrintModal(source){
     vWrap.style.cssText="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--blue-dark);font-weight:600";
     var vLbl=document.createElement("span"); vLbl.textContent="Комплектація (варіант):";
     var vSel=document.createElement("select"); vSel.id="pr-variant";
-    vSel.style.cssText="font-size:11px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:3px 6px;cursor:pointer;color:var(--tx)";
+    vSel.style.cssText="font-size:11px;font-family:'Manrope',Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:3px 6px;cursor:pointer;color:var(--tx)";
     var o0=document.createElement("option"); o0.value=""; o0.textContent="усі варіанти (як є)"; vSel.appendChild(o0);
     for(var lv=1; lv<=maxVar; lv++){ var o=document.createElement("option"); o.value=String(lv); o.textContent="лише Вар"+lv+(lv===1?" (основні)":""); vSel.appendChild(o); }
     vWrap.appendChild(vLbl); vWrap.appendChild(vSel);
@@ -6989,7 +6989,7 @@ function pmMoveSelect(fromBlockId, itemId){
   var sel=document.createElement("select");
   sel.className="pr-move";
   sel.title="Перенести в інший блок";
-  sel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:1px 2px;width:22px;cursor:pointer;vertical-align:middle";
+  sel.style.cssText="font-size:10px;font-family:'Manrope',Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:1px 2px;width:22px;cursor:pointer;vertical-align:middle";
   var o0=document.createElement("option"); o0.value=""; o0.textContent="⇄"; sel.appendChild(o0);
   PM_BLOCKS.forEach(function(b){ if(b.id!==fromBlockId){ var o=document.createElement("option"); o.value=b.id; o.textContent=b.label; sel.appendChild(o); } });
   (function(fb,iid){ sel.onchange=function(){ if(this.value) pmMoveItem(fb, iid, this.value); }; })(fromBlockId, itemId);
@@ -7036,7 +7036,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   function mkInp(val, placeholder, field, type){
     var el=document.createElement("input");
     el.value=val||""; el.placeholder=placeholder||""; el.type=type||"text";
-    el.style.cssText="width:100%;background:transparent;border:none;color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none";
+    el.style.cssText="width:100%;background:transparent;border:none;color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none";
     if(type==="number"){ el.min="0"; }
     if(field==="buyPrice"||field==="qty") el.style.textAlign="right";
     if(field==="buyPrice") el.style.color="var(--ac)";
@@ -7074,7 +7074,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   function mkSel(opts, curVal, field, cls){
     var el=document.createElement("select");
     if(cls) el.className=cls;
-    el.style.cssText="background:transparent;border:none;font-family:Verdana,sans-serif;font-size:11px;outline:none;cursor:pointer;width:100%";
+    el.style.cssText="background:transparent;border:none;font-family:'Manrope',Verdana,sans-serif;font-size:11px;outline:none;cursor:pointer;width:100%";
     opts.forEach(function(o){
       var opt=document.createElement("option");
       opt.value=o.val!==undefined?o.val:o; opt.textContent=o.label!==undefined?o.label:o;
@@ -7113,7 +7113,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   }
   if(hasVariants||isVariant){
     var sp=document.createElement("span");
-    sp.style.cssText="font-family:Verdana,sans-serif;font-size:10px;font-weight:bold;color:"+(isVariant?"var(--bl)":"var(--tx2)");
+    sp.style.cssText="font-family:'Manrope',Verdana,sans-serif;font-size:10px;font-weight:bold;color:"+(isVariant?"var(--bl)":"var(--tx2)");
     sp.textContent=varLabel;
     td1.appendChild(sp);
   }
@@ -7124,7 +7124,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   var wrap=document.createElement("div");
   wrap.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=mkSel(PM_AVAIL,item.avail||"","avail");
-  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";
+  availSel.style.cssText="font-size:10px;font-family:'Manrope',Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";
   var availTxt=document.createElement("span");
   availTxt.className="pr-avail-txt";
   availTxt.textContent=pmAvailLabel(item.avail);
@@ -7154,14 +7154,14 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   td3.appendChild(qtyInp); tr.appendChild(td3);
 
   // Col 4: Price without discount (Вартість)
-  var td4a=mkTd("width:5%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
+  var td4a=mkTd("width:5%;vertical-align:middle;font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
   if(isClientItem||isHidden){ td4a.textContent="\u2014"; td4a.style.color="var(--tx3)"; }
   else if((item.markupType||"auto")==="manual"){
     var mInp=document.createElement("input");
     mInp.className="pm-manual-inp";
     mInp.type="number"; mInp.min="0"; mInp.value=item.manualPrice||""; mInp.placeholder="\u0446\u0456\u043d\u0430";
     mInp.title="\u0420\u0443\u0447\u043d\u0430 \u0446\u0456\u043d\u0430 \u043a\u043b\u0456\u0454\u043d\u0442\u0443 (\u043d\u0430\u0446\u0456\u043d\u043a\u0430 \u00ab\u0432\u0440\u0443\u0447\u043d\u0443\u00bb)";
-    mInp.style.cssText="width:100%;background:rgba(124,58,237,.10);border:1px solid #7c3aed;border-radius:3px;color:#5b21b6;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+    mInp.style.cssText="width:100%;background:rgba(124,58,237,.10);border:1px solid #7c3aed;border-radius:3px;color:#5b21b6;font-family:'Manrope',Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
     (function(bid,iid){ mInp.addEventListener("change",function(){ setManualPrice(bid,iid,+this.value); }); mInp.addEventListener("click",function(e){ e.stopPropagation(); }); })(blockId,item.id);
     td4a.appendChild(mInp);
   }
@@ -7169,7 +7169,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   tr.appendChild(td4a);
 
   // Col 5: Final price with discount (Фін.вартість)
-  var td4=mkTd("width:6%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
+  var td4=mkTd("width:6%;vertical-align:middle;font-family:'Manrope',Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
   td4.textContent=isHidden?"\u043f\u0440\u0438\u0445\u043e\u0432\u0430\u043d\u043e":(isClientItem?"\u0432\u0456\u0434 \u043a\u043b\u0456\u0454\u043d\u0442\u0430":(finalDisc?finalDisc.toLocaleString("uk-UA")+" \u0433\u0440\u043d":"\u2014"));
   if(isClientItem||isHidden) td4.style.color="var(--tx3)";
   tr.appendChild(td4);
@@ -7234,7 +7234,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     {val:"manual", label:"\u2713 \u0432\u0440\u0443\u0447\u043d\u0443"}
   ];
   var markupSel=mkSel(markupOpts, item.markupType||"auto", "markupType");
-  markupSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";
+  markupSel.style.cssText="font-size:10px;font-family:'Manrope',Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";
   td10.appendChild(markupSel); tr.appendChild(td10);
 
   // Col 11: Status (+ кнопка «СКЛ» — Отримано на складі)
@@ -7301,7 +7301,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
       fpzInp.type = "number"; fpzInp.min = "0"; fpzInp.value = item.fpz||""; fpzInp.placeholder = "—";
       fpzInp.title = "ФПЗ: фактична вартість з доставкою, грн (за весь рядок). Порожньо = прибуток за розрахунком";
       var fpzOn = parseFloat(item.fpz)>0;
-      fpzInp.style.cssText = "width:100%;background:"+(fpzOn?"rgba(25,118,210,.12)":"transparent")+";border:1px "+(fpzOn?"solid var(--bl)":"dashed var(--bd)")+";border-radius:3px;color:var(--bl);font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+      fpzInp.style.cssText = "width:100%;background:"+(fpzOn?"rgba(25,118,210,.12)":"transparent")+";border:1px "+(fpzOn?"solid var(--bl)":"dashed var(--bd)")+";border-radius:3px;color:var(--bl);font-family:'Manrope',Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
       (function(bid,iid){ fpzInp.addEventListener("change",function(){ pmUpdItem(bid,iid,"fpz",+this.value||0); }); })(blockId,item.id);
       tdF.appendChild(fpzInp);
     }
@@ -7310,7 +7310,7 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
   if(isAdmin()){
     var disc = pmDiscCode();
     var profit = pmProfit(item, disc);
-    var td13 = mkTd("width:8%;vertical-align:middle;text-align:right;white-space:nowrap;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold");
+    var td13 = mkTd("width:8%;vertical-align:middle;text-align:right;white-space:nowrap;font-family:'Manrope',Verdana,sans-serif;font-size:11px;font-weight:bold");
     td13.className = "pt-profit";
     td13.textContent = profit ? profit.toLocaleString("uk-UA") + " грн" : "—";
     td13.style.color = profit > 0 ? "var(--gr)" : profit < 0 ? "var(--rd)" : "var(--tx3)";
@@ -7565,7 +7565,7 @@ function pmBuildPresetPopup(blockId, anchorEl){
 
   var popup = document.createElement("div");
   popup.id = "pm-preset-popup";
-  popup.style.cssText = "position:fixed;z-index:300;background:var(--bg2);border:1px solid var(--bda);border-radius:4px;padding:4px;min-width:260px;max-height:340px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.15);font-family:Verdana,sans-serif;font-size:12px";
+  popup.style.cssText = "position:fixed;z-index:300;background:var(--bg2);border:1px solid var(--bda);border-radius:4px;padding:4px;min-width:260px;max-height:340px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.15);font-family:'Manrope',Verdana,sans-serif;font-size:12px";
 
   var title = document.createElement("div");
   title.style.cssText = "font-size:10px;color:var(--tx3);padding:4px 8px 6px;border-bottom:1px solid var(--bd);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px";
@@ -8194,7 +8194,7 @@ function buyPriceCell(item, onSet, onCheck){
   var wrap=document.createElement("div"); wrap.style.cssText="display:flex;align-items:center;gap:2px";
   var inp=document.createElement("input");
   inp.type="number"; inp.min="0"; inp.value=item.buyPrice||""; inp.placeholder="0";
-  inp.style.cssText="width:100%;background:transparent;border:none;color:var(--ac);font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+  inp.style.cssText="width:100%;background:transparent;border:none;color:var(--ac);font-family:'Manrope',Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
   // Страховка від неуважності: статус Корзина/Замовлено/Отримано без вартості — поле світиться червоним, доки не впишеш
   var needPrice=(item.status==="cart"||item.status==="ordered"||item.status==="received") && !(parseFloat(item.buyPrice)>0);
   if(needPrice){
@@ -9055,7 +9055,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   function mkInp(val,ph,field,type){
     var el=document.createElement("input");
     el.value=val||""; el.placeholder=ph||""; el.type=type||"text";
-    el.style.cssText="width:100%;background:transparent;border:none;color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none";
+    el.style.cssText="width:100%;background:transparent;border:none;color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none";
     if(type==="number"){ el.min="0"; }
     if(field==="buyPrice"||field==="qty") el.style.textAlign="right";
     if(field==="buyPrice") el.style.color="var(--ac)";
@@ -9094,7 +9094,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var td1=mkTd("width:3%;white-space:nowrap;vertical-align:middle");
   if(hasVariants||isVariant){
     var sp=document.createElement("span");
-    sp.style.cssText="font-family:Verdana,sans-serif;font-size:10px;font-weight:bold;color:"+(isVariant?"var(--bl)":"var(--tx2)");
+    sp.style.cssText="font-family:'Manrope',Verdana,sans-serif;font-size:10px;font-weight:bold;color:"+(isVariant?"var(--bl)":"var(--tx2)");
     sp.textContent=varLabel; td1.appendChild(sp);
   }
   tr.appendChild(td1);
@@ -9103,7 +9103,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var td2=mkTd("min-width:200px;vertical-align:middle");
   var wrap2=document.createElement("div"); wrap2.style.cssText="display:flex;gap:4px;align-items:center";
   var availSel=document.createElement("select");
-  availSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";
+  availSel.style.cssText="font-size:10px;font-family:'Manrope',Verdana,sans-serif;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;flex-shrink:0;width:86px;max-width:86px;cursor:pointer";
   PM_AVAIL.forEach(function(o){ var opt=document.createElement("option"); opt.value=o.val!==undefined?o.val:o; opt.textContent=o.label!==undefined?o.label:o; if(opt.value===(item.avail||"")) opt.selected=true; availSel.appendChild(opt); });
   (function(){ availSel.addEventListener("change",function(){ soUpdPart(item.id,"avail",this.value); }); })();
   var availTxt=document.createElement("span"); availTxt.className="pr-avail-txt"; availTxt.textContent=pmAvailLabel(item.avail);
@@ -9118,14 +9118,14 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   td3.appendChild(qtyInp); tr.appendChild(td3);
 
   // Col4: price without disc (для націнки «вручну» — редаговане поле ціни клієнту)
-  var td4a=mkTd("width:8%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
+  var td4a=mkTd("width:8%;vertical-align:middle;font-family:'Manrope',Verdana,sans-serif;font-size:11px;color:var(--tx2);text-align:right;white-space:nowrap");
   if(isClient||isHidden){ td4a.textContent="—"; }
   else if((item.markupType||"auto")==="manual"){
     var smInp=document.createElement("input");
     smInp.className="pm-manual-inp";
     smInp.type="number"; smInp.min="0"; smInp.value=item.manualPrice||""; smInp.placeholder="ціна";
     smInp.title="Ручна ціна клієнту (націнка «вручну»)";
-    smInp.style.cssText="width:100%;background:rgba(124,58,237,.10);border:1px solid #7c3aed;border-radius:3px;color:#5b21b6;font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+    smInp.style.cssText="width:100%;background:rgba(124,58,237,.10);border:1px solid #7c3aed;border-radius:3px;color:#5b21b6;font-family:'Manrope',Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
     (function(iid){ smInp.addEventListener("change",function(){ soSetManualPrice(iid,+this.value); }); smInp.addEventListener("click",function(e){ e.stopPropagation(); }); })(item.id);
     td4a.appendChild(smInp);
   }
@@ -9133,7 +9133,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   tr.appendChild(td4a);
 
   // Col5: final price with disc
-  var td4=mkTd("width:9%;vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
+  var td4=mkTd("width:9%;vertical-align:middle;font-family:'Manrope',Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--ac);text-align:right;white-space:nowrap");
   td4.textContent=isHidden?"приховано":(isClient?"від клієнта":(finalDisc?finalDisc.toLocaleString("uk-UA")+" грн":"—"));
   if(isClient||isHidden) td4.style.color="var(--tx3)"; tr.appendChild(td4);
 
@@ -9193,7 +9193,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   var td10=mkTd("width:7%;vertical-align:middle");
   var markupOpts=[{val:"auto",label:"×"+markup+" (avto.pro)"},{val:"at",label:"×1.4 (AT/AN)"},{val:"risk",label:"×1.5 (Ризик)"},{val:"manual",label:"✓ вручну"}];
   var mSel=document.createElement("select");
-  mSel.style.cssText="font-size:10px;font-family:Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";
+  mSel.style.cssText="font-size:10px;font-family:'Manrope',Verdana,sans-serif;background:var(--bg);border:1px solid var(--bd);border-radius:2px;padding:2px 3px;width:100%;cursor:pointer;color:var(--tx2)";
   markupOpts.forEach(function(o){ var opt=document.createElement("option"); opt.value=o.val; opt.textContent=o.label; if(o.val===(item.markupType||"auto")) opt.selected=true; mSel.appendChild(opt); });
   mSel.addEventListener("change",function(){ soUpdPart(item.id,"markupType",this.value); });
   td10.appendChild(mSel); tr.appendChild(td10);
@@ -9257,7 +9257,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
       fpzInp.type="number"; fpzInp.min="0"; fpzInp.value=item.fpz||""; fpzInp.placeholder="—";
       fpzInp.title="ФПЗ: фактична вартість з доставкою, грн (за весь рядок). Порожньо = прибуток за розрахунком";
       var fpzOn=parseFloat(item.fpz)>0;
-      fpzInp.style.cssText="width:100%;background:"+(fpzOn?"rgba(25,118,210,.12)":"transparent")+";border:1px "+(fpzOn?"solid var(--bl)":"dashed var(--bd)")+";border-radius:3px;color:var(--bl);font-family:Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+      fpzInp.style.cssText="width:100%;background:"+(fpzOn?"rgba(25,118,210,.12)":"transparent")+";border:1px "+(fpzOn?"solid var(--bl)":"dashed var(--bd)")+";border-radius:3px;color:var(--bl);font-family:'Manrope',Verdana,sans-serif;font-size:11px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
       (function(iid){ fpzInp.addEventListener("change",function(){ soUpdPart(iid,"fpz",+this.value||0); }); })(item.id);
       tdF.appendChild(fpzInp);
     }
@@ -9330,7 +9330,7 @@ function soRenderWorks(){
     var tdQ = document.createElement("td"); tdQ.style.verticalAlign="middle";
     var qInp = document.createElement("input");
     qInp.type="number"; qInp.min="1"; qInp.value=w.qty||1;
-    qInp.style.cssText="width:44px;background:transparent;border:none;color:var(--tx);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;text-align:right";
+    qInp.style.cssText="width:44px;background:transparent;border:none;color:var(--tx);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;text-align:right";
     (function(work){ qInp.addEventListener("change",function(){ work.qty=+this.value||1; soRenderWorks(); soUpdateSummary(); }); })(w);
     tdQ.appendChild(qInp); tr.appendChild(tdQ);
 
@@ -9338,20 +9338,20 @@ function soRenderWorks(){
     var tdP = document.createElement("td"); tdP.style.verticalAlign="middle";
     var pInp = document.createElement("input");
     pInp.type="number"; pInp.min="0"; pInp.value=w.price||""; pInp.placeholder="0";
-    pInp.style.cssText="width:80px;background:transparent;border:none;color:var(--ac);font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
+    pInp.style.cssText="width:80px;background:transparent;border:none;color:var(--ac);font-family:'Manrope',Verdana,sans-serif;font-size:12px;font-weight:bold;padding:2px 4px;outline:none;text-align:right";
     (function(work){ pInp.addEventListener("change",function(){ work.price=+this.value||0; soRenderWorks(); soUpdateSummary(); }); })(w);
     tdP.appendChild(pInp); tr.appendChild(tdP);
 
     // 5) Фін.ціна
     var tdF = document.createElement("td");
-    tdF.style.cssText="vertical-align:middle;font-family:Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--blue-mid);text-align:right;white-space:nowrap";
+    tdF.style.cssText="vertical-align:middle;font-family:'Manrope',Verdana,sans-serif;font-size:12px;font-weight:bold;color:var(--blue-mid);text-align:right;white-space:nowrap";
     var final = soWorkFinal(w);
     tdF.textContent = final ? final.toLocaleString("uk-UA")+" грн" : "—";
     tr.appendChild(tdF);
 
     // Тип робіт (блок-джерело) — праворуч від цін
     var tdT = document.createElement("td"); tdT.className="so-wt-type";
-    tdT.style.cssText="vertical-align:middle;font-family:Verdana,sans-serif;font-size:10px;color:var(--tx3)";
+    tdT.style.cssText="vertical-align:middle;font-family:'Manrope',Verdana,sans-serif;font-size:10px;color:var(--tx3)";
     tdT.textContent = soWorkTypeLabel(w.cat);
     tr.appendChild(tdT);
 
@@ -9359,7 +9359,7 @@ function soRenderWorks(){
       // 6) Факт (фактичні витрати)
       var tdFact = document.createElement("td"); tdFact.className="so-wt-fact"; tdFact.style.verticalAlign="middle";
       var act=document.createElement("input"); act.className="rc-act"; act.type="number"; act.min="0"; act.step="100"; act.placeholder="факт"; act.value=w.actualUAH||"";
-      act.style.cssText="width:80px;background:transparent;border:none;color:var(--tx2);font-family:Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;text-align:right";
+      act.style.cssText="width:80px;background:transparent;border:none;color:var(--tx2);font-family:'Manrope',Verdana,sans-serif;font-size:11px;padding:2px 4px;outline:none;text-align:right";
       (function(wk){ act.addEventListener("change",function(){ var n=parseFloat(this.value)||0; if(n>0) wk.actualUAH=n; else delete wk.actualUAH; soRenderWorks(); soUpdateSummary(); }); })(w);
       act.title = (function(){ var a=parseFloat(w.actualUAH)||0; if(a<=0) return "Фактичні витрати (для сторонніх)"; var m=(w.price||0)*(w.qty||1)-a; return "Маржа "+m.toLocaleString("uk-UA")+" грн"+(w.coord==="anikin"&&m>0?" · Координатору "+Math.round(m*PAY_COORD_SHARE_EXT).toLocaleString("uk-UA"):""); })();
       tdFact.appendChild(act); tr.appendChild(tdFact);
@@ -9367,7 +9367,7 @@ function soRenderWorks(){
       // 7) Координатор
       var tdC = document.createElement("td"); tdC.className="so-wt-coord"; tdC.style.verticalAlign="middle";
       var sel=document.createElement("select"); sel.className="rc-sel";
-      sel.style.cssText="background:transparent;border:1px solid var(--bd);border-radius:3px;font-family:Verdana,sans-serif;font-size:10px;padding:2px 3px;cursor:pointer;color:var(--tx2);max-width:100%";
+      sel.style.cssText="background:transparent;border:1px solid var(--bd);border-radius:3px;font-family:'Manrope',Verdana,sans-serif;font-size:10px;padding:2px 3px;cursor:pointer;color:var(--tx2);max-width:100%";
       [["","— коорд. —"],["broslav","Брослав"],["anikin","Координатор"]].forEach(function(o){ var op=document.createElement("option"); op.value=o[0]; op.textContent=o[1]; if((w.coord||"")===o[0]) op.selected=true; sel.appendChild(op); });
       (function(wk){ sel.addEventListener("change",function(){ wk.coord=this.value; soRenderWorks(); soUpdateSummary(); }); })(w);
       tdC.appendChild(sel); tr.appendChild(tdC);
@@ -15043,7 +15043,7 @@ function planRender(){
     }
     h+='<tr style="border-top:1px solid var(--bd)'+(na?';opacity:.45':'')+(s.status==="done"?';background:rgba(46,125,50,.05)':'')+(s.status==="active"?';background:rgba(25,118,210,.06)':'')+'">'
       +'<td style="width:30px;text-align:center;font-size:16px;padding:6px 4px;'+(edit?'cursor:pointer':'')+'" '+(edit?'onclick="planCycle('+i+')" title="Змінити статус"':'')+'>'+icon+'</td>'
-      +'<td style="padding:6px 4px;font-family:Verdana,sans-serif;font-size:12px'+(s.status==="done"?';color:var(--tx3)':'')+'">'+(i+1)+'. '+escH(s.name)+(na?' <span style="font-size:9px;color:var(--tx3)">(неактивний — обрано альтернативу)</span>':'')+'</td>'
+      +'<td style="padding:6px 4px;font-family:Manrope,Verdana,sans-serif;font-size:12px'+(s.status==="done"?';color:var(--tx3)':'')+'">'+(i+1)+'. '+escH(s.name)+(na?' <span style="font-size:9px;color:var(--tx3)">(неактивний — обрано альтернативу)</span>':'')+'</td>'
       +'<td style="padding:6px 4px;white-space:nowrap">'+exec+'</td>'
       +'<td style="padding:6px 4px;font-family:var(--mono);font-size:10px;color:var(--tx3);white-space:nowrap" title="'+escH(s.changedBy||"")+'">'+dates+'</td>'
       +'<td style="padding:6px 4px;white-space:nowrap;text-align:right">'+ctl+'</td></tr>';

@@ -1297,6 +1297,13 @@ body.is-adm #pay-set-btn{display:inline-block}
 
 /* ── ПЛАН — плитки авто з фото (пропорції bidfax 4:3) ──────────────────────── */
 #plan-tiles{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+/* ── Малярки: великі плитки з міні-плитками авто ── */
+#paint-tiles{grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+.paint-cars{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.paint-carjob{width:112px}
+.paint-carjob .ph{width:112px;height:82px;border-radius:12px;object-fit:cover;border:2px solid #fff;box-shadow:0 2px 8px rgba(24,29,39,.18);background:var(--bg3);display:block}
+.paint-carjob .nm{font-size:10.5px;font-weight:700;color:var(--tx2);margin-top:4px;line-height:1.25;max-height:26px;overflow:hidden}
+.paint-jobph{width:122px;height:92px;border-radius:12px;object-fit:cover;flex:none;background:var(--bg3);border:1px solid var(--bd)}
 /* ── План: шкала етапів з авто над нею ── */
 #plan-scale{margin-bottom:16px}
 .pscale{background:var(--bg2);border-radius:18px;box-shadow:var(--shadow);padding:16px 10px 10px;overflow-x:auto}
@@ -13387,22 +13394,52 @@ function paintCashOp(amount, desc, car, vin, date){
 }
 
 // ── Рендер ──
+// Фото авто для Малярок: VIN → фото (плани + авто «В роботі»), кеш на сесію
+var PAINT_PH_READY=false, PAINT_PH_LOADING=false;
+function paintPhotosLoad(){
+  if(PAINT_PH_READY) return Promise.resolve();
+  PAINT_PH_LOADING=true;
+  return carPhotosLoad().then(function(){
+    return db.collection("calculations").where("status","==","in_work").get();
+  }).then(function(s){
+    s.forEach(function(d){
+      var r=d.data(); var vk=(r.vin||"").trim().toUpperCase(); if(!vk) return;
+      var ph=carPhotoFor(r, d.id);
+      if(ph && (r.type==="works" || !CAR_VIN_PHOTOS[vk])) CAR_VIN_PHOTOS[vk]=ph;
+    });
+    PAINT_PH_READY=true; PAINT_PH_LOADING=false;
+  }).catch(function(){ PAINT_PH_LOADING=false; });
+}
+function paintCarPh(vin){
+  var vk=(vin||"").trim().toUpperCase();
+  return (vk && CAR_VIN_PHOTOS[vk]) || CAR_PH_DEF;
+}
 function paintRender(){
   var tiles = document.getElementById("paint-tiles"), det = document.getElementById("paint-detail");
   var top = document.getElementById("paint-topbtns");
   if(!tiles) return;
+  if(!PAINT_PH_READY && !PAINT_PH_LOADING){ paintPhotosLoad().then(function(){ paintRender(); }); }
   if(!PAINT_SEL){
     det.style.display = "none"; tiles.style.display = "";
     if(top) top.innerHTML = isAdmin() ? '<button class="btn btn-o" onclick="paintAddPainter()">＋ Малярка</button>' : '';
     tiles.innerHTML = PAINTERS.filter(function(p){ return p.active!==false; }).map(function(p){
-      var open = PAINT_JOBS.filter(function(j){ return j.painterId===p._id && j.status==="open"; });
+      var open = PAINT_JOBS.filter(function(j){ return j.painterId===p._id && j.status==="open"; })
+        .sort(function(a,b){ return (b.startDate||"").localeCompare(a.startDate||""); });
       var adv = open.reduce(function(s,j){ return s+paintJobAdv(j); }, 0);
       var dep = paintFreeDeposit(p._id);
+      var carsH = open.length
+        ? '<div class="paint-cars">'+open.map(function(j){
+            return '<div class="paint-carjob" title="'+escH((j.car||"")+(j.vin?" · "+j.vin:""))+'">'
+              +'<img class="ph" src="'+escH(paintCarPh(j.vin))+'" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.onerror=null;this.src=CAR_PH_DEF"/>'
+              +'<div class="nm">'+escH(j.car||j.vin||"—")+'</div></div>';
+          }).join("")+'</div>'
+        : '<div class="pay-sub" style="margin-top:10px;color:var(--tx3)">немає авто в роботі</div>';
       return '<div class="pay-card" style="cursor:pointer" onclick="paintOpen(\''+p._id+'\')">'
         + '<div class="pay-nm">🎨 '+escH(p.name)+'</div>'
         + '<div class="pay-bal" style="font-size:16px">'+paintFmt(adv+dep)+' грн <span style="font-size:11px;color:var(--tx3);font-weight:normal">наші гроші у маляра</span></div>'
         + '<div class="pay-sub">авто в роботі: <b>'+open.length+'</b> · авансів по авто: '+paintFmt(adv)+' грн</div>'
         + '<div class="pay-sub">вільний депозит (без авто): <b style="color:'+(dep>0?"var(--bl)":"var(--tx3)")+'">'+paintFmt(dep)+' грн</b></div>'
+        + carsH
         + '</div>';
     }).join("") || '<div class="pay-sub">Немає малярок</div>';
     return;
@@ -13438,7 +13475,9 @@ function paintRender(){
     + '</div>';
   function jobCard(j){
     var adv = paintJobAdv(j), isOpen = j.status==="open";
-    var h = '<div class="pay-card"'+(isOpen?'':' style="opacity:.55"')+'>'
+    var h = '<div class="pay-card"'+(isOpen?'':' style="opacity:.55"')+'><div style="display:flex;gap:12px;align-items:flex-start">'
+      + '<img class="paint-jobph" src="'+escH(paintCarPh(j.vin))+'" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.onerror=null;this.src=CAR_PH_DEF"/>'
+      + '<div style="flex:1;min-width:0">'
       + '<div class="pay-nm">'+escH(j.car||"—")+'</div>'
       + '<div class="pay-rl" style="font-family:var(--mono)">'+escH(j.vin||"")+'</div>';
     if(isOpen){
@@ -13458,7 +13497,7 @@ function paintRender(){
         + '<div class="pay-sub">'+(j.linked?'<span style="color:var(--gr)">✓ у калькуляції Робіт</span>':'<span style="color:#e67e22">очікує: відкрийте Роботи цього авто, щоб підтягнути факт</span>')+'</div>'
         + (isAdmin()?'<div class="pay-cbtns"><button style="color:var(--rd)" onclick="paintDeleteJob(\''+j._id+'\')">×</button></div>':'');
     }
-    return h + '</div>';
+    return h + '</div></div></div>';
   }
   document.getElementById("paint-jobs").innerHTML =
     (open.map(jobCard).join("") || '<div class="pay-sub">Немає авто в роботі у цього маляра</div>')

@@ -1300,19 +1300,19 @@ body.is-adm #pay-set-btn{display:inline-block}
 /* ── План: шкала етапів з авто над нею ── */
 #plan-scale{margin-bottom:16px}
 .pscale{background:var(--bg2);border-radius:18px;box-shadow:var(--shadow);padding:16px 10px 10px;overflow-x:auto}
-.pscale-row{display:flex;align-items:flex-end;min-width:1240px}
-.pscale-col{flex:1 1 0;min-width:88px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;padding:0 3px;border-radius:12px;transition:background .12s}
+.pscale-row{display:flex;align-items:flex-end;min-width:1500px}
+.pscale-col{flex:1 1 0;min-width:104px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;padding:0 3px;border-radius:12px;transition:background .12s}
 .pscale-col.drop{background:var(--acd)}
 .pscale-col.drop .pscale-node{border-color:var(--ac);background:var(--ac)}
 .pscale-col::before{content:"";position:absolute;left:0;right:0;bottom:37px;height:2px;background:var(--bd)}
 .pscale-col:first-child::before{left:50%}
 .pscale-col:last-child::before{right:50%}
 .pscale-cars{display:flex;flex-direction:column;justify-content:flex-end;gap:5px;margin-bottom:8px;position:relative;z-index:2}
-.pscale-car{width:76px;height:57px;border-radius:11px;overflow:hidden;cursor:grab;border:2px solid #fff;box-shadow:0 2px 8px rgba(24,29,39,.22);background:var(--bg3);transition:transform .12s}
-.pscale-car:hover{transform:scale(1.12)}
+.pscale-car{width:98px;height:73px;border-radius:12px;overflow:hidden;cursor:grab;border:2px solid #fff;box-shadow:0 2px 8px rgba(24,29,39,.22);background:var(--bg3);transition:transform .12s}
+.pscale-car:hover{transform:scale(1.1)}
 .pscale-car:active{cursor:grabbing}
 .pscale-car img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-.pscale-more{width:76px;height:22px;border-radius:8px;background:var(--bg3);color:var(--tx2);font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pscale-more{width:98px;height:24px;border-radius:8px;background:var(--bg3);color:var(--tx2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pscale-node{width:12px;height:12px;border-radius:999px;background:var(--bg2);border:2px solid var(--bda);margin-bottom:6px;position:relative;z-index:2;box-sizing:border-box}
 .pscale-node.on{background:var(--ac);border-color:var(--ac)}
 .pscale-node.ok{background:var(--gr);border-color:var(--gr)}
@@ -1683,6 +1683,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
       <button class="btn btn-o" onclick="sluSheetPrint()" title="Зарплатна калькуляція для слюсаря: Слюсарні + Безпека, без цін клієнта">🔧 Лист слюсаря</button>
       <button class="btn btn-o" onclick="newCalcLinked('parts')" title="Створити Запчастини для цього ж авто">➕ Запчастини (це авто)</button>
+      <button class="btn btn-o" onclick="calcJump('parts')" title="Відкрити збережену калькуляцію Запчастин цього авто (по VIN)">⇄ До Запчастин</button>
       <button class="btn btn-o" onclick="wArchiveCurrent()" title="Завершити ремонт і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
       <button class="btn btn-o" id="w-hidden-toggle" onclick="toggleWorksHidden()" title="Показати/сховати приховані роботи" style="display:none">👁 Показати приховані</button>
     </div>
@@ -1827,6 +1828,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <button class="btn btn-o" onclick="genClientDoc('invoice')" title="Рахунок-фактура для ТОВ/ФОП">🧾 Рахунок</button>
           <button class="btn btn-o" onclick="genClientDoc('act')" title="Акт прийому-передачі">📄 Акт</button>
           <button class="btn btn-o" onclick="newCalcLinked('works')" title="Створити Роботи для цього ж авто">➕ Роботи (це авто)</button>
+          <button class="btn btn-o" onclick="calcJump('works')" title="Відкрити збережену калькуляцію Робіт цього авто (по VIN)">⇄ До Робіт</button>
           <button class="btn btn-o" onclick="pmArchiveCurrent()" title="Завершити і перемістити в Архів" style="color:var(--blue-dark);border-color:var(--blue-dark)">📦 В архів</button>
           <button class="btn btn-o" onclick="openCalcLog('parts')" title="Історія змін цієї калькуляції">🕘 Історія</button>
           <button class="btn btn-o" onclick="pmClear()">&#10005; Нова</button>
@@ -4962,6 +4964,33 @@ function newCalcLinked(target){
   else { if(typeof pmCarSync==="function") pmCarSync(); if(typeof pmUpdateSummary==="function") pmUpdateSummary(); }
   takeSnap(target==="works"?"works":"parts");
   showToast("Нова «"+tgtLabel+"» для "+(vals.car||vals.vin));
+}
+
+// Перейти до ЗБЕРЕЖЕНОЇ калькуляції іншого типу цього ж авто (пошук по VIN)
+function calcJump(target){
+  var srcPrefix = (target==="parts") ? "w" : "pm";   // з Робіт → ЗЧ | з ЗЧ → Роботи
+  var vinRaw = (_v(srcPrefix+"-vin")||"").trim();
+  if(!vinRaw){ showToast("Вкажіть VIN, щоб знайти авто"); return; }
+  var vinUp = vinRaw.toUpperCase();
+  var qs=[ db.collection("calculations").where("vin","==",vinRaw).get() ];
+  if(vinUp!==vinRaw) qs.push(db.collection("calculations").where("vin","==",vinUp).get());
+  Promise.all(qs).then(function(res){
+    var best=null, bestKey="";
+    res.forEach(function(snap){ snap.forEach(function(d){
+      var r=d.data(), t=r.type||"works";
+      var ok = (target==="parts") ? (t==="parts"||t==="parts_v2") : (t==="works");
+      if(!ok) return;
+      var k=(r.updatedAt||r.date||"")+d.id;
+      if(!best || k>bestKey){ best=d; bestKey=k; }
+    }); });
+    if(!best){
+      showToast(target==="parts"
+        ? "Запчастин для цього VIN ще немає — «➕ Запчастини (це авто)»"
+        : "Робіт для цього VIN ще немає — «➕ Роботи (це авто)»");
+      return;
+    }
+    loadRec(best.id);
+  }).catch(function(e){ showToast("Помилка пошуку: "+e.message); });
 }
 
 var ACTIVE_MODE = "in_work";
@@ -15056,6 +15085,12 @@ function planRender(){
   var top=document.getElementById("plan-topbtns");
   if(!tiles) return;
   planScaleRender();
+  // Список — на всю ширину; деталка авто — із заставкою праворуч
+  if(CURRENT_TAB==="plan"){
+    document.body.classList.toggle("hero-on", !!PLAN_SEL);
+    var tpEl=document.getElementById("tab-plan");
+    if(tpEl) tpEl.classList.toggle("hero-pad", !!PLAN_SEL);
+  }
   if(!PLAN_SEL){
     det.style.display="none"; tiles.style.display="";
     if(top) top.innerHTML="";
@@ -15089,7 +15124,8 @@ function planRender(){
   if(!c){ PLAN_SEL=null; planRender(); return; }
   var p=planOf(c), edit=planCanEdit();
   tiles.style.display="none"; det.style.display="";
-  if(top) top.innerHTML='<button class="btn btn-o" onclick="planBack()">← Усі авто</button>';
+  if(top) top.innerHTML='<button class="btn btn-o" onclick="planBack()">← Усі авто</button>'
+    +'<button class="btn btn-p" onclick="loadRec(\''+PLAN_SEL+'\')">'+(c.kind==="to"?"🧰 Відкрити ТО":"🔧 Відкрити Роботи")+'</button>';
   var phSrc=planPhotoOf(c);
   var h='<div class="pay-led">'
     +'<div class="pay-nm">'+escH(c.car||"—")+' <span style="font-family:var(--mono);font-size:11px;color:var(--tx3)">'+escH(c.vin||"")+'</span></div>'

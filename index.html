@@ -14944,7 +14944,7 @@ function planScaleRender(){
     if(!p) return;
     var pr=planProgress(p);
     var cur=pr.act;
-    if(!cur){ for(var i=0;i<p.stages.length;i++){ if(p.stages[i].status!=="done"){ cur=p.stages[i]; break; } } }
+    if(!cur){ for(var i=0;i<p.stages.length;i++){ if(p.stages[i].status!=="done" && p.stages[i].status!=="na"){ cur=p.stages[i]; break; } } }
     if(!cur){ if(pr.tot && pr.done===pr.tot) doneCol.cars.push(c); return; }
     var col=null;
     for(var j=0;j<cols.length;j++){

@@ -11733,7 +11733,7 @@ function payBalance(wid){
   var cur = payCurOf(w ? w.role : "");
   var acc=0, pd=0, fine=0;
   var carry=0, ms=PAY_MONTH+"-01";   // #3 — залишок з попередніх місяців (наскрізно до початку обраного)
-  PAY_ACCRUALS.forEach(function(a){ if(a.workerId!==wid||a.void) return; var d=(a.date||"");
+  PAY_ACCRUALS.forEach(function(a){ if(a.workerId!==wid||a.void||a.type==="reserve") return; var d=(a.date||"");   // reserve = бронь робіт за ставочником, не гроші
     if(d && d<ms) carry += payNative(a,cur); else if(payMonthMatch(d)) acc += payNative(a,cur); });
   // Виплати: аванс/зарплата/погашення розстрочки віднімаються; ВИДАЧА розстрочки (loan) — ні (борг)
   PAY_PAYMENTS.forEach(function(p){ if(p.workerId!==wid||p.void||p.type==="loan") return; var d=(p.date||"");
@@ -11924,6 +11924,10 @@ function payRenderCards(){
         var bop = document.createElement("button"); bop.textContent = "＋ Доплата";
         (function(id){ bop.onclick = function(){ payOpenDaily(id); }; })(w._id);
         btns.appendChild(bop);
+        // Бронь робіт: фіксує виконане ставочником по авто (без грошей) — захист від повторного нарахування іншому
+        var brs = document.createElement("button"); brs.textContent = "🔒 Бронь робіт";
+        (function(id){ brs.onclick = function(){ payOpenAccrue(id); }; })(w._id);
+        btns.appendChild(brs);
       } else {
         var b0 = document.createElement("button"); b0.textContent = "＋ Нарах."; b0.style.cssText="color:var(--ac);border-color:var(--ac)";
         (function(id, daily){ b0.onclick = function(){ daily ? payOpenDaily(id) : payOpenAccrue(id); }; })(w._id, payIsDaily(w));
@@ -11992,7 +11996,8 @@ function payRenderLedger(){
     else if(a.type==="coord_week"){ t="тижнева ставка"; txt=a.workName||""; }
     else if(a.type==="coord_labor"){ t=Math.round(payCoordShare(a.srcRole)*100)+"% з праці"; txt=(a.srcWorkerName||"")+" · "+(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="coord_ext"){ t=Math.round(PAY_COORD_SHARE_EXT*100)+"% "+(a.src==="mal"?"малярні":"сторонні"); txt=(a.carName||"")+" · "+(a.workName||""); }
-    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:payNative(a,cur), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext"), dkind:"acc"});
+    else if(a.type==="reserve"){ t="🔒 бронь (ставка)"; txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%) · "+payFmt(payNative(a,cur),cur)+" — без оплати"; }
+    rows.push({id:a._id, kind:"acc", vd:!!a.void, by:a.voidedBy||"", d:a.date, t:t, txt:txt, v:(a.type==="reserve"?0:payNative(a,cur)), editable:(a.type!=="coord_labor"&&a.type!=="coord_ext"), dkind:"acc"});
   }});
   PAY_PAYMENTS.forEach(function(p){ if(p.workerId===w._id && payMonthMatch(p.date)){
     var pt = p.type==="advance"?"аванс":(p.type==="loan"?"розстрочка (видача)":(p.type==="loan_repay"?"погашення розстрочки":"виплата"));
@@ -12712,9 +12717,11 @@ function payOpenAccrue(preWid){
   var ws = document.getElementById("pay-ac-worker");
   var order = ["Чигряй","Стрижеус","Димура","Тютюшкін"];   // фіксований порядок
   var rank = function(nm){ for(var i=0;i<order.length;i++){ if((nm||"").indexOf(order[i])===0) return i; } return 99; };
-  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr" && !payIsDaily(w) && !payIsWeekly(w);})
+  // Працівники на тижневій ставці (Тютюшкін) теж у списку — їм роботи БРОНЮЮТЬСЯ (type:"reserve"):
+  // фонд і % робіт зʼїдаються (повторно іншому не нарахуєш), але гроші не капають — він на ставці.
+  ws.innerHTML = PAY_WORKERS.filter(function(w){return w.active!==false && w.role!=="coord" && w.role!=="pmgr" && !payIsDaily(w);})
     .sort(function(a,b){ return rank(a.name)-rank(b.name); })
-    .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+'</option>'; }).join("");
+    .map(function(w){ return '<option value="'+w._id+'">'+escH(w.name)+' — '+(PAY_ROLE_LBL[w.role]||"")+(payIsWeekly(w)?' · 🔒 ставка (бронь)':'')+'</option>'; }).join("");
   if(preWid){ ws.value = preWid; }   // передвибір з картки
   var firstW = PAY_WORKERS.find(function(w){ return w._id===ws.value; });
   payRenderCarOptions(firstW);   // авто з мітками кольору + фільтр по рихтувальнику
@@ -12770,7 +12777,8 @@ function payAccrueCarChanged(){
   var bcEl=document.getElementById("pay-ac-bonus-cur"); if(bcEl) bcEl.textContent=(cur==="usd"?"$":"грн");
   var toCur = function(usd){ return cur==="usd" ? usd : Math.round(usd*rate); };
   fundEl.innerHTML = 'Фонд ('+(PAY_ROLE_LBL[role]||"")+', розрахунок у '+(cur==="usd"?"$":"грн")+') по авто: <b>'+payFmt(toCur(fund),cur)+'</b> · нараховано '+
-    payFmt(toCur(used),cur)+' · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+payFmt(toCur(left),cur)+'</b>';
+    payFmt(toCur(used),cur)+' · <b style="color:'+(left>0.01?"var(--gr)":"var(--rd)")+'">лишилось '+payFmt(toCur(left),cur)+'</b>'+
+    (payIsWeekly(worker) ? '<div style="margin-top:6px;padding:7px 10px;border-radius:9px;background:rgba(63,91,246,.08);color:var(--ac);font-weight:600">🔒 '+escH(worker.name)+' на тижневій ставці — роботи буде ЗАБРОНЬОВАНО за ним (гроші не нараховуються), щоб їх не можна було нарахувати іншому.</div>' : '');
   // ТО: спеціальність рядка — за «Типом робіт» (cat); без типу — слюсарна
   var isTO = payIsTO(rec);
   var works = (rec.works||[]).filter(function(w){
@@ -12808,6 +12816,8 @@ function payDoAccrue(){
   var role = worker.role, today = new Date().toISOString().slice(0,10);
   var accDate = (document.getElementById("pay-ac-date")||{}).value || today;   // #1/#4 — дата нарахування (заднім числом)
   var acRate = rec.rate||usdRate||44.1, acCur = payCurOf(role);
+  // Працівник на тижневій ставці → БРОНЬ (type:"reserve"): сума зʼїдає фонд/% робіт, але в баланс не йде
+  var isRes = payIsWeekly(worker);
   var inputs = document.querySelectorAll("#pay-ac-works input[data-uid]");
   var batch = [], total = 0;
   for(var i=0;i<inputs.length;i++){
@@ -12816,12 +12826,14 @@ function payDoAccrue(){
     var usd = parseFloat(inputs[i].getAttribute("data-usd"))||0;
     var amt = usd*(pct/100)*payShareOf(role);
     total += amt;
-    batch.push({ workerId:worker._id, workerName:worker.name, role:role, rate:acRate,
+    var acc = { workerId:worker._id, workerName:worker.name, role:role, rate:acRate,
       calcId:rec._id, carName:rec.car||"", vin:rec.vin||"",
       workUid:inputs[i].getAttribute("data-uid"), workName:inputs[i].getAttribute("data-name"),
       cat:inputs[i].getAttribute("data-cat"), clientUSD:usd, partPct:pct,
       amountUSD:Math.round(amt*100)/100, date:accDate,
-      author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" };
+    if(isRes) acc.type = "reserve";
+    batch.push(acc);
   }
   // #2 — бонус поверх фонду (не входить у ліміт 50%, без бонусу координатора)
   var bonusInp = parseFloat((document.getElementById("pay-ac-bonus")||{}).value)||0;
@@ -12851,6 +12863,7 @@ function payDoAccrue(){
       refs.forEach(function(ref, i){
         var a = batch[i];
         if(a.type==="bonus") return;   // на бонус поверх фонду координатору не нараховуємо
+        if(a.type==="reserve") return; // бронь (ставка) — координатор свою частку вже має з тижневої ставки
         payCoordsFor(a.date).forEach(function(co){
           extra.push({ workerId:co._id, workerName:co.name, role:"coord", type:"coord_labor", rate:acRate,
             srcAccrualId:ref.id, srcWorkerId:a.workerId, srcWorkerName:a.workerName, srcRole:a.role,
@@ -12862,8 +12875,14 @@ function payDoAccrue(){
       return extra.length ? Promise.all(extra.map(function(e){ return db.collection("work_accruals").add(e); })) : null;
     })
     .then(function(){ payClose("pay-accrue-modal");
-      var totCur = acCur==="usd"?(total+bonusUSD):Math.round((total+bonusUSD)*acRate);
-      showToast("Нараховано "+payFmt(totCur,acCur)+(bonusUSD>0?" (вкл. бонус)":"")+" — "+worker.name); payLoadAll(); })
+      if(isRes){
+        var resCur = acCur==="usd"?total:Math.round(total*acRate);
+        showToast("🔒 Заброньовано робіт на "+payFmt(resCur,acCur)+" за "+worker.name+" (ставка, без нарахування)"+(bonusUSD>0?" + бонус":""));
+      } else {
+        var totCur = acCur==="usd"?(total+bonusUSD):Math.round((total+bonusUSD)*acRate);
+        showToast("Нараховано "+payFmt(totCur,acCur)+(bonusUSD>0?" (вкл. бонус)":"")+" — "+worker.name);
+      }
+      payLoadAll(); })
     .catch(function(e){ st.className="pay-status err"; st.textContent="Помилка: "+e.message; });
 }
 
@@ -12938,8 +12957,10 @@ function payBuildReport(wid){
   L.push("Місяць: "+payMonthLabel(PAY_MONTH));
   L.push("");
   L.push("**НАРАХОВАНО:**");
-  var accs = PAY_ACCRUALS.filter(function(a){ return a.workerId===wid && !a.void && payMonthMatch(a.date); })
+  var accsAll = PAY_ACCRUALS.filter(function(a){ return a.workerId===wid && !a.void && payMonthMatch(a.date); })
     .sort(function(a,b){ return (a.date||"").localeCompare(b.date||""); });
+  var resv = accsAll.filter(function(a){ return a.type==="reserve"; });   // бронь робіт (ставка) — без грошей
+  var accs = accsAll.filter(function(a){ return a.type!=="reserve"; });
   if(!accs.length) L.push("  —");
   accs.forEach(function(a){
     var lbl;
@@ -12953,6 +12974,10 @@ function payBuildReport(wid){
     L.push("  "+fmtDMY(a.date)+"  "+lbl+" — "+payFmt(payNative(a,cur),cur));
   });
   L.push("**Разом нараховано: "+payFmt(b.acc,cur)+"**");
+  if(resv.length){
+    L.push(""); L.push("**ВИКОНАНО (в рахунок ставки, без оплати):**");
+    resv.forEach(function(a){ L.push("  "+fmtDMY(a.date)+"  "+(a.carName||"")+(a.workName?" · "+a.workName:"")+(a.partPct?" ("+a.partPct+"%)":"")); });
+  }
   var advs = PAY_PAYMENTS.filter(function(p){ return p.workerId===wid && !p.void && p.type==="advance" && payMonthMatch(p.date); });
   if(advs.length){ L.push(""); L.push("**АВАНСИ:**"); advs.forEach(function(p){ L.push("  "+fmtDMY(p.date)+(p.note?" · "+p.note:"")+" — "+payFmt(payNative(p,cur),cur)); }); }
   var reps = PAY_PAYMENTS.filter(function(p){ return p.workerId===wid && !p.void && p.type==="loan_repay" && payMonthMatch(p.date); });
@@ -13174,7 +13199,7 @@ function statsRender(){
     var worksProfit;
     if(r.worksProfitUAH!==undefined && r.worksProfitUAH!==null){ worksProfit = r.worksProfitUAH; }
     else {
-      var lU=0,cU=0; PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void||a.role==="pmgr") return; if(a.role==="coord") cU+=(a.amountUSD||0); else lU+=(a.amountUSD||0); });
+      var lU=0,cU=0; PAY_ACCRUALS.forEach(function(a){ if(a.calcId!==r._id||a.void||a.role==="pmgr"||a.type==="reserve") return; if(a.role==="coord") cU+=(a.amountUSD||0); else lU+=(a.amountUSD||0); });
       worksProfit = Math.round(worksPaid - (lU+cU)*rate - (r.malPaidUAH||0) - worksPaid*taxPct/100);
     }
     var bal = recordBalanceUAH(r);              // залишок по роботах

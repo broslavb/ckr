@@ -1508,6 +1508,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       <div onclick="event.stopPropagation();cfgGo('settings')">Ціни</div>
       <div onclick="event.stopPropagation();cfgGo('svcprices')">Ціни ТО</div>
       <div onclick="event.stopPropagation();cfgGo('presets')">Шаблони ЗЧ</div>
+      <div onclick="event.stopPropagation();closeCfgMenu();saleListOpen()">🏷 Склад продажу</div>
     </div>
   </div>
 </div>
@@ -2287,6 +2288,58 @@ body.hero-on .hero-pad{margin-right:40vw}
       <button class="btn btn-p" id="cashq-save" onclick="qopSave()" style="flex:1">Зберегти</button>
       <button class="btn btn-o" onclick="qopClose()">Скасувати</button>
     </div>
+  </div>
+</div>
+
+<!-- СКЛАД ПРОДАЖУ (avto.pro): модалка додавання деталі -->
+<div id="sale-modal" style="display:none;position:fixed;z-index:545;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border-radius:14px;padding:20px 22px;width:min(94vw,470px);max-height:92vh;overflow-y:auto;box-sizing:border-box;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="font-size:15px;font-weight:800;margin-bottom:4px">🏷 На продаж — склад avto.pro</div>
+    <div id="sale-src" style="font-size:11px;color:var(--tx3);margin-bottom:12px"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px">
+        <div class="fld" style="flex:1"><label>Виробник (бренд)</label><input id="sale-brand" list="sale-brands" style="text-transform:uppercase"/></div>
+        <div class="fld" style="flex:1"><label>Код (артикул)</label><input id="sale-code"/></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div class="fld" style="flex:1"><label>Ціна, $</label><input id="sale-price" type="number" min="0" step="0.1"/></div>
+        <div class="fld" style="width:80px"><label>К-ть</label><input id="sale-qty" type="number" min="1" value="1"/></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;padding-bottom:8px"><input type="checkbox" id="sale-used"/> Б/У</label>
+      </div>
+      <div class="fld"><label>Опис (бачить покупець на avto.pro)</label><textarea id="sale-desc" rows="2" style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
+      <div class="fld"><label>Фото (URL, кілька — через кому; можна лишити пустим)</label><input id="sale-photo" placeholder="https://..."/></div>
+    </div>
+    <div id="sale-status" style="margin-top:8px;font-size:12px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-p" onclick="saleSave()" style="flex:1">Додати у склад</button>
+      <button class="btn btn-o" onclick="saleClose()">Скасувати</button>
+    </div>
+    <datalist id="sale-brands"></datalist>
+  </div>
+</div>
+
+<!-- СКЛАД ПРОДАЖУ: список / CSV / публікація -->
+<div id="sale-list-modal" style="display:none;position:fixed;z-index:540;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border-radius:14px;padding:20px 22px;width:min(96vw,980px);max-height:92vh;overflow-y:auto;box-sizing:border-box;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:800">🏷 Склад продажу — avto.pro</div>
+      <div id="sale-list-info" style="font-size:12px;color:var(--tx3)"></div>
+    </div>
+    <div id="sale-list-body" style="overflow-x:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-o" onclick="saleOpen()">＋ Додати вручну</button>
+      <button class="btn btn-p" onclick="saleCSV()">⬇ CSV для avto.pro</button>
+      <button class="btn btn-o" onclick="document.getElementById('sale-imp-file').click()" title="Разовий імпорт поточного складу з avto.pro (формат прайса, роздільник ;)">⬆ Імпорт CSV</button>
+      <input type="file" id="sale-imp-file" accept=".csv,.txt" style="display:none" onchange="saleImport(this.files[0]);this.value=''"/>
+      <span id="sale-gh-wrap" style="display:none;gap:8px;align-items:center">
+        <button class="btn btn-o" id="sale-pub-btn" onclick="salePublish()">🚀 Опублікувати</button>
+        <span style="font-size:10px;color:var(--tx3);cursor:pointer;text-decoration:underline" onclick="saleGhSetToken()">токен</span>
+      </span>
+      <span style="flex:1"></span>
+      <button class="btn btn-o" onclick="saleListClose()">Закрити</button>
+    </div>
+    <div id="sale-pub-url" style="display:none;margin-top:8px;font-size:11px;color:var(--tx3)">Посилання для автооновлення avto.pro («Через удаленный сервер», раз на день):
+      <b style="user-select:all">https://broslavb.github.io/ckr/sale/price.csv</b> · порядок полів у прайсі: 1-Производитель · 2-Код · 3-Цена · 4-Количество · 5-Описание · 6-Б/У · 8-Фото</div>
   </div>
 </div>
 
@@ -7387,6 +7440,13 @@ function pmRowHtml(blockId, item, itemIdx, varLabel, isVariant, disc, hasVariant
     (function(bid,iid){ varBtn.onclick=function(){ pmAddVariant(bid,iid); }; })(blockId,item.id);
     td12.appendChild(varBtn);
   }
+  if(canFpz()){
+    var saleBtn=document.createElement("span");
+    saleBtn.className="pr-var"; saleBtn.textContent="🏷";
+    saleBtn.title="На продаж — у склад avto.pro";
+    (function(bid,iid){ saleBtn.onclick=function(){ saleFromPM(bid,iid); }; })(blockId,item.id);
+    td12.appendChild(saleBtn);
+  }
   var delBtn=document.createElement("span");
   delBtn.className="pr-del"; delBtn.innerHTML="&#215;";
   (function(bid,iid,isV){ delBtn.onclick=function(){ pmDelItem(bid,iid,isV); }; })(blockId,item.id,isVariant);
@@ -9345,6 +9405,13 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
     (function(pid){ varBtn.onclick=function(){ soAddVariant(pid); }; })(item.id);
     td12.appendChild(varBtn);
   }
+  if(canFpz()){
+    var saleBtn=document.createElement("span");
+    saleBtn.className="pr-var"; saleBtn.textContent="🏷";
+    saleBtn.title="На продаж — у склад avto.pro";
+    (function(iid){ saleBtn.onclick=function(){ saleFromSO(iid); }; })(item.id);
+    td12.appendChild(saleBtn);
+  }
   var delBtn=document.createElement("span"); delBtn.className="pr-del"; delBtn.innerHTML="&#215;";
   (function(iid,isV){ delBtn.onclick=function(){ soDelPart(iid,isV); }; })(item.id,isVariant);
   td12.appendChild(delBtn); tr.appendChild(td12);
@@ -11091,6 +11158,225 @@ var QOP_TITLES={paintadv:"🎨 Аванс малярці", glass:"🪟 Демо�
   wash1:"🚿 Мийка первинна", wash2:"💨 Мийка (обдув)",
   payauto:"💳 Оплата клієнта — за авто", paypart:"💳 Оплата клієнта — Запчастини",
   paywork:"💳 Оплата клієнта — Роботи", payto:"💳 Оплата клієнта — ТО / Замовлення"};
+
+// ── СКЛАД ПРОДАЖУ (avto.pro) ─────────────────────────────────────────────────
+// Зайві деталі з авто → колекція sale_stock → CSV у форматі прайса avto.pro:
+// Производитель;Код;Цена($);Количество;Описание;Б/У;Реставрация;Фото;вага;габарити.
+// Публікація: файл sale/price.csv пишеться у репо broslavb/ckr через GitHub API
+// (токен зберігається ЛИШЕ в localStorage пристрою власника) → avto.pro
+// автооновлення «Через удаленный сервер» тягне https://broslavb.github.io/ckr/sale/price.csv
+var SALE_ITEMS=[], SALE_LOADED=false, SALE_SRC=null;
+var SALE_BRANDS=["BMW","VAG","MERCEDES","NISSAN","INFINITI","TOYOTA","LEXUS","HONDA","ACURA","MAZDA","HYUNDAI","KIA","LAND ROVER","JAGUAR","PORSCHE","CHRYSLER","JEEP","DODGE","FORD","CHEVROLET","GM","TESLA","SUBARU","MITSUBISHI","VOLVO","4MAX","SIGNEDA","DEPO","FPS","GORDON","MARKET (OEM)"];
+function saleCanUse(){ return canFpz(); }
+function saleClose(){ document.getElementById("sale-modal").style.display="none"; }
+function saleListClose(){ document.getElementById("sale-list-modal").style.display="none"; }
+function saleSt(msg,err){ var el=document.getElementById("sale-status"); el.style.color=err?"var(--rd)":"var(--gr)"; el.textContent=msg||""; }
+function saleOpen(pre){
+  if(!saleCanUse()){ showToast("Лише власник або менеджер ЗЧ"); return; }
+  pre=pre||{};
+  var dl=document.getElementById("sale-brands");
+  if(dl && !dl.children.length) dl.innerHTML=SALE_BRANDS.map(function(b){return '<option value="'+b+'">';}).join("");
+  document.getElementById("sale-src").textContent = pre.car ? ("Авто-донор: "+pre.car+(pre.vin?" · "+pre.vin:"")) : "Без привʼязки до авто";
+  SALE_SRC={car:pre.car||"",vin:pre.vin||""};
+  document.getElementById("sale-brand").value=pre.brand||"";
+  document.getElementById("sale-code").value=pre.code||"";
+  var pr=document.getElementById("sale-price");
+  pr.value=""; pr.placeholder = pre.buyHint ? ("закупка ≈ "+pre.buyHint+" $") : "0.00";
+  document.getElementById("sale-qty").value=pre.qty||1;
+  document.getElementById("sale-desc").value=pre.desc||"";
+  document.getElementById("sale-used").checked=!!pre.used;
+  document.getElementById("sale-photo").value="";
+  saleSt("");
+  document.getElementById("sale-modal").style.display="flex";
+  setTimeout(function(){ var f=document.getElementById(pre.code?"sale-brand":"sale-code"); if(f) f.focus(); },60);
+}
+function saleFromItem(item, car, vin){
+  var rate=usdRate||44.1;
+  saleOpen({
+    code:(item.code||item.altCode||""), desc:item.name||"",
+    qty:item.qty||1,
+    used:((item.avail||"").indexOf("used")>=0),
+    buyHint:(item.buyPrice>0 ? Math.round(item.buyPrice/rate) : ""),
+    car:car, vin:vin
+  });
+}
+function saleFromPM(blockId,itemId){
+  var block=PM_BLOCKS.find(function(b){return b.id===blockId;}); if(!block) return;
+  var it=null;
+  block.items.forEach(function(i){ if(i.id===itemId) it=i; (i.variants||[]).forEach(function(v){ if(v.id===itemId) it=v; }); });
+  if(!it) return;
+  saleFromItem(it, document.getElementById("pm-car").value.trim(), document.getElementById("pm-vin").value.trim());
+}
+function saleFromSO(itemId){
+  var it=null;
+  soParts.forEach(function(i){ if(i.id===itemId) it=i; (i.variants||[]).forEach(function(v){ if(v.id===itemId) it=v; }); });
+  if(!it) return;
+  saleFromItem(it, document.getElementById("so-car").value.trim(), document.getElementById("so-vin").value.trim());
+}
+function saleSave(){
+  var brand=document.getElementById("sale-brand").value.trim().toUpperCase();
+  var code=document.getElementById("sale-code").value.trim();
+  var price=parseFloat(document.getElementById("sale-price").value)||0;
+  var qty=parseInt(document.getElementById("sale-qty").value,10)||1;
+  var desc=document.getElementById("sale-desc").value.trim();
+  if(!brand){ saleSt("Вкажіть виробника (бренд) — як на avto.pro",1); return; }
+  if(!code){ saleSt("Вкажіть код (артикул)",1); return; }
+  if(price<=0){ saleSt("Вкажіть ціну в $",1); return; }
+  saleSt("Збереження...");
+  db.collection("sale_stock").add({
+    brand:brand, code:code, priceUSD:price, qty:qty, desc:desc,
+    used:document.getElementById("sale-used").checked,
+    photo:document.getElementById("sale-photo").value.trim(),
+    car:(SALE_SRC&&SALE_SRC.car)||"", vin:(SALE_SRC&&SALE_SRC.vin)||"",
+    date:new Date().toISOString().slice(0,10), ts:Date.now(),
+    author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+  }).then(function(){
+    SALE_LOADED=false; saleClose();
+    showToast("🏷 Додано у склад продажу: "+brand+" "+code+" — не забудьте «Опублікувати»");
+    if(document.getElementById("sale-list-modal").style.display==="flex") saleListOpen();
+  }).catch(function(e){ saleSt("Помилка: "+e.message+(e.code==="permission-denied"?" — у Firestore немає правила для sale_stock":""),1); });
+}
+function saleLoad(){
+  return db.collection("sale_stock").get().then(function(snap){
+    SALE_ITEMS=[]; snap.forEach(function(d){ SALE_ITEMS.push(Object.assign({_id:d.id},d.data())); });
+    SALE_ITEMS.sort(function(a,b){ return (a.brand||"").localeCompare(b.brand||"") || (a.code||"").localeCompare(b.code||""); });
+    SALE_LOADED=true;
+  });
+}
+function saleListOpen(){
+  if(!saleCanUse()){ showToast("Лише власник або менеджер ЗЧ"); return; }
+  document.getElementById("sale-list-modal").style.display="flex";
+  document.getElementById("sale-list-body").innerHTML='<div style="padding:20px;color:var(--tx3)">Завантаження...</div>';
+  saleLoad().then(saleListRender).catch(function(e){
+    document.getElementById("sale-list-body").innerHTML='<div style="padding:20px;color:var(--rd)">Помилка: '+escH(e.message)+'<br>Ймовірно, у Firestore немає правила для колекції <b>sale_stock</b> (read/write залогіненим, як parking).</div>';
+  });
+}
+function saleListRender(){
+  var el=document.getElementById("sale-list-body");
+  if(!SALE_ITEMS.length){
+    el.innerHTML='<div style="padding:20px;color:var(--tx3)">Порожньо. Додавайте деталі кнопкою 🏷 у рядках Запчастин/ТО або «＋ Додати вручну».</div>';
+  } else {
+    var h='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px"><tr style="text-align:left;color:var(--tx3);font-size:10px;text-transform:uppercase"><th style="padding:4px 6px">Бренд</th><th>Код</th><th>Опис</th><th style="text-align:right">Ціна $</th><th style="text-align:center">К-ть</th><th>Б/У</th><th>Авто-донор</th><th></th></tr>';
+    SALE_ITEMS.forEach(function(it,i){
+      h+='<tr style="border-top:1px solid var(--bd)'+((it.qty||0)<=0?';opacity:.45':'')+'">'+
+        '<td style="padding:5px 6px;font-weight:700;white-space:nowrap">'+escH(it.brand||"")+'</td>'+
+        '<td style="font-family:var(--mono);white-space:nowrap">'+escH(it.code||"")+'</td>'+
+        '<td style="max-width:280px">'+escH(it.desc||"")+(it.photo?' 📷':'')+'</td>'+
+        '<td style="text-align:right;font-weight:700;white-space:nowrap">'+(it.priceUSD||0)+'</td>'+
+        '<td style="text-align:center"><input type="number" min="0" value="'+(it.qty||0)+'" style="width:46px;text-align:center" onchange="saleQty('+i+',this.value)"></td>'+
+        '<td>'+(it.used?"Б/У":"")+'</td>'+
+        '<td style="color:var(--tx3);font-size:11px">'+escH(it.car||"")+'</td>'+
+        '<td style="text-align:right"><span class="pr-del" onclick="saleDel('+i+')">&#215;</span></td></tr>';
+    });
+    el.innerHTML=h+'</table>';
+  }
+  saleListFoot();
+}
+function saleListFoot(){
+  var n=SALE_ITEMS.reduce(function(s,i){return s+(i.qty||0);},0);
+  var sum=SALE_ITEMS.reduce(function(s,i){return s+(i.priceUSD||0)*(i.qty||0);},0);
+  document.getElementById("sale-list-info").textContent=SALE_ITEMS.length+" позицій · "+n+" шт · на "+Math.round(sum).toLocaleString("uk-UA")+" $";
+  var gh=document.getElementById("sale-gh-wrap"); if(gh) gh.style.display=isAdmin()?"inline-flex":"none";
+  var u=document.getElementById("sale-pub-url"); if(u) u.style.display=isAdmin()?"":"none";
+  var b=document.getElementById("sale-pub-btn"); if(b) b.textContent="🚀 Опублікувати"+(saleGhToken()?"":" (потрібен токен)");
+}
+function saleQty(i,v){
+  var it=SALE_ITEMS[i]; if(!it) return;
+  var q=parseInt(v,10)||0;
+  db.collection("sale_stock").doc(it._id).update({qty:q}).then(function(){
+    it.qty=q; saleListFoot();
+    showToast(q===0 ? "К-ть 0 — на avto.pro стане «немає в наявності»" : "Оновлено");
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
+function saleDel(i){
+  var it=SALE_ITEMS[i]; if(!it) return;
+  if(!confirm("Видалити "+(it.brand||"")+" "+(it.code||"")+" зі складу продажу?\n(Зникне з прайса при наступній публікації)")) return;
+  db.collection("sale_stock").doc(it._id).delete().then(function(){ SALE_ITEMS.splice(i,1); saleListRender(); });
+}
+function saleCSVText(){
+  var L=["Производитель;Код;Цена;Количество;Описание;Б/У;Реставрация;Фото;Вес, кг;Глубина, см;Ширина, см;Высота, см"];
+  SALE_ITEMS.forEach(function(it){
+    var d=(it.desc||"").replace(/;/g,",").replace(/[\r\n]+/g," ");
+    L.push([(it.brand||""),(it.code||""),(it.priceUSD||0),(it.qty||0),d,(it.used?"+":""),"",(it.photo||""),"","","",""].join(";"));
+  });
+  return L.join("\r\n");
+}
+function saleCSV(){
+  var go=function(){
+    var blob=new Blob(["﻿"+saleCSVText()],{type:"text/csv;charset=utf-8"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download="CKR_sale_"+new Date().toISOString().slice(0,10)+".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
+  };
+  SALE_LOADED ? go() : saleLoad().then(go);
+}
+// Разовий імпорт поточного складу avto.pro (CSV з роздільником ;) у sale_stock.
+// Дублікати (бренд+код уже у складі) пропускаються — можна лити повторно.
+function saleImport(file){
+  if(!file) return;
+  if(!saleCanUse()){ showToast("Лише власник або менеджер ЗЧ"); return; }
+  var rd=new FileReader();
+  rd.onload=function(){
+    var txt=(rd.result||"").replace(/^﻿/,"");
+    var lines=txt.split(/\r?\n/).filter(function(l){ return l.trim(); });
+    if(lines.length && lines[0].indexOf("Производитель")>=0) lines.shift();   // шапка
+    var have={};
+    SALE_ITEMS.forEach(function(it){ have[(it.brand||"")+"|"+(it.code||"")]=1; });
+    var batch=[], skip=0;
+    lines.forEach(function(l){
+      var c=l.split(";");
+      var brand=(c[0]||"").trim().toUpperCase(), code=(c[1]||"").trim();
+      if(!brand || !code) return;
+      if(have[brand+"|"+code]){ skip++; return; }
+      have[brand+"|"+code]=1;
+      batch.push({ brand:brand, code:code, priceUSD:parseFloat(c[2])||0, qty:parseInt(c[3],10)||0,
+        desc:(c[4]||"").trim(), used:(c[5]||"").trim()==="+", photo:(c[7]||"").trim(),
+        car:"", vin:"", imported:true,
+        date:new Date().toISOString().slice(0,10), ts:Date.now(),
+        author:currentUserName||"", authorEmail:currentUser?currentUser.email:"" });
+    });
+    if(!batch.length){ showToast("Нічого імпортувати"+(skip?" (усі "+skip+" вже у складі)":"")); return; }
+    if(!confirm("Імпортувати "+batch.length+" позицій у склад продажу?"+(skip?" ("+skip+" дублікатів пропущено)":""))) return;
+    document.getElementById("sale-list-info").textContent="Імпорт "+batch.length+" позицій...";
+    Promise.all(batch.map(function(d){ return db.collection("sale_stock").add(d); }))
+      .then(function(){ showToast("⬆ Імпортовано "+batch.length+" позицій"); SALE_LOADED=false; saleListOpen(); })
+      .catch(function(e){ showToast("Помилка імпорту: "+e.message); saleListOpen(); });
+  };
+  rd.readAsText(file,"utf-8");
+}
+
+// Публікація прайса на GitHub Pages (для автооновлення avto.pro «Через удаленный сервер»)
+var SALE_GH_REPO="broslavb/ckr", SALE_GH_PATH="sale/price.csv";
+function saleGhToken(){ try{ return localStorage.getItem("ckr_gh_token")||""; }catch(e){ return ""; } }
+function saleGhSetToken(){
+  var t=prompt("GitHub токен (fine-grained, права Contents: Read/Write ЛИШЕ на репозиторій ckr).\nЗберігається тільки в браузері цього пристрою:", saleGhToken()||"");
+  if(t===null) return;
+  try{ localStorage.setItem("ckr_gh_token",(t||"").trim()); }catch(e){}
+  saleListFoot(); showToast(t?"Токен збережено на цьому пристрої":"Токен прибрано");
+}
+function salePublish(){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var tok=saleGhToken();
+  if(!tok){ saleGhSetToken(); return; }
+  var go=function(){
+    var csv="﻿"+saleCSVText();
+    var b64=btoa(unescape(encodeURIComponent(csv)));
+    var api="https://api.github.com/repos/"+SALE_GH_REPO+"/contents/"+SALE_GH_PATH;
+    var hdr={ "Authorization":"Bearer "+tok, "Accept":"application/vnd.github+json" };
+    var inf=document.getElementById("sale-list-info"); if(inf) inf.textContent="Публікація на GitHub...";
+    fetch(api,{headers:hdr}).then(function(r){ return r.status===404 ? null : r.json(); }).then(function(cur){
+      var body={ message:"avto.pro price "+new Date().toISOString().slice(0,16).replace("T"," "), content:b64 };
+      if(cur && cur.sha) body.sha=cur.sha;
+      return fetch(api,{method:"PUT",headers:hdr,body:JSON.stringify(body)});
+    }).then(function(r){
+      if(!r.ok) return r.json().then(function(j){ throw new Error(j.message||("HTTP "+r.status)); });
+      saleListFoot();
+      showToast("🚀 Опубліковано — сайт віддасть новий прайс за ~1-2 хв");
+    }).catch(function(e){ saleListFoot(); showToast("Помилка публікації: "+e.message); });
+  };
+  SALE_LOADED ? go() : saleLoad().then(go);
+}
 
 function qopClose(){ var m=document.getElementById("cashq-modal"); if(m) m.style.display="none"; QOP=null; }
 function qopSt(msg){ var s=document.getElementById("cashq-status"); if(s){ s.className="pay-status err"; s.textContent=msg; } }

@@ -2294,7 +2294,7 @@ body.hero-on .hero-pad{margin-right:40vw}
 <!-- СКЛАД ПРОДАЖУ (avto.pro): модалка додавання деталі -->
 <div id="sale-modal" style="display:none;position:fixed;z-index:545;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
   <div style="background:var(--bg2);border-radius:14px;padding:20px 22px;width:min(94vw,470px);max-height:92vh;overflow-y:auto;box-sizing:border-box;box-shadow:0 8px 40px rgba(0,0,0,.3)">
-    <div style="font-size:15px;font-weight:800;margin-bottom:4px">🏷 На продаж — склад avto.pro</div>
+    <div id="sale-title" style="font-size:15px;font-weight:800;margin-bottom:4px">🏷 На продаж — склад avto.pro</div>
     <div id="sale-src" style="font-size:11px;color:var(--tx3);margin-bottom:12px"></div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;gap:8px">
@@ -2303,7 +2303,7 @@ body.hero-on .hero-pad{margin-right:40vw}
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end">
         <div class="fld" style="flex:1"><label>Ціна, $</label><input id="sale-price" type="number" min="0" step="0.1"/></div>
-        <div class="fld" style="width:80px"><label>К-ть</label><input id="sale-qty" type="number" min="1" value="1"/></div>
+        <div class="fld" style="width:80px"><label>К-ть</label><input id="sale-qty" type="number" min="0" value="1"/></div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;padding-bottom:8px"><input type="checkbox" id="sale-used"/> Б/У</label>
       </div>
       <div class="fld"><label>Опис (бачить покупець на avto.pro)</label><textarea id="sale-desc" rows="2" style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
@@ -2311,7 +2311,7 @@ body.hero-on .hero-pad{margin-right:40vw}
     </div>
     <div id="sale-status" style="margin-top:8px;font-size:12px"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn btn-p" onclick="saleSave()" style="flex:1">Додати у склад</button>
+      <button class="btn btn-p" id="sale-save-btn" onclick="saleSave()" style="flex:1">Додати у склад</button>
       <button class="btn btn-o" onclick="saleClose()">Скасувати</button>
     </div>
     <datalist id="sale-brands"></datalist>
@@ -11165,7 +11165,7 @@ var QOP_TITLES={paintadv:"🎨 Аванс малярці", glass:"🪟 Демо�
 // Публікація: файл sale/price.csv пишеться у репо broslavb/ckr через GitHub API
 // (токен зберігається ЛИШЕ в localStorage пристрою власника) → avto.pro
 // автооновлення «Через удаленный сервер» тягне https://broslavb.github.io/ckr/sale/price.csv
-var SALE_ITEMS=[], SALE_LOADED=false, SALE_SRC=null;
+var SALE_ITEMS=[], SALE_LOADED=false, SALE_SRC=null, SALE_EDIT_ID=null;
 var SALE_BRANDS=["BMW","VAG","MERCEDES","NISSAN","INFINITI","TOYOTA","LEXUS","HONDA","ACURA","MAZDA","HYUNDAI","KIA","LAND ROVER","JAGUAR","PORSCHE","CHRYSLER","JEEP","DODGE","FORD","CHEVROLET","GM","TESLA","SUBARU","MITSUBISHI","VOLVO","4MAX","SIGNEDA","DEPO","FPS","GORDON","MARKET (OEM)"];
 function saleCanUse(){ return canFpz(); }
 function saleClose(){ document.getElementById("sale-modal").style.display="none"; }
@@ -11174,21 +11174,30 @@ function saleSt(msg,err){ var el=document.getElementById("sale-status"); el.styl
 function saleOpen(pre){
   if(!saleCanUse()){ showToast("Лише власник або менеджер ЗЧ"); return; }
   pre=pre||{};
+  SALE_EDIT_ID=pre._id||null;
   var dl=document.getElementById("sale-brands");
   if(dl && !dl.children.length) dl.innerHTML=SALE_BRANDS.map(function(b){return '<option value="'+b+'">';}).join("");
-  document.getElementById("sale-src").textContent = pre.car ? ("Авто-донор: "+pre.car+(pre.vin?" · "+pre.vin:"")) : "Без привʼязки до авто";
+  document.getElementById("sale-title").textContent = SALE_EDIT_ID ? "✎ Редагування — склад avto.pro" : "🏷 На продаж — склад avto.pro";
+  document.getElementById("sale-save-btn").textContent = SALE_EDIT_ID ? "Зберегти зміни" : "Додати у склад";
+  document.getElementById("sale-src").textContent = pre.car ? ("Авто-донор: "+pre.car+(pre.vin?" · "+pre.vin:"")) : (SALE_EDIT_ID ? "Позиція складу продажу" : "Без привʼязки до авто");
   SALE_SRC={car:pre.car||"",vin:pre.vin||""};
   document.getElementById("sale-brand").value=pre.brand||"";
   document.getElementById("sale-code").value=pre.code||"";
   var pr=document.getElementById("sale-price");
-  pr.value=""; pr.placeholder = pre.buyHint ? ("закупка ≈ "+pre.buyHint+" $") : "0.00";
-  document.getElementById("sale-qty").value=pre.qty||1;
+  pr.value=(SALE_EDIT_ID && pre.priceUSD!=null)?pre.priceUSD:"";
+  pr.placeholder = pre.buyHint ? ("закупка ≈ "+pre.buyHint+" $") : "0.00";
+  document.getElementById("sale-qty").value=(pre.qty!=null?pre.qty:1);
   document.getElementById("sale-desc").value=pre.desc||"";
   document.getElementById("sale-used").checked=!!pre.used;
-  document.getElementById("sale-photo").value="";
+  document.getElementById("sale-photo").value=pre.photo||"";
   saleSt("");
   document.getElementById("sale-modal").style.display="flex";
-  setTimeout(function(){ var f=document.getElementById(pre.code?"sale-brand":"sale-code"); if(f) f.focus(); },60);
+  setTimeout(function(){ var f=document.getElementById(SALE_EDIT_ID?"sale-price":(pre.code?"sale-brand":"sale-code")); if(f) f.focus(); },60);
+}
+function saleEdit(i){
+  var it=SALE_ITEMS[i]; if(!it) return;
+  saleOpen({_id:it._id, brand:it.brand, code:it.code, priceUSD:it.priceUSD, qty:it.qty,
+    desc:it.desc, used:it.used, photo:it.photo, car:it.car, vin:it.vin});
 }
 function saleFromItem(item, car, vin){
   var rate=usdRate||44.1;
@@ -11217,12 +11226,25 @@ function saleSave(){
   var brand=document.getElementById("sale-brand").value.trim().toUpperCase();
   var code=document.getElementById("sale-code").value.trim();
   var price=parseFloat(document.getElementById("sale-price").value)||0;
-  var qty=parseInt(document.getElementById("sale-qty").value,10)||1;
+  var qty=parseInt(document.getElementById("sale-qty").value,10); if(isNaN(qty)||qty<0) qty=SALE_EDIT_ID?0:1;
   var desc=document.getElementById("sale-desc").value.trim();
   if(!brand){ saleSt("Вкажіть виробника (бренд) — як на avto.pro",1); return; }
   if(!code){ saleSt("Вкажіть код (артикул)",1); return; }
   if(price<=0){ saleSt("Вкажіть ціну в $",1); return; }
   saleSt("Збереження...");
+  if(SALE_EDIT_ID){ // редагування існуючої позиції
+    var upd={ brand:brand, code:code, priceUSD:price, qty:qty, desc:desc,
+      used:document.getElementById("sale-used").checked,
+      photo:document.getElementById("sale-photo").value.trim() };
+    db.collection("sale_stock").doc(SALE_EDIT_ID).update(upd).then(function(){
+      SALE_ITEMS.forEach(function(it){ if(it._id===SALE_EDIT_ID) Object.assign(it,upd); });
+      SALE_ITEMS.sort(function(a,b){ return (a.brand||"").localeCompare(b.brand||"") || (a.code||"").localeCompare(b.code||""); });
+      SALE_EDIT_ID=null; saleClose();
+      showToast("✎ Оновлено: "+brand+" "+code+" — не забудьте «Опублікувати»");
+      if(document.getElementById("sale-list-modal").style.display==="flex") saleListRender();
+    }).catch(function(e){ saleSt("Помилка: "+e.message,1); });
+    return;
+  }
   db.collection("sale_stock").add({
     brand:brand, code:code, priceUSD:price, qty:qty, desc:desc,
     used:document.getElementById("sale-used").checked,
@@ -11258,15 +11280,15 @@ function saleListRender(){
   } else {
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px"><tr style="text-align:left;color:var(--tx3);font-size:10px;text-transform:uppercase"><th style="padding:4px 6px">Бренд</th><th>Код</th><th>Опис</th><th style="text-align:right">Ціна $</th><th style="text-align:center">К-ть</th><th>Б/У</th><th>Авто-донор</th><th></th></tr>';
     SALE_ITEMS.forEach(function(it,i){
-      h+='<tr style="border-top:1px solid var(--bd)'+((it.qty||0)<=0?';opacity:.45':'')+'">'+
+      h+='<tr onclick="saleEdit('+i+')" title="Клік — редагувати" style="border-top:1px solid var(--bd);cursor:pointer'+((it.qty||0)<=0?';opacity:.45':'')+'">'+
         '<td style="padding:5px 6px;font-weight:700;white-space:nowrap">'+escH(it.brand||"")+'</td>'+
         '<td style="font-family:var(--mono);white-space:nowrap">'+escH(it.code||"")+'</td>'+
         '<td style="max-width:280px">'+escH(it.desc||"")+(it.photo?' 📷':'')+'</td>'+
         '<td style="text-align:right;font-weight:700;white-space:nowrap">'+(it.priceUSD||0)+'</td>'+
-        '<td style="text-align:center"><input type="number" min="0" value="'+(it.qty||0)+'" style="width:46px;text-align:center" onchange="saleQty('+i+',this.value)"></td>'+
+        '<td style="text-align:center"><input type="number" min="0" value="'+(it.qty||0)+'" style="width:46px;text-align:center" onclick="event.stopPropagation()" onchange="saleQty('+i+',this.value)"></td>'+
         '<td>'+(it.used?"Б/У":"")+'</td>'+
         '<td style="color:var(--tx3);font-size:11px">'+escH(it.car||"")+'</td>'+
-        '<td style="text-align:right"><span class="pr-del" onclick="saleDel('+i+')">&#215;</span></td></tr>';
+        '<td style="text-align:right;white-space:nowrap"><span class="pr-del" title="Редагувати" onclick="event.stopPropagation();saleEdit('+i+')" style="margin-right:8px">&#9998;</span><span class="pr-del" onclick="event.stopPropagation();saleDel('+i+')">&#215;</span></td></tr>';
     });
     el.innerHTML=h+'</table>';
   }

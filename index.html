@@ -8644,6 +8644,7 @@ function pmPullCashExpenses(car, vin){
       var dest = o.dest, markup = o.markup;
       if(!dest){ var rr = cashDestFor(o.desc); dest = rr.dest; markup = rr.markup; }
       if(dest === "works") return;   // роботи — наступним етапом
+      if(dest === "paint_extra") return;   // таксі малярки — у вкладку Малярки, не в ЗЧ
       ops.push({_id: doc.id, o: o, dest: dest, markup: markup || 1.3});
     });
     if(!ops.length) return;
@@ -8895,7 +8896,9 @@ function soFinalPrice(item){
   if(isClient) return 0;
   if((item.markupType||"auto")==="manual") return Math.round(item.manualPrice||0);   // ручна ціна
   if(!item.buyPrice) return 0;
-  return Math.round(item.buyPrice * soMarkup(item.buyPrice, item.markupType||"auto") * (item.qty||1));
+  // Витрата з Каси має свою націнку (транспорт 10% / решта 30%) — як у ЗЧ
+  var mk = item.cashMarkup ? item.cashMarkup : soMarkup(item.buyPrice, item.markupType||"auto");
+  return Math.round(item.buyPrice * mk * (item.qty||1));
 }
 function soFinalWithDisc(fp, discRate){ return fp ? Math.round(fp*(1-discRate)) : 0; }
 function soWorkFinal(w){
@@ -8988,8 +8991,13 @@ function soUpdPart(id, field, value){
   if(item){
     // Перехід на «вручну» — підставляємо поточну ціну як стартову ручну
     if(field==="markupType" && value==="manual" && !(item.manualPrice>0)) item.manualPrice = soFinalPrice(item) || 0;
+    if(field==="markupType" && item.fromCash) delete item.cashMarkup;   // майстер сам обрав націнку
     item[field]=value;
-    if(field==="status"){ item.statusDate=todayISO(); warnStatusNoPrice(item, value); }   // дата зміни статусу + попередження про вартість
+    if(field==="status"){
+      item.statusDate=todayISO(); warnStatusNoPrice(item, value);
+      // підтвердження витрати з Каси — знімає червоний (як у ЗЧ)
+      if((value==="check"||value==="received") && item.fromCash) item.cashConfirmed=true;
+    }
     if(field==="qty" || field==="buyPrice"){
       // як у ЗЧ: стрілки number-input у Safari — рендер із затримкою, підсумок оновлюємо одразу
       soUpdateSummary(); soScheduleRender();
@@ -9211,6 +9219,7 @@ function soPartRowHtml(item, varLabel, isVariant, disc, hasVariants){
   if(item.status==="error") tr.classList.add("pr-error");
   if(item.status==="cancelled") tr.classList.add("pr-cancelled");
   if(isHidden) tr.classList.add("pr-hidden");
+  if(item.fromCash && !item.cashConfirmed) tr.classList.add("pr-cash-new");   // витрата з Каси, ще не перевірена
 
   function mkTd(css){ var td=document.createElement("td"); if(css) td.style.cssText=css; return td; }
   function mkInp(val,ph,field,type){
@@ -9670,6 +9679,74 @@ function soRenderProfit(disc, worksTotal){
 }
 
 // ── SAVE / LOAD ──────────────────────────────────────────────────────────────
+// ══ ВИТРАТИ З КАСИ → ТО/ЗАМОВЛЕННЯ ═══════════════════════════════════════════
+// Той самий механізм, що в Запчастинах (pmPullCashExpenses): транспорт одним
+// рядком з націнкою 10%, решта (олива/метізи/доставка…) — окремими рядками 30%.
+// Рядок червоний, доки не підтверджений статусом «Перевірена вартість» /
+// «Отримано». dest works — у Роботи; dest paint_extra — у Малярки (не сюди).
+function soAddCashItem(name, netSum, markup, ids){
+  soParts.push({
+    id: uid(), name: name, qty: 1, avail: "", code: "", altCode: "",
+    supplier: "", supplierName: "", link: "",
+    buyPrice: netSum, markupType: "auto", cashMarkup: markup,
+    status: "dash", variants: [],
+    fromCash: true, cashIds: ids, cashConfirmed: false
+  });
+}
+function soPullCashExpenses(car, vin){
+  if(!car && !vin) return;
+  db.collection("cash_operations").where("type","==","-").limit(1000).get().then(function(snap){
+    // Те, що вже є в цьому замовленні — повторно не додаємо
+    var already = {};
+    soParts.forEach(function(i){ (i.cashIds||[]).forEach(function(id){ already[id]=true; }); });
+
+    var ops = [];
+    snap.forEach(function(doc){
+      var o = doc.data();
+      if(o.linked || already[doc.id]) return;
+      var byVin = vin && o.vin && String(o.vin).toUpperCase() === String(vin).toUpperCase();
+      var byCar = car && o.car && o.car === car;
+      if(!byVin && !byCar) return;
+      var dest = o.dest, markup = o.markup;
+      if(!dest){ var rr = cashDestFor(o.desc); dest = rr.dest; markup = rr.markup; }
+      if(dest === "works") return;         // роботи — не в список ЗЧ
+      if(dest === "paint_extra") return;   // таксі малярки — у вкладку Малярки
+      ops.push({_id: doc.id, o: o, dest: dest, markup: markup || 1.3});
+    });
+    if(!ops.length) return;
+
+    var added = 0;
+    // Транспортні — ОДНИМ рядком: суми складаємо, дати через кому
+    var trans = ops.filter(function(x){ return x.dest === "transport"; });
+    if(trans.length){
+      var sum = 0, dates = [], ids = [];
+      trans.forEach(function(x){ sum += (x.o.amount||0); dates.push(pmCashShortDate(x.o.date)); ids.push(x._id); });
+      soAddCashItem("Транспортні витрати (" + dates.join(", ") + ")", sum, 1.1, ids); added++;
+    }
+    ops.filter(function(x){ return x.dest !== "transport"; }).forEach(function(x){
+      soAddCashItem(x.o.desc + " (" + pmCashShortDate(x.o.date) + ")", x.o.amount||0, x.markup, [x._id]); added++;
+    });
+
+    if(added){
+      soRenderParts(); soUpdateSummary();
+      showToast("З каси підтягнуто витрат: " + added + " — перевірте червоні рядки та збережіть");
+    }
+  }).catch(function(){});
+}
+// Після збереження замовлення — позначити витрати каси перенесеними
+function soMarkCashLinked(){
+  var ids = [];
+  soParts.forEach(function(i){
+    if(i.fromCash && i.cashIds) i.cashIds.forEach(function(id){ if(ids.indexOf(id) < 0) ids.push(id); });
+  });
+  if(!ids.length) return;
+  ids.forEach(function(id){
+    db.collection("cash_operations").doc(id).update({
+      linked: true, linkedCalcId: soCurrentDocId || "", linkedAt: new Date().toISOString()
+    }).catch(function(){});
+  });
+}
+
 function soSave(){
   var car = document.getElementById("so-car").value||"Без назви";
   var vin = document.getElementById("so-vin").value.toUpperCase();
@@ -9708,11 +9785,11 @@ function soSave(){
   var col = db.collection("calculations");
   if(soCurrentDocId){
     col.doc(soCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Оновлено: "+car);})
+      .then(function(){soMarkCashLinked(); takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Оновлено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(ref){soCurrentDocId=ref.id;takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Збережено: "+car);})
+      .then(function(ref){soCurrentDocId=ref.id;soMarkCashLinked();takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Збережено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   }
 }
@@ -9738,6 +9815,7 @@ function soLoadFromRecord(r, docId){
   var soMp = document.getElementById("so-mgr-pct"); if(soMp) soMp.value = (r.mgrPct!=null?r.mgrPct:10);
   soInit();
   takeSnap("service");
+  soPullCashExpenses(r.car||"", r.vin||"");   // підтягнути витрати з каси по цьому авто
   soCheckCancellations();   // попередження про скасовані замовлення
 }
 
@@ -10645,14 +10723,17 @@ var CASH_EDIT_ID = null; // editing existing op
 
 var CASH_PRESETS = {
   "+": ["Оплата від клієнта", "Внесення готівки", "Аванс від клієнта", "Повернення коштів"],
-  "-": ["Видача готівки з каси власнику", "Таксі", "Стоянка", "Мийка первинна", "Мийка (обдув)", "Сертифікація авто", "Демонтаж/монтаж панорами", "Демонтаж/монтаж скла лобового", "Демонтаж/монтаж скла заднього", "Демонтаж/монтаж скла кутового", "Розвал/сходження", "Скидання Crash Data в SRS", "Заправка кондиціонеру", "Евакуатор, 1 сторона", "Сторонній електрик / кодування", "Сторонній електрик, виїзні роботи", "Коригування рівня передніх фар", "Вібростенд", "Полірування авто", "Пальне, дозаправки", "Хімчистка салону кросовер", "Хімчистка салону седан", "Прибирання / Уборка", "Діагностика (УкрДіагностика)", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
+  "-": ["Видача готівки з каси власнику", "Таксі", "Таксі (малярка)", "Стоянка", "Мийка первинна", "Мийка (обдув)", "Сертифікація авто", "Демонтаж/монтаж панорами", "Демонтаж/монтаж скла лобового", "Демонтаж/монтаж скла заднього", "Демонтаж/монтаж скла кутового", "Розвал/сходження", "Скидання Crash Data в SRS", "Заправка кондиціонеру", "Евакуатор, 1 сторона", "Сторонній електрик / кодування", "Сторонній електрик, виїзні роботи", "Коригування рівня передніх фар", "Вібростенд", "Полірування авто", "Пальне, дозаправки", "Хімчистка салону кросовер", "Хімчистка салону седан", "Прибирання / Уборка", "Діагностика (УкрДіагностика)", "Запчастини (дрібні)", "Комунальні послуги", "Кава / Продукти", "Метізи / Кліпси", "Відправка / Перевізник", "Олива / Фільтри (ТО)", "Інше"]
 };
 
 // ── МАРШРУТИЗАЦІЯ ВИТРАТ У КАЛЬКУЛЯЦІЮ АВТО ──────────────────────────────────
 // dest: works — у Роботи | consumables — Витратні матеріали
 //       to_parts — ЗЧ та матеріали для ТО | transport — одним рядком "Транспортні витрати"
+//       paint_extra — таксі/доставка ПО МАЛЯРЦІ: НЕ в калькуляцію, а у вкладку
+//       Малярки (привʼязка до авто у маляра → дод. затрати при закритті)
 // markup: націнка при показі в калькуляції (у касі лишається чиста сума)
 var CASH_DEST_RULES = [
+  {m:["маляр"],                              dest:"paint_extra", markup:1},
   {m:["таксі","транспорт"],                  dest:"transport",   markup:1.1},
   {m:["мийк"],                               dest:"works",       markup:1.3},
   {m:["хімчистк","прибиран","уборк"],        dest:"works",       markup:1.3},
@@ -11002,6 +11083,10 @@ function cashSaveOp(){
   if(!desc)  { showToast("Введіть опис"); document.getElementById("cash-modal-desc").focus(); return; }
 
   var route = (CASH_OP_TYPE === "-" && carInfo) ? cashDestFor(desc) : {dest:"", markup:1};
+  // Таксі (малярка) без вибраного авто — не зможе привʼязатись до маляра
+  if(CASH_OP_TYPE==="-" && !carInfo && cashDestFor(desc).dest==="paint_extra"){
+    showToast("⚠ Витрата по малярці без авто — у вкладку Малярки не привʼяжеться. Краще оберіть авто зі списку.");
+  }
 
   var op = {
     type: CASH_OP_TYPE,
@@ -14138,7 +14223,7 @@ function wCashMarkLinked(){
 // відкритті калькуляції). Депозит — аванс наперед без авто, гасить залишки частково.
 // Кожен аванс/доплата/депозит = витрата в Касі (депозит-залік — ні, гроші вже враховані).
 // ══════════════════════════════════════════════════════════════════════════════
-var PAINTERS = [], PAINT_JOBS = [], PAINT_SEL = null, PAINT_CTX = null;
+var PAINTERS = [], PAINT_JOBS = [], PAINT_SEL = null, PAINT_CTX = null, PAINT_TAXI = [];
 var PAINT_SEEDS = [{id:"paint_max_maer", name:"Макс-Маєр"}, {id:"paint_serhii_gornyi", name:"Сергій Горний"}];
 
 function paintInit(){
@@ -14154,7 +14239,7 @@ function paintInit(){
     }
     db.collection("paint_jobs").limit(800).get().then(function(js){
       PAINT_JOBS = []; js.forEach(function(d){ PAINT_JOBS.push(Object.assign({_id:d.id}, d.data())); });
-      paintRender();
+      paintTaxiSync().then(function(){ paintRender(); });
     }).catch(function(e){ showToast("Малярки: "+e.message+" — перевірте правило paint_jobs у Firestore"); });
   }).catch(function(e){ showToast("Малярки: "+e.message+" — перевірте правило painters у Firestore"); });
 }
@@ -14236,6 +14321,37 @@ function paintCashOp(amount, desc, car, vin, date){
   });
 }
 
+// ── Таксі (малярка) з Каси ───────────────────────────────────────────────────
+// Витрати з Каси з dest:"paint_extra" («Таксі (малярка)» та все з «маляр» в
+// описі): по VIN шукаємо ВІДКРИТЕ авто у маляра → привʼязуємо до job.extras
+// окремими рядками (касова операція стає linked+paint — статистика її не
+// задвоює, бо сума увійде у факт малярки). Якщо авто ще не загнали — витрата
+// висить ЧЕРВОНИМ угорі вкладки Малярки і привʼяжеться сама, щойно авто
+// зʼявиться у маляра. При закритті сума extras — дефолт «Дод. затрат».
+function paintTaxiSync(){
+  return db.collection("cash_operations").where("dest","==","paint_extra").limit(500).get().then(function(snap){
+    PAINT_TAXI = [];
+    var pend = [];
+    snap.forEach(function(d){ var o=d.data(); if(!o.linked) pend.push(Object.assign({_id:d.id}, o)); });
+    var chain = Promise.resolve();
+    pend.forEach(function(o){
+      var vin = String(o.vin||"").toUpperCase().trim();
+      var j = vin ? PAINT_JOBS.find(function(x){ return x.status==="open" && String(x.vin||"").toUpperCase().trim()===vin; }) : null;
+      if(!j){ PAINT_TAXI.push(o); return; }
+      chain = chain.then(function(){
+        var ex = (j.extras||[]).concat([{ id:"px"+Date.now()+Math.random().toString(36).substr(2,4),
+          amount:Math.round(o.amount||0), date:o.date||"", note:o.desc||"Таксі (малярка)", cashOpId:o._id }]);
+        return db.collection("paint_jobs").doc(j._id).update({extras:ex}).then(function(){
+          j.extras = ex;
+          return db.collection("cash_operations").doc(o._id).update({linked:true, paint:true, linkedPaintJobId:j._id});
+        });
+      });
+    });
+    return chain;
+  }).catch(function(){});
+}
+function paintJobExtras(j){ return (j.extras||[]).reduce(function(s,x){ return s+(x.amount||0); }, 0); }
+
 // ── Рендер ──
 // Фото авто для Малярок: VIN → фото (плани + авто «В роботі»), кеш на сесію
 var PAINT_PH_READY=false, PAINT_PH_LOADING=false;
@@ -14265,7 +14381,16 @@ function paintRender(){
   if(!PAINT_SEL){
     det.style.display = "none"; tiles.style.display = "";
     if(top) top.innerHTML = isAdmin() ? '<button class="btn btn-o" onclick="paintAddPainter()">＋ Малярка</button>' : '';
-    tiles.innerHTML = PAINTERS.filter(function(p){ return p.active!==false; }).map(function(p){
+    // Таксі (малярка), що чекають авто у маляра — червоним угорі
+    var pendH = PAINT_TAXI.length
+      ? '<div style="grid-column:1/-1;border:1.5px solid var(--rd);border-radius:12px;padding:10px 14px;background:rgba(214,51,108,.07);font-size:12.5px;color:var(--rd)">'
+        + '<b>🚕 Таксі (малярка) з Каси — чекає авто у маляра:</b><br>'
+        + PAINT_TAXI.map(function(o){ return '• '+escH(o.car||o.vin||"⚠ без авто")+' — <b>'+paintFmt(o.amount||0)+' грн</b> ('+escH(o.date||"")+(o.desc?' · '+escH(o.desc):'')+')'; }).join('<br>')
+        + '<div style="color:var(--tx3);margin-top:4px">Загоніть авто до маляра — витрата привʼяжеться до нього автоматично.'
+        + (PAINT_TAXI.some(function(o){ return !(o.vin||"").trim(); }) ? ' Операції <b>без авто/VIN</b> привʼязати неможливо — видаліть у Касі та внесіть заново, обравши авто зі списку.' : '')
+        + '</div></div>'
+      : '';
+    tiles.innerHTML = pendH + PAINTERS.filter(function(p){ return p.active!==false; }).map(function(p){
       var open = PAINT_JOBS.filter(function(j){ return j.painterId===p._id && j.status==="open"; })
         .sort(function(a,b){ return (b.startDate||"").localeCompare(a.startDate||""); });
       var adv = open.reduce(function(s,j){ return s+paintJobAdv(j); }, 0);
@@ -14327,6 +14452,7 @@ function paintRender(){
       h += '<div class="pay-bal" style="font-size:15px">аванс: '+paintFmt(adv)+' грн</div>'
         + '<div class="pay-sub">загнали '+escH(j.startDate||"")+'</div>'
         + ((j.advances||[]).map(function(a){ return '<div class="pay-sub">💵 '+paintFmt(a.amount)+' грн · '+escH(a.date||"")+(a.note?' · '+escH(a.note):'')+(a.own?' · 🔒 власні':'')+'</div>'; }).join(""))
+        + ((j.extras||[]).map(function(x){ return '<div class="pay-sub" style="color:#e67e22">🚕 '+paintFmt(x.amount)+' грн · '+escH(x.date||"")+(x.note?' · '+escH(x.note):'')+' <span style="color:var(--tx3)">(дод. затрати при закритті)</span></div>'; }).join(""))
         + '<div class="pay-cbtns">'
         + '<button onclick="ps3dOpenPaint(\''+j._id+'\')" title="Схема авто (3D): що фарбуємо / що відмічено">🚗 Схема</button>'
         + '<button onclick="paintOpenAdvance(\''+j._id+'\')">＋ Аванс</button>'
@@ -14485,13 +14611,16 @@ function paintOpenClose(jobId){
   var j = PAINT_JOBS.find(function(x){ return x._id===jobId; }); if(!j) return;
   PAINT_CTX = {kind:"close", jobId:jobId};
   var adv = paintJobAdv(j), dep = paintFreeDeposit(j.painterId);
+  var extSum = paintJobExtras(j);
   document.getElementById("paint-close-title").textContent = "Забрати авто — "+(j.car||j.vin);
-  document.getElementById("paint-close-info").innerHTML = "Аванси по авто: <b>"+paintFmt(adv)+" грн</b> · вільний депозит маляра: <b>"+paintFmt(dep)+" грн</b>";
+  document.getElementById("paint-close-info").innerHTML = "Аванси по авто: <b>"+paintFmt(adv)+" грн</b> · вільний депозит маляра: <b>"+paintFmt(dep)+" грн</b>"
+    + (extSum>0 ? " · 🚕 таксі з Каси: <b>"+paintFmt(extSum)+" грн</b> (вже у «Дод. затратах»)" : "");
   document.getElementById("paint-close-dep-lbl").textContent = "З депозиту, грн (доступно "+paintFmt(dep)+")";
   document.getElementById("paint-close-total").value = "";
   document.getElementById("paint-close-depuse").value = 0;
-  document.getElementById("paint-close-extra").value = 1000;
-  document.getElementById("paint-close-extranote").value = "";
+  // Таксі (малярка) з Каси вже привʼязані до авто — вони і є дод. затрати
+  document.getElementById("paint-close-extra").value = extSum>0 ? extSum : 1000;
+  document.getElementById("paint-close-extranote").value = extSum>0 ? ("таксі з Каси ×"+(j.extras||[]).length) : "";
   var _ow2=document.getElementById("paint-close-own"); if(_ow2) _ow2.checked=false;
   document.getElementById("paint-close-status").textContent = "";
   paintCloseRecalc();

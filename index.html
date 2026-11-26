@@ -2025,6 +2025,7 @@ body.hero-on .hero-pad{margin-right:40vw}
           <span class="pm-slbl">Залишок оплати</span>
           <span class="pm-sval" id="so-balance" style="color:var(--bl)">0 грн</span>
         </div>
+        <div id="so-paint-pending" class="no-print"></div>
         <div id="so-adm-profit" class="no-print"></div>
       </div>
 
@@ -9459,6 +9460,16 @@ function soDelWork(id){
   soRenderWorks(); soUpdateSummary();
 }
 
+// Порядок типів робіт для сортування таблиці і розшифровок
+function soTypeRank(cat){
+  if(cat===CAT_KUZ) return 0;
+  if(cat===CAT_SLU) return 1;
+  if(cat===CAT_BEZ) return 2;
+  if(cat===CAT_MAL) return 3;
+  if(cat===CAT_STO) return 4;
+  if(String(cat||"").indexOf("ТО · ")===0) return 5;
+  return cat ? 6 : 7;   // невідомий тип; зовсім без типу — в кінці
+}
 // Назва блоку-джерела роботи (для колонки «Тип робіт»)
 function soWorkTypeLabel(cat){
   if(!cat) return "";
@@ -9484,9 +9495,19 @@ function soRenderWorks(){
   thead.appendChild(hrow); table.appendChild(thead);
 
   var tbody = document.createElement("tbody");
-  soWorks.forEach(function(w){
+  // Відображення відсортоване по типах робіт (сам масив soWorks не чіпаємо);
+  // нові/без типу — в кінці, поруч із кнопкою «+ Додати роботу»
+  var soRows = soWorks.map(function(w,i){ return {w:w, i:i}; });
+  soRows.sort(function(a,b){ return soTypeRank(a.w.cat)-soTypeRank(b.w.cat) || a.i-b.i; });
+  soRows.forEach(function(sr){
+    var w = sr.w;
     var tr = document.createElement("tr");
     tr.setAttribute("data-work-id", w.id);
+    // Стороння робота без ФПЗ (факту) — червона, прибуток по ній не рахується
+    if(w.cat===CAT_STO && (w.price||0)>0 && !(parseFloat(w.actualUAH)>0)){
+      tr.style.background="rgba(214,51,108,.08)";
+      tr.title="Стороння робота без ФПЗ (факту) — впишіть «Факт», інакше прибуток по ній не рахується";
+    }
 
     // 1) Назва (пошук у каталозі)
     var tdN = document.createElement("td");
@@ -9610,6 +9631,59 @@ function soRecalc(){
   soRenderParts(); soRenderWorks(); soUpdateSummary();
 }
 
+// ── МАЛЯРНІ — ФАКТ у ТО (аналог wPullPaint у Роботах) ────────────────────────
+// Факт малярки (роботи + дод. затрати) по VIN підтягується із ЗАКРИТИХ
+// незалінкованих paint_jobs; пишеться в документ полем malActual.
+var SO_MAL_ACTUAL=0, SO_PAINT_TO_LINK=[];
+function soSetMalActual(v){ SO_MAL_ACTUAL=parseFloat(v)||0; soUpdateSummary(); }
+function soPullPaint(vin){
+  var el=document.getElementById("so-paint-pending"); if(el) el.innerHTML="";
+  SO_PAINT_TO_LINK=[];
+  vin=(vin||"").toUpperCase().trim();
+  if(!vin || !isAdmin() || !el) return;
+  db.collection("paint_jobs").where("vin","==",vin).where("status","==","closed").limit(20).get().then(function(snap){
+    var jobs=[]; snap.forEach(function(d){ var jj=d.data(); if(!jj.linked) jobs.push(Object.assign({_id:d.id}, jj)); });
+    if(!jobs.length) return;
+    var sum=0, parts=[];
+    jobs.forEach(function(jj){ var s=(jj.totalUAH||0)+(jj.extraUAH||0); sum+=s; parts.push(escH(jj.painterName||"маляр")+" "+paintFmt(s)+" грн (роботи "+paintFmt(jj.totalUAH||0)+" + дод. "+paintFmt(jj.extraUAH||0)+")"); });
+    var ids=jobs.map(function(jj){ return jj._id; }).join(",");
+    var cur=SO_MAL_ACTUAL||0;
+    var h='<div style="margin:8px 0;border:1px solid #e67e22;border-radius:6px;padding:8px 12px;background:rgba(230,126,34,.07);font-family:var(--mono);font-size:11px" data-admin-only>'
+      +'🎨 <b>Малярка закрита:</b> '+parts.join(" + ")+' = <b>'+paintFmt(sum)+' грн</b>';
+    if(cur>0 && Math.abs(cur-sum)>1){
+      h+='<br>У «Малярні — факт» зараз: <b>'+paintFmt(cur)+' грн</b> · різниця '+paintFmt(sum-cur)+' грн'
+        +'<div style="margin-top:6px"><button class="btn btn-p" style="font-size:11px;padding:3px 10px" onclick="soPaintApply('+sum+',\''+ids+'\')">Оновити на '+paintFmt(sum)+'</button> '
+        +'<button class="btn btn-o" style="font-size:11px;padding:3px 10px" onclick="soPaintKeep(\''+ids+'\')">Лишити '+paintFmt(cur)+'</button></div>';
+    } else if(cur>0){
+      h+=' — вже збігається з «Малярні — факт». <button class="btn btn-o" style="font-size:11px;padding:3px 10px" onclick="soPaintKeep(\''+ids+'\')">ОК, привʼязати</button>';
+    } else {
+      h+='<div style="margin-top:6px"><button class="btn btn-p" style="font-size:11px;padding:3px 10px" onclick="soPaintApply('+sum+',\''+ids+'\')">Застосувати у «Малярні — факт»</button></div>';
+    }
+    el.innerHTML=h+'</div>';
+  }).catch(function(){});
+}
+function soPaintApply(sum, ids){
+  SO_MAL_ACTUAL=sum; SO_PAINT_TO_LINK=ids.split(",");
+  var el=document.getElementById("so-paint-pending");
+  if(el) el.innerHTML='<div style="margin:8px 0;padding:6px 12px;color:var(--gr);font-family:var(--mono);font-size:11px">🎨 ✓ Факт малярки '+paintFmt(sum)+' грн застосовано — ЗБЕРЕЖІТЬ замовлення</div>';
+  soUpdateSummary();
+  showToast("«Малярні — факт» = "+paintFmt(sum)+" грн — збережіть замовлення");
+}
+function soPaintKeep(ids){
+  SO_PAINT_TO_LINK=ids.split(",");
+  var el=document.getElementById("so-paint-pending");
+  if(el) el.innerHTML='<div style="margin:8px 0;padding:6px 12px;color:var(--gr);font-family:var(--mono);font-size:11px">🎨 ✓ Малярку буде привʼязано при збереженні (факт лишили свій)</div>';
+  showToast("Малярка привʼяжеться при збереженні");
+}
+function soPaintMarkLinked(){
+  if(!SO_PAINT_TO_LINK.length) return;
+  SO_PAINT_TO_LINK.forEach(function(id){
+    db.collection("paint_jobs").doc(id).update({linked:true, linkedCalcId:soCurrentDocId||"", linkedAt:new Date().toISOString()}).catch(function(){});
+  });
+  SO_PAINT_TO_LINK=[];
+  var el=document.getElementById("so-paint-pending"); if(el) el.innerHTML="";
+}
+
 function soUpdateSummary(){
   var disc = soDiscRate();
   var partsTotal = 0;
@@ -9679,27 +9753,52 @@ function soRenderProfit(disc, worksTotal){
     partsProfit += client - buy - Math.round(client*TAX);
   };
   soParts.forEach(function(it){ acc(it); (it.variants||[]).forEach(acc); });
-  // Роботи: дохід − 6% − фактичні витрати (де проставлено) − бонус координатора (Анікін 15% маржі)
-  var worksActual=0, worksCoord=0;
+  // ── Роботи ПО ТИПАХ ──
+  // Рихтувальні: −50% працівнику −6%. Слюсарні/Безпека/ТО: −45% −6% (ставка
+  // слюсарів у Зарплаті). Малярні: дохід − факт малярки − 6% (факт тягнеться
+  // з вкладки Малярки при закритті авто). Сторонні: дохід − ФПЗ(«Факт») − 6%
+  // − частка координатора; без ФПЗ — у прибуток НЕ входять (червоні).
+  var kuzInc=0, sluInc=0, malInc=0;
+  var stoProfit=0, stoCoord=0, stoCnt=0, stoNoFpz=0, stoNoFpzSum=0;
   soWorks.forEach(function(w){
-    var actual=parseFloat(w.actualUAH)||0; if(actual>0){ worksActual+=actual;
-      if(w.coord==="anikin"){ var m=(w.price||0)*(w.qty||1)-actual; if(m>0) worksCoord+=Math.round(m*PAY_COORD_SHARE_EXT); }
+    var inc=soWorkFinal(w); if(!inc) return;
+    if(w.cat===CAT_KUZ) kuzInc+=inc;
+    else if(w.cat===CAT_MAL) malInc+=inc;
+    else if(w.cat===CAT_STO){
+      var a=parseFloat(w.actualUAH)||0;
+      if(a>0){
+        stoCnt++;
+        var p=inc - Math.round(inc*TAX) - a;
+        if(w.coord==="anikin"){ var m=(w.price||0)*(w.qty||1)-a; if(m>0){ var c=Math.round(m*PAY_COORD_SHARE_EXT); p-=c; stoCoord+=c; } }
+        stoProfit+=p;
+      } else { stoNoFpz++; stoNoFpzSum+=inc; }
     }
+    else sluInc+=inc;   // СЛЮСАРНІ + БЕЗПЕКА + «ТО · …» + без типу
   });
-  var worksNet = worksTotal - Math.round(worksTotal*TAX) - worksActual - worksCoord;
-  var total = partsProfit + worksNet;
+  var kuzProfit=Math.round(kuzInc*(1-PAY_SHARE-TAX));
+  var sluProfit=Math.round(sluInc*(1-PAY_SHARE_SLU-TAX));
+  var malFact=SO_MAL_ACTUAL||0;
+  var malPending=(malInc>0 && !(malFact>0));
+  var malProfit=(malInc>0 && malFact>0) ? Math.round(malInc - malInc*TAX - malFact) : 0;
+  var total = partsProfit + kuzProfit + sluProfit + stoProfit + malProfit;
   var mgrPct=parseFloat((document.getElementById("so-mgr-pct")||{}).value); if(!(mgrPct>=0)) mgrPct=10;
   var mgrSum=Math.round(Math.max(0,partsProfit)*mgrPct/100);
   var f=function(v){ return Math.round(v).toLocaleString("uk-UA"); };
   var col=function(v){ return v>=0?"var(--gr)":"var(--rd)"; };
+  var row=function(lbl,val){ return '<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">'+lbl+'</span><span class="pm-sval" style="font-size:11px;color:'+col(val)+'">'+f(val)+' грн</span></div>'; };
   el.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--bd);padding-top:8px">'
     +'<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Прибуток на ТО (лише адмін)</div>'
-    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Прибуток ЗЧ (клієнту − закупка/ФПЗ − 6%)</span><span class="pm-sval" style="font-size:11px;color:'+col(partsProfit)+'">'+f(partsProfit)+' грн</span></div>'
+    +row('Прибуток ЗЧ (клієнту − закупка/ФПЗ − 6%)', partsProfit)
     +((mgrPct>0&&partsProfit>0)?'<div class="pm-srow" id="so-mgr-row"><span class="pm-slbl" style="font-size:11px;color:var(--bl)">Менеджер ЗЧ ('+mgrPct+'%)</span><span class="pm-sval" style="font-size:11px;font-weight:bold;color:var(--bl)">'+f(mgrSum)+' грн</span></div>'
       +'<div class="no-print" style="padding:4px 0"><button type="button" class="pm-hidden-btn" onclick="soMgrAccrueNow()" title="Нарахувати % менеджеру вже зараз; при архівації донарахується лише різниця">💰 Нарахувати менеджеру ЗЧ</button></div>':'')
-    +'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Роботи (дохід − 6%'+((worksActual||worksCoord)?' − факт − коорд':'')+')</span><span class="pm-sval" style="font-size:11px;color:'+col(worksNet)+'">'+f(worksNet)+' грн</span></div>'
-    +'<div class="pm-srow main" style="margin-top:4px"><span class="pm-slbl" style="font-size:12px;color:var(--tx)">ПРИБУТОК ТО</span><span class="pm-sval" style="color:'+col(total)+'">'+f(total)+' грн</span></div>'
-    +'<div class="pay-sub" style="margin-top:4px;font-size:10px">Оплата слюсаря за роботи — через Зарплату (нарахування).</div>'
+    +(kuzInc?row('Рихтувальні (−'+Math.round(PAY_SHARE*100)+'% прац. − 6%)', kuzProfit):'')
+    +(sluInc?row('Слюсарні/Безпека/ТО (−'+Math.round(PAY_SHARE_SLU*100)+'% прац. − 6%)', sluProfit):'')
+    +(malInc?'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px">Малярні (дохід − факт − 6%)</span><span class="pm-sval" style="font-size:11px;'+(malPending?'color:var(--rd);font-weight:bold">очікує факт':'color:'+col(malProfit)+'">'+f(malProfit)+' грн')+'</span></div>':'')
+    +((malInc||malFact)?'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px;color:'+(malPending?'var(--rd)':'var(--tx3)')+'">Малярні — факт, грн</span><span class="pm-sval"><input type="number" min="0" step="100" value="'+(malFact||"")+'" placeholder="з малярки" onchange="soSetMalActual(this.value)" style="width:90px;text-align:right;font-size:11px;border:1px solid '+(malPending?'var(--rd)':'var(--bd)')+';border-radius:4px;padding:2px 4px;background:transparent;color:var(--tx)"></span></div>':'')
+    +(stoCnt?row('Сторонні (дохід − ФПЗ − 6%'+(stoCoord?' − коорд '+f(stoCoord):'')+')', stoProfit):'')
+    +(stoNoFpz?'<div class="pm-srow"><span class="pm-slbl" style="font-size:11px;color:var(--rd);font-weight:bold">⚠ Сторонні без ФПЗ × '+stoNoFpz+' ('+f(stoNoFpzSum)+' грн)</span><span class="pm-sval" style="font-size:11px;color:var(--rd)">не враховано</span></div>':'')
+    +'<div class="pm-srow main" style="margin-top:4px"><span class="pm-slbl" style="font-size:12px;color:var(--tx)">ПРИБУТОК ТО'+((malPending||stoNoFpz)?' <span style="color:var(--rd);font-size:10px">(неповний)</span>':'')+'</span><span class="pm-sval" style="color:'+col(total)+'">'+f(total)+' грн</span></div>'
+    +'<div class="pay-sub" style="margin-top:4px;font-size:10px">Частки працівників ('+Math.round(PAY_SHARE*100)+'% рихт. / '+Math.round(PAY_SHARE_SLU*100)+'% слюс.) вже відняті — нарахування в Зарплаті їх і видає.</div>'
     +'</div>';
 }
 
@@ -9800,6 +9899,7 @@ function soSave(){
     date:document.getElementById("so-date").value,
     disc:disc, discW:discW, partsTotal:partsTotal, worksTotal:worksTotal,
     totalUAH:partsTotal+worksTotal,
+    malActual:SO_MAL_ACTUAL||0,
     masterEmail:currentUser?currentUser.email:"",
     masterName:currentUserName||"",
     parts:JSON.parse(JSON.stringify(soParts)),
@@ -9810,11 +9910,11 @@ function soSave(){
   var col = db.collection("calculations");
   if(soCurrentDocId){
     col.doc(soCurrentDocId).update(Object.assign({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(){soMarkCashLinked(); takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Оновлено: "+car);})
+      .then(function(){soMarkCashLinked(); soPaintMarkLinked(); takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, soLogSnap, false)||soLogSnap; payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Оновлено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   } else {
     col.add(Object.assign({createdAt:firebase.firestore.FieldValue.serverTimestamp()},rec))
-      .then(function(ref){soCurrentDocId=ref.id;soMarkCashLinked();takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Збережено: "+car);})
+      .then(function(ref){soCurrentDocId=ref.id;soMarkCashLinked();soPaintMarkLinked();takeSnap("service"); soLogSnap=logCalcChange(soCurrentDocId, rec, null, true); payPushCashOps(soCurrentDocId, soPayments, car, vin, "ТО/Замовлення"); showToast("Збережено: "+car);})
       .catch(function(e){showToast("Помилка: "+e.message);});
   }
 }
@@ -9826,6 +9926,7 @@ function soLoadFromRecord(r, docId){
   soParts = r.parts || [];
   soWorks = r.works || [];
   soPayments = r.payments || [];
+  SO_MAL_ACTUAL = parseFloat(r.malActual)||0;
   document.getElementById("so-car").value=r.car||"";
   document.getElementById("so-vin").value=r.vin||"";
   document.getElementById("so-client").value=r.client||"";
@@ -9841,6 +9942,7 @@ function soLoadFromRecord(r, docId){
   soInit();
   takeSnap("service");
   soPullCashExpenses(r.car||"", r.vin||"");   // підтягнути витрати з каси по цьому авто
+  soPullPaint(r.vin||"");                     // факт закритої малярки по цьому авто
   soCheckCancellations();   // попередження про скасовані замовлення
 }
 
@@ -9849,6 +9951,8 @@ function soClear(){
   CALC_PH.service=""; calcPhotoRender("service");
   orgClear("so");
   soCurrentDocId=null; soParts=[]; soWorks=[]; soPayments=[];
+  SO_MAL_ACTUAL=0; SO_PAINT_TO_LINK=[];
+  var sppEl=document.getElementById("so-paint-pending"); if(sppEl) sppEl.innerHTML="";
   ["so-car","so-client","so-vin","so-phone"].forEach(function(id){var e=document.getElementById(id);if(e)e.value="";});
   soSetDisc("none"); soSetDiscW("none");
   var soCoC=document.getElementById("so-coord"); if(soCoC) soCoC.value="";

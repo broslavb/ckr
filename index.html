@@ -9629,6 +9629,30 @@ function soUpdateSummary(){
   var html = "";
   if(partsTotal) html += '<div class="pm-srow"><span class="pm-slbl" style="font-size:10px">Запчастини</span><span class="pm-sval" style="font-size:11px">'+partsTotal.toLocaleString("uk-UA")+" грн"+'</span></div>';
   if(worksTotal) html += '<div class="pm-srow"><span class="pm-slbl" style="font-size:10px">Роботи</span><span class="pm-sval" style="font-size:11px">'+worksTotal.toLocaleString("uk-UA")+" грн"+'</span></div>';
+  // Розшифровка робіт по типах (Рихтувальні/Слюсарні/Безпека/Малярні/Сторонні/ТО)
+  // — лише на екрані (.no-print), клієнтський друк без змін
+  if(worksTotal){
+    var byType={}, cntType={}, typeOrder=[];
+    soWorks.forEach(function(w){
+      var s=soWorkFinal(w); if(!s) return;
+      var lbl=soWorkTypeLabel(w.cat)||"Без типу";
+      if(byType[lbl]==null){ byType[lbl]=0; cntType[lbl]=0; typeOrder.push(lbl); }
+      byType[lbl]+=s; cntType[lbl]++;
+    });
+    if(typeOrder.length){
+      var pref=["Рихтувальні","Слюсарні","Безпека","Малярні","Сторонні","ТО"];
+      typeOrder.sort(function(a,b){
+        var ia=pref.indexOf(a), ib=pref.indexOf(b);
+        return (ia<0?99:ia)-(ib<0?99:ib);
+      });
+      html += '<div class="no-print" style="margin-top:6px;border-top:1px dashed var(--bd);padding-top:6px">'
+        + '<div style="font-family:var(--mono);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Роботи — по типах</div>';
+      typeOrder.forEach(function(lbl){
+        html += '<div class="pm-srow"><span class="pm-slbl" style="font-size:10px;color:var(--tx3)">'+escH(lbl)+' <span style="opacity:.7">× '+cntType[lbl]+'</span></span><span class="pm-sval" style="font-size:11px">'+byType[lbl].toLocaleString("uk-UA")+' грн</span></div>';
+      });
+      html += '</div>';
+    }
+  }
   var srEl = document.getElementById("so-summary-rows"); if(srEl) srEl.innerHTML=html;
 
   var gtEl = document.getElementById("so-grand-total"); if(gtEl) gtEl.textContent=grandTotal.toLocaleString("uk-UA")+" грн";

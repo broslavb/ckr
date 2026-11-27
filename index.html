@@ -12138,14 +12138,15 @@ function payCoordWeek(wid){
   if(!isAdmin()){ showToast("Лише власник"); return; }
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
   var today = new Date().toISOString().slice(0,10);
-  var dt = new Date(today+"T00:00:00");
+  var dt = new Date(); dt.setHours(12,0,0,0);
   dt.setDate(dt.getDate() - (dt.getDay()+6)%7);              // понеділок поточного тижня
-  var mon = dt.toISOString().slice(0,10);
+  var mon = payLocalISO(dt);
   dt.setDate(dt.getDate()+6);
-  var sun = dt.toISOString().slice(0,10);
+  var sun = payLocalISO(dt);
   var fmt = function(s){ return s.slice(8,10)+"."+s.slice(5,7); };
   var wk = fmt(mon)+"–"+fmt(sun);
-  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===wid && a.type==="coord_week" && !a.void && a.weekKey===mon; });
+  // дубль-чек: правильний ключ або легасі (зміщений на день, до фікса toISOString)
+  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===wid && a.type==="coord_week" && !a.void && (a.weekKey===mon || a.weekKey===payPrevISO(mon)); });
   if(dup){ showToast("Тижнева ставка за "+wk+" вже нарахована ("+Math.round(dup.amountUAH||0)+" грн)"); return; }
   var amt = Math.round(PAY_COORD_WEEK_UAH);
   if(!confirm("Нарахувати тижневу ставку "+amt.toLocaleString("uk-UA")+" грн за тиждень "+wk+" — "+w.name+"?")) return;
@@ -12480,6 +12481,10 @@ function payRenderCards(){
       var br = document.createElement("button"); br.textContent = "Розстрочка";
       (function(id){ br.onclick = function(){ payOpenGive("loan", id); }; })(w._id);
       btns2.appendChild(br);
+      // Списання боргу (корекція балансу / прощення розстрочки) — лише власник
+      var bwo = document.createElement("button"); bwo.textContent = "✖ Списати борг"; bwo.style.cssText="color:var(--rd)";
+      (function(id){ bwo.onclick = function(){ payDebtWriteoff(id); }; })(w._id);
+      btns2.appendChild(bwo);
       }
       // #9 Ручний бонус-корегування (Анікін, менеджер ЗЧ) — лише власник
       if(isAdmin() && (w.role==="coord" || w.role==="pmgr")){
@@ -12516,6 +12521,7 @@ function payRenderLedger(){
     var t="нарахування", txt=(a.carName||"")+" · "+(a.workName||"")+" ("+(a.partPct||0)+"%)";
     if(a.type==="bonus"){ t="бонус"; txt=(a.carName||"")+" · "+(a.workName||""); }
     else if(a.type==="bonus_manual"){ t="бонус (корегування)"; txt=a.workName||""; }
+    else if(a.type==="debt_writeoff"){ t="✖ списання боргу"; txt=a.workName||""; }
     else if(a.type==="daily"){ t="ставка (день)"; txt=(a.amountUAH||0).toLocaleString("uk-UA")+" грн"; }
     else if(a.type==="weekly"){ t="ставка (тиждень)"; txt=a.workName||""; }
     else if(a.type==="dailyop"){ t="доплата"; txt=(a.carName?a.carName+" · ":"")+(a.workName||""); }
@@ -12765,6 +12771,63 @@ function payManualBonus(wid){
   }).then(function(){ showToast("Бонус "+Math.round(uah).toLocaleString("uk-UA")+" грн — "+w.name); payLoadAll(); })
     .catch(function(e){ showToast("Помилка: "+e.message); });
 }
+// ✖ Списання боргу (лише власник): плюс-корекція балансу (type debt_writeoff,
+// Каса НЕ чіпається, фонд авто не зачіпає — без calcId). Якщо є розстрочка —
+// другим кроком можна простити її частину: пара loan_repay (мінус розстрочка,
+// мінус баланс) + debt_writeoff (плюс баланс) → баланс у нулі, борг зник.
+function payDebtWriteoff(wid){
+  if(!isAdmin()){ showToast("Лише власник"); return; }
+  var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
+  var b = payBalance(wid), loan = payLoanRemaining(wid);
+  var rate = usdRate||44.1;
+  var today = new Date().toISOString().slice(0,10);
+  var date = payMonthMatch(today) ? today : PAY_MONTH + "-15";
+  var tasks=[], parts=[];
+  // 1) борг по балансу (відʼємний баланс)
+  var v = prompt("✖ Списати борг — «"+w.name+"»\nПоточний баланс: "+payFmt(b.bal,b.cur)+"\n\nСума списання, грн (ляже ПЛЮСОМ у баланс; Каса не чіпається).\n0 або пусто — пропустити:", b.bal<0?Math.round(-b.bal):"");
+  if(v===null) return;
+  var uah = Math.round(parseFloat(String(v).replace(",","."))||0);
+  var note = "";
+  if(uah>0){ note = prompt("Коментар (причина списання):","")||""; }
+  // 2) розстрочка (прощення)
+  var loanUah = 0;
+  if(loan.remaining>0.01){
+    var v2 = prompt("У «"+w.name+"» є розстрочка (борг): "+payFmt(loan.remaining,loan.cur)+"\nПростити (списати) з неї, грн? 0 або пусто — не чіпати:", "");
+    if(v2!==null) loanUah = Math.min(Math.round(parseFloat(String(v2).replace(",","."))||0), Math.round(loan.remaining));
+  }
+  if(uah<=0 && loanUah<=0){ showToast("Нічого не списано"); return; }
+  if(!confirm("Списати безповоротно:\n"+(uah>0?"• борг балансу: "+uah.toLocaleString("uk-UA")+" грн\n":"")+(loanUah>0?"• розстрочка: "+loanUah.toLocaleString("uk-UA")+" грн\n":"")+"Каса не чіпається. Продовжити?")) return;
+  if(uah>0){
+    parts.push("баланс +"+uah.toLocaleString("uk-UA"));
+    tasks.push(db.collection("work_accruals").add({
+      workerId:w._id, workerName:w.name, role:w.role, type:"debt_writeoff", rate:rate,
+      workName:"✖ Списання боргу"+(note?" · "+note:""), carName:"",
+      amountUAH:uah, amountUSD:Math.round((uah/rate)*100)/100, date:date,
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+    }));
+  }
+  if(loanUah>0){
+    parts.push("розстрочка −"+loanUah.toLocaleString("uk-UA"));
+    // Пара: погашення розстрочки (без каси) + компенсація балансу — щоб
+    // прощення НЕ зменшувало баланс працівника, лише стирало борг розстрочки
+    tasks.push(db.collection("worker_payments").add({
+      workerId:w._id, workerName:w.name, role:w.role,
+      amountUAH:loanUah, rate:rate, amountUSD:Math.round((loanUah/rate)*100)/100, payCur:"uah",
+      type:"loan_repay", date:date, note:"✖ списання розстрочки (прощення, без каси)",
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+    }));
+    tasks.push(db.collection("work_accruals").add({
+      workerId:w._id, workerName:w.name, role:w.role, type:"debt_writeoff", rate:rate,
+      workName:"✖ Списання розстрочки (компенсація балансу)", carName:"",
+      amountUAH:loanUah, amountUSD:Math.round((loanUah/rate)*100)/100, date:date,
+      author:currentUserName||"", authorEmail:currentUser?currentUser.email:""
+    }));
+  }
+  Promise.all(tasks).then(function(){
+    showToast("✖ Списано: "+parts.join(" · ")+" — "+w.name);
+    payLoadAll();
+  }).catch(function(e){ showToast("Помилка: "+e.message); });
+}
 // #7 Ставка менеджера ЗЧ (грн/міс) — зберігається на працівникові, редагує власник
 function payEditBaseRate(wid){
   if(!isAdmin()){ showToast("Лише власник"); return; }
@@ -12829,9 +12892,9 @@ function payRenderCalendar(){
 }
 // Попередній РОБОЧИЙ день (Сб/Нд — вихідні, пропускаємо)
 function payPrevWorkDay(dateStr){
-  var d=new Date(dateStr+"T00:00:00");
+  var d=new Date(dateStr+"T12:00:00");
   do { d.setDate(d.getDate()-1); } while(d.getDay()===0 || d.getDay()===6);
-  return d.toISOString().slice(0,10);
+  return payLocalISO(d);
 }
 // Штраф за прогул: 2-й+ робочий день підряд = 2000; інакше пн=2000, решта=1500
 function payAbsenceFine(dateStr, prevIsAbsence){
@@ -13147,6 +13210,10 @@ function payEnsureTutWeekly(){
 // днів; сума пропорційна (ставка ÷ 5 за день, дефолт пн–пт)
 var PAY_WK_CTX = null;
 var PAY_WK_DOW = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"];
+// Дата → "YYYY-MM-DD" ЛОКАЛЬНО. НЕ через toISOString(): він конвертує в UTC
+// (−2 год Київ) і локальна північ стає ПОПЕРЕДНІМ днем — тижні зʼїжджали на день.
+function payLocalISO(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+function payPrevISO(s){ var d=new Date(s+"T12:00:00"); d.setDate(d.getDate()-1); return payLocalISO(d); }
 function payWeekAccrue(wid){
   var w = PAY_WORKERS.find(function(x){ return x._id===wid; }); if(!w) return;
   if(!Math.round(w.weeklyRateUAH||0)){ showToast("Задайте тижневу ставку (✎ на картці)"); return; }
@@ -13164,22 +13231,29 @@ function payWeekFmtD(s){ return s.slice(8,10)+"."+s.slice(5,7); }
 function payWeekRender(){
   if(!PAY_WK_CTX) return;
   var w = PAY_WORKERS.find(function(x){ return x._id===PAY_WK_CTX.wid; }); if(!w) return;
-  var dt = new Date(new Date().toISOString().slice(0,10)+"T00:00:00");
+  var dt = new Date(); dt.setHours(12,0,0,0);
   dt.setDate(dt.getDate() - (dt.getDay()+6)%7 + PAY_WK_CTX.off*7);   // понеділок обраного тижня
-  var dates=[]; for(var i=0;i<7;i++){ var d=new Date(dt); d.setDate(dt.getDate()+i); dates.push(d.toISOString().slice(0,10)); }
+  var dates=[]; for(var i=0;i<7;i++){ var d=new Date(dt); d.setDate(dt.getDate()+i); dates.push(payLocalISO(d)); }
   PAY_WK_CTX.dates = dates;
   document.getElementById("pw-title").textContent = w.name+" — тижнева ставка "+Math.round(w.weeklyRateUAH||0).toLocaleString("uk-UA")+" грн";
   document.getElementById("pw-range").textContent = payWeekFmtD(dates[0])+" – "+payWeekFmtD(dates[6]);
-  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===w._id && a.type==="weekly" && !a.void && a.weekKey===dates[0]; });
+  // Дубль-чек: новий (правильний) ключ-понеділок АБО легасі-ключ, зміщений на
+  // день назад (старі нарахування до фікса toISOString)
+  var dup = PAY_ACCRUALS.find(function(a){ return a.workerId===w._id && a.type==="weekly" && !a.void && (a.weekKey===dates[0] || a.weekKey===payPrevISO(dates[0])); });
   PAY_WK_CTX.dup = !!dup;
   var st=document.getElementById("pw-status");
   st.className="pay-status"+(dup?" err":""); st.textContent = dup ? "Цей тиждень вже нараховано: "+Math.round(dup.amountUAH||0).toLocaleString("uk-UA")+" грн"+(dup.days?" ("+dup.days+" дн)":"") : "";
   document.getElementById("pw-ok").disabled = !!dup;
   var box=document.getElementById("pw-days");
+  // Табель: прогул/відгул знімають галочку дня (можна поставити вручну)
   box.innerHTML = dates.map(function(ds,i){
+    var rec = payAttendGet(w._id, ds); if(rec && rec.void) rec=null;
+    var mark = rec ? (rec.kind==="absence"
+      ? ' <span style="color:var(--rd);font-weight:bold">прогул</span>'
+      : rec.kind==="dayoff" ? ' <span style="color:var(--blue-mid);font-weight:bold">відгул</span>' : '') : '';
     return '<label style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;cursor:pointer'+(dup?';opacity:.5':'')+'">'
-      +'<input type="checkbox" id="pw-d-'+i+'" '+(i<5?'checked':'')+(dup?' disabled':'')+' onchange="payWeekSum()"/>'
-      +'<b style="width:24px">'+PAY_WK_DOW[i]+'</b> '+payWeekFmtD(ds)+'</label>';
+      +'<input type="checkbox" id="pw-d-'+i+'" '+((i<5 && !rec)?'checked':'')+(dup?' disabled':'')+' onchange="payWeekSum()"/>'
+      +'<b style="width:24px">'+PAY_WK_DOW[i]+'</b> '+payWeekFmtD(ds)+mark+'</label>';
   }).join("");
   payWeekSum();
 }
